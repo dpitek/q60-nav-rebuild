@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="420" viewBox="0 0 800 420">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0c1810"/>
+      <stop offset="100%" stop-color="#080e0a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="420" fill="url(#bg)"/>
+
+  <!-- ===== TAB BAR (bottom) ===== -->
+  <rect x="0" y="370" width="800" height="50" fill="#080e0a"/>
+  <line x1="0" y1="370" x2="800" y2="370" stroke="#1a3a1a" stroke-width="1"/>
+
+  <!-- Tab items: Nav, Climate, Audio, Phone -->
+  <!-- Nav tab — ACTIVE -->
+  <rect x="0" y="370" width="200" height="50" fill="#0f1a12"/>
+  <line x1="0" y1="370" x2="200" y2="370" stroke="#00d4ff" stroke-width="3"/>
+  <text x="100" y="398" fill="#00d4ff" font-family="sans-serif" font-size="11" font-weight="bold" text-anchor="middle">▲ NAV</text>
+  <text x="100" y="413" fill="#00d4ff" font-family="sans-serif" font-size="9" text-anchor="middle">companion</text>
+
+  <!-- Climate tab -->
+  <line x1="200" y1="375" x2="200" y2="415" stroke="#1a3a1a" stroke-width="1"/>
+  <text x="300" y="398" fill="#445544" font-family="sans-serif" font-size="11" text-anchor="middle">❄ CLIMATE</text>
+
+  <!-- Audio tab -->
+  <line x1="400" y1="375" x2="400" y2="415" stroke="#1a3a1a" stroke-width="1"/>
+  <text x="500" y="398" fill="#445544" font-family="sans-serif" font-size="11" text-anchor="middle">♪ AUDIO</text>
+
+  <!-- Phone tab -->
+  <line x1="600" y1="375" x2="600" y2="415" stroke="#1a3a1a" stroke-width="1"/>
+  <text x="700" y="398" fill="#445544" font-family="sans-serif" font-size="11" text-anchor="middle">✆ PHONE</text>
+
+  <!-- ===== STATUS BAR (top) ===== -->
+  <rect x="0" y="0" width="800" height="36" fill="#060c08"/>
+  <line x1="0" y1="36" x2="800" y2="36" stroke="#1a3a1a" stroke-width="1"/>
+
+  <!-- GPS dot -->
+  <circle cx="20" cy="18" r="4" fill="#00d4ff"/>
+  <text x="32" y="22" fill="#556655" font-family="sans-serif" font-size="11">GPS lock</text>
+
+  <!-- BT indicator -->
+  <text x="120" y="22" fill="#335533" font-family="sans-serif" font-size="12">⦿</text>
+  <text x="134" y="22" fill="#556655" font-family="sans-serif" font-size="11">BT</text>
+
+  <!-- Nav active badge -->
+  <rect x="185" y="8" width="160" height="20" rx="3" fill="#0d1f0d" stroke="#2a4a2a" stroke-width="1"/>
+  <text x="265" y="22" fill="#5a8a5a" font-family="sans-serif" font-size="11" text-anchor="middle">▲ Active route · 7.2 mi</text>
+
+  <!-- Clock -->
+  <text x="780" y="22" fill="#778877" font-family="sans-serif" font-size="13" text-anchor="end" font-weight="bold">4:12 PM</text>
+
+  <!-- Outside temp -->
+  <text x="700" y="22" fill="#556655" font-family="sans-serif" font-size="12" text-anchor="end">74°F</text>
+
+  <!-- ===== MAIN CONTENT: NavCompanionView ===== -->
+
+  <!-- Turn arrow (large, centered top) -->
+  <g transform="translate(340, 50)">
+    <!-- Arrow: right turn -->
+    <rect x="0" y="0" width="120" height="120" rx="10" fill="#0d1f10" stroke="#1a4a1a" stroke-width="1.5"/>
+    <g fill="none" stroke="#00d4ff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="42" y1="90" x2="42" y2="42"/>
+      <line x1="42" y1="42" x2="78" y2="42"/>
+      <polyline points="62,26 78,42 62,58"/>
+    </g>
+  </g>
+
+  <!-- Distance countdown (large) -->
+  <text x="400" y="210" fill="#ffffff" font-family="sans-serif" font-size="58" font-weight="bold" text-anchor="middle">0.4 mi</text>
+
+  <!-- Instruction text -->
+  <text x="400" y="248" fill="#aaccaa" font-family="sans-serif" font-size="18" text-anchor="middle">Turn right onto Avent Ferry Rd</text>
+
+  <!-- Divider -->
+  <line x1="60" y1="270" x2="740" y2="270" stroke="#1a3a1a" stroke-width="1"/>
+
+  <!-- Bottom stats row -->
+  <!-- ETA -->
+  <text x="133" y="305" fill="#556655" font-family="sans-serif" font-size="12" text-anchor="middle">ETA</text>
+  <text x="133" y="338" fill="#ffffff" font-family="sans-serif" font-size="28" font-weight="bold" text-anchor="middle">4:37</text>
+  <text x="133" y="358" fill="#556655" font-family="sans-serif" font-size="11" text-anchor="middle">PM</text>
+
+  <!-- Separator -->
+  <line x1="266" y1="285" x2="266" y2="365" stroke="#1a3a1a" stroke-width="1"/>
+
+  <!-- Remaining -->
+  <text x="400" y="305" fill="#556655" font-family="sans-serif" font-size="12" text-anchor="middle">remain</text>
+  <text x="400" y="338" fill="#ccddcc" font-family="sans-serif" font-size="28" font-weight="bold" text-anchor="middle">7.2 mi</text>
+  <text x="400" y="358" fill="#556655" font-family="sans-serif" font-size="11" text-anchor="middle">~25 min</text>
+
+  <!-- Separator -->
+  <line x1="533" y1="285" x2="533" y2="365" stroke="#1a3a1a" stroke-width="1"/>
+
+  <!-- Speed / limit -->
+  <text x="667" y="305" fill="#556655" font-family="sans-serif" font-size="12" text-anchor="middle">speed</text>
+  <text x="650" y="338" fill="#ffffff" font-family="sans-serif" font-size="28" font-weight="bold" text-anchor="end">38</text>
+  <text x="655" y="338" fill="#888888" font-family="sans-serif" font-size="16">/</text>
+  <text x="700" y="338" fill="#888888" font-family="sans-serif" font-size="22">45</text>
+  <text x="667" y="358" fill="#556655" font-family="sans-serif" font-size="11" text-anchor="middle">mph / limit</text>
+</svg>

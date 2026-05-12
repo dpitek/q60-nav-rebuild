@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="420" viewBox="0 0 800 420">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0c1810"/>
+      <stop offset="100%" stop-color="#080e0a"/>
+    </linearGradient>
+    <linearGradient id="fanBar" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#1a4a1a"/>
+      <stop offset="100%" stop-color="#3a9a3a"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="420" fill="url(#bg)"/>
+
+  <!-- Status bar -->
+  <rect x="0" y="0" width="800" height="36" fill="#060c08"/>
+  <line x1="0" y1="36" x2="800" y2="36" stroke="#1a3a1a" stroke-width="1"/>
+  <circle cx="20" cy="18" r="4" fill="#00d4ff"/>
+  <text x="32" y="22" fill="#556655" font-family="sans-serif" font-size="11">GPS lock</text>
+  <text x="700" y="22" fill="#556655" font-family="sans-serif" font-size="12" text-anchor="end">74°F</text>
+  <text x="780" y="22" fill="#778877" font-family="sans-serif" font-size="13" text-anchor="end" font-weight="bold">4:12 PM</text>
+
+  <!-- Tab bar -->
+  <rect x="0" y="370" width="800" height="50" fill="#080e0a"/>
+  <line x1="0" y1="370" x2="800" y2="370" stroke="#1a3a1a" stroke-width="1"/>
+  <text x="100" y="398" fill="#445544" font-family="sans-serif" font-size="11" text-anchor="middle">▲ NAV</text>
+  <line x1="200" y1="375" x2="200" y2="415" stroke="#1a3a1a" stroke-width="1"/>
+  <rect x="200" y="370" width="200" height="50" fill="#0f1a12"/>
+  <line x1="200" y1="370" x2="400" y2="370" stroke="#00d4ff" stroke-width="3"/>
+  <text x="300" y="398" fill="#00d4ff" font-family="sans-serif" font-size="11" font-weight="bold" text-anchor="middle">❄ CLIMATE</text>
+  <line x1="400" y1="375" x2="400" y2="415" stroke="#1a3a1a" stroke-width="1"/>
+  <text x="500" y="398" fill="#445544" font-family="sans-serif" font-size="11" text-anchor="middle">♪ AUDIO</text>
+  <line x1="600" y1="375" x2="600" y2="415" stroke="#1a3a1a" stroke-width="1"/>
+  <text x="700" y="398" fill="#445544" font-family="sans-serif" font-size="11" text-anchor="middle">✆ PHONE</text>
+
+  <!-- ===== LEFT ZONE (Driver) ===== -->
+  <!-- Zone label -->
+  <text x="130" y="65" fill="#778877" font-family="sans-serif" font-size="12" text-anchor="middle">DRIVER</text>
+
+  <!-- Temp up button -->
+  <rect x="90" y="75" width="80" height="36" rx="4" fill="#0f1f12" stroke="#2a4a2a" stroke-width="1.5"/>
+  <text x="130" y="99" fill="#aaddaa" font-family="sans-serif" font-size="22" text-anchor="middle" font-weight="bold">▲</text>
+
+  <!-- Temp display -->
+  <text x="130" y="160" fill="#ffffff" font-family="sans-serif" font-size="52" font-weight="bold" text-anchor="middle">72</text>
+  <text x="130" y="185" fill="#778877" font-family="sans-serif" font-size="16" text-anchor="middle">°F</text>
+
+  <!-- Temp down button -->
+  <rect x="90" y="196" width="80" height="36" rx="4" fill="#0f1f12" stroke="#2a4a2a" stroke-width="1.5"/>
+  <text x="130" y="220" fill="#aaddaa" font-family="sans-serif" font-size="22" text-anchor="middle" font-weight="bold">▼</text>
+
+  <!-- Seat heat (driver) - level 2 -->
+  <text x="130" y="252" fill="#556655" font-family="sans-serif" font-size="11" text-anchor="middle">seat heat</text>
+  <rect x="96" y="258" width="22" height="16" rx="2" fill="#ff6600" opacity="0.85"/>
+  <rect x="122" y="258" width="22" height="16" rx="2" fill="#ff6600" opacity="0.85"/>
+  <rect x="148" y="258" width="22" height="16" rx="2" fill="#1a2a1a" stroke="#2a4a2a" stroke-width="1"/>
+
+  <!-- ===== CENTER COLUMN ===== -->
+
+  <!-- Mode buttons -->
+  <text x="400" y="65" fill="#778877" font-family="sans-serif" font-size="12" text-anchor="middle">AIRFLOW MODE</text>
+
+  <!-- Face -->
+  <rect x="310" y="75" width="70" height="44" rx="4" fill="#1a3a2a" stroke="#3a7a3a" stroke-width="1.5"/>
+  <text x="345" y="93" fill="#aaddaa" font-family="sans-serif" font-size="16" text-anchor="middle">☻</text>
+  <text x="345" y="112" fill="#88aa88" font-family="sans-serif" font-size="10" text-anchor="middle">face</text>
+
+  <!-- Feet (active) -->
+  <rect x="388" y="75" width="70" height="44" rx="4" fill="#0f1f12" stroke="#2a4a2a" stroke-width="1.5"/>
+  <text x="423" y="93" fill="#556655" font-family="sans-serif" font-size="16" text-anchor="middle">⌄⌄</text>
+  <text x="423" y="112" fill="#445544" font-family="sans-serif" font-size="10" text-anchor="middle">feet</text>
+
+  <!-- Blend -->
+  <rect x="466" y="75" width="70" height="44" rx="4" fill="#0f1f12" stroke="#2a4a2a" stroke-width="1.5"/>
+  <text x="501" y="96" fill="#556655" font-family="sans-serif" font-size="13" text-anchor="middle">⊕</text>
+  <text x="501" y="112" fill="#445544" font-family="sans-serif" font-size="10" text-anchor="middle">blend</text>
+
+  <!-- Defrost -->
+  <rect x="544" y="75" width="70" height="44" rx="4" fill="#0f1f12" stroke="#2a4a2a" stroke-width="1.5"/>
+  <text x="579" y="96" fill="#556655" font-family="sans-serif" font-size="13" text-anchor="middle">⚡</text>
+  <text x="579" y="112" fill="#445544" font-family="sans-serif" font-size="10" text-anchor="middle">defrost</text>
+
+  <!-- Fan bars (7 segments, level 4) -->
+  <text x="400" y="152" fill="#778877" font-family="sans-serif" font-size="12" text-anchor="middle">FAN SPEED</text>
+  <!-- OFF button -->
+  <rect x="350" y="160" width="40" height="24" rx="3" fill="#0f1f12" stroke="#2a4a2a" stroke-width="1"/>
+  <text x="370" y="176" fill="#445544" font-family="sans-serif" font-size="11" text-anchor="middle">OFF</text>
+  <!-- Fan segments: 7 total, first 4 active -->
+  <rect x="398" y="175" width="20" height="10" rx="1" fill="url(#fanBar)"/>
+  <rect x="422" y="170" width="20" height="15" rx="1" fill="url(#fanBar)"/>
+  <rect x="446" y="163" width="20" height="22" rx="1" fill="url(#fanBar)"/>
+  <rect x="470" y="155" width="20" height="30" rx="1" fill="url(#fanBar)"/>
+  <rect x="494" y="148" width="20" height="37" rx="1" fill="#1a2a1a" stroke="#2a4a2a" stroke-width="1"/>
+  <rect x="518" y="140" width="20" height="45" rx="1" fill="#1a2a1a" stroke="#2a4a2a" stroke-width="1"/>
+  <rect x="542" y="130" width="20" height="55" rx="1" fill="#1a2a1a" stroke="#2a4a2a" stroke-width="1"/>
+
+  <!-- AC / Recirc toggles -->
+  <rect x="320" y="240" width="80" height="36" rx="4" fill="#1a4a2a" stroke="#3a9a3a" stroke-width="1.5"/>
+  <text x="360" y="263" fill="#aaffaa" font-family="sans-serif" font-size="14" text-anchor="middle" font-weight="bold">A/C ON</text>
+
+  <rect x="420" y="240" width="80" height="36" rx="4" fill="#0f1f12" stroke="#2a4a2a" stroke-width="1.5"/>
+  <text x="460" y="263" fill="#556655" font-family="sans-serif" font-size="14" text-anchor="middle">RECIRC</text>
+
+  <!-- Outside temp center -->
+  <text x="400" y="316" fill="#556655" font-family="sans-serif" font-size="12" text-anchor="middle">outside</text>
+  <text x="400" y="345" fill="#aaaaaa" font-family="sans-serif" font-size="28" font-weight="bold" text-anchor="middle">74°F</text>
+
+  <!-- ===== RIGHT ZONE (Passenger) ===== -->
+  <text x="670" y="65" fill="#778877" font-family="sans-serif" font-size="12" text-anchor="middle">PASSENGER</text>
+
+  <rect x="630" y="75" width="80" height="36" rx="4" fill="#0f1f12" stroke="#2a4a2a" stroke-width="1.5"/>
+  <text x="670" y="99" fill="#aaddaa" font-family="sans-serif" font-size="22" text-anchor="middle" font-weight="bold">▲</text>
+
+  <text x="670" y="160" fill="#ffffff" font-family="sans-serif" font-size="52" font-weight="bold" text-anchor="middle">70</text>
+  <text x="670" y="185" fill="#778877" font-family="sans-serif" font-size="16" text-anchor="middle">°F</text>
+
+  <rect x="630" y="196" width="80" height="36" rx="4" fill="#0f1f12" stroke="#2a4a2a" stroke-width="1.5"/>
+  <text x="670" y="220" fill="#aaddaa" font-family="sans-serif" font-size="22" text-anchor="middle" font-weight="bold">▼</text>
+
+  <!-- Seat heat (passenger) - level 1 -->
+  <text x="670" y="252" fill="#556655" font-family="sans-serif" font-size="11" text-anchor="middle">seat heat</text>
+  <rect x="636" y="258" width="22" height="16" rx="2" fill="#ff6600" opacity="0.85"/>
+  <rect x="662" y="258" width="22" height="16" rx="2" fill="#1a2a1a" stroke="#2a4a2a" stroke-width="1"/>
+  <rect x="688" y="258" width="22" height="16" rx="2" fill="#1a2a1a" stroke="#2a4a2a" stroke-width="1"/>
+
+  <!-- Vertical dividers -->
+  <line x1="245" y1="50" x2="245" y2="360" stroke="#1a3a1a" stroke-width="1"/>
+  <line x1="555" y1="50" x2="555" y2="360" stroke="#1a3a1a" stroke-width="1"/>
+</svg>

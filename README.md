@@ -12,6 +12,7 @@ while preserving the original firmware as a permanent, non-destructive fallback.
 
 ## Table of Contents
 
+- [UI Mockups](#ui-mockups)
 - [Background](#background)
 - [Hardware Platform](#hardware-platform)
 - [System Architecture](#system-architecture)
@@ -44,6 +45,158 @@ scratch on the same hardware, adding:
 The original firmware is preserved on eMMC slot A and is **never overwritten**.
 The new system boots from slot B. A hardware-level safety mechanism automatically
 restores the original if the new system fails to start.
+
+---
+
+## UI Mockups
+
+> ⚠️ **These are static SVG wireframes — very raw, first-pass only.** The app isn't running on hardware yet.
+> Colors and layout match the actual QML code, but proportions, typography, and interaction polish are
+> all still TBD. Consider this a visual translation of the data model, not a finished design.
+
+---
+
+### Screen 1 — Navigation View (upper display, 800×480)
+
+![Navigation View](docs/mockups/01-nav-upper-screen.svg)
+
+**What's here:**
+- Simulated vector map using the dark-green `q60-dark.json` color scheme (OpenMapTiles palette)
+- Active route rendered as a cyan line (`#00d4ff`) with soft glow — matches MapLibre `q60-route` layer
+- Current position puck with heading arrow
+- **Top HUD:** turn arrow, distance-to-maneuver, next street name, ETA, remaining distance
+- **Bottom HUD:** current speed, posted speed limit sign, road name, GPS lock dot, outside temp
+- Orange pulse bar at the top HUD edge activates when a turn is <0.2 mi away
+
+**UI/UX notes and known issues:**
+- The top HUD is dense. On the actual 8" display at arm's reach, the 22px distance readout
+  is borderline — may need to go 28-32px with street name truncated to one line.
+- Speed limit sign is a visual placeholder; actual sign shape needs a red-border rectangle
+  matching US MUTCD standards — size is about right at 30×34px.
+- ETA and remaining distance compete for the same cognitive space. One option: hide "remain"
+  when the route is under 5 mi and just show a large ETA countdown.
+- The approaching-turn pulse bar (orange, 4px) is subtle. On a high-ambient-light display
+  this needs to be thicker (6-8px) or use a pulsing animation.
+- Route glow filter (`feGaussianBlur σ=4`) will be cheap to render in software — confirmed
+  viable on Atom E6xx at 800×480 in the current software-render pipeline.
+
+---
+
+### Screen 2 — Nav Companion View (lower display, 800×420)
+
+![Nav Companion](docs/mockups/02-nav-companion-lower.svg)
+
+**What's here:**
+- Lower screen, running alongside the map on the upper display
+- Large turn arrow (120×120 canvas element) — same `TurnArrow.qml` component, bigger draw area
+- Distance countdown in large type (58px) — the primary glance target while driving
+- Bottom row: ETA / remaining distance / speed-vs-limit in a 3-column layout
+- Tab bar at bottom: Nav · Climate · Audio · Phone
+- Status bar at top: GPS, Bluetooth, active route summary, temp, clock
+
+**UI/UX notes and known issues:**
+- This is the screen the driver actually looks at during turn-by-turn. The 58px distance
+  readout is intentional — readable in peripheral vision without looking directly at the display.
+- The 3-column bottom row (ETA | remain | speed) is information-dense. Consider reducing to
+  2 columns (ETA | speed vs limit) and moving "remain" to the status bar as a compact badge.
+- The tab bar icons are emoji placeholders (▲ ❄ ♪ ✆). These need proper vector icons —
+  ideally SVG assets drawn at 24×24px. The emoji approach will render inconsistently
+  across different Linux font stacks.
+- Active tab indicator is a 3px cyan top border. Works but is minimal — could use a filled
+  background or a heavier underline (5-6px) for faster visual scanning at a glance.
+- Auto-switching to this tab when a route starts (from any other tab) is implemented in
+  `StatusBridge`. No visual transition animation yet — needs a 150ms cross-fade minimum.
+
+---
+
+### Screen 3 — Climate View
+
+![Climate View](docs/mockups/03-climate-view.svg)
+
+**What's here:**
+- Dual temp zones: driver (left) and passenger (right) with ±1°F up/down buttons
+- Center column: airflow mode selector (face / feet / blend / defrost), fan speed bar, A/C + recirc toggles
+- Progressive fan bar: 7 segments of increasing height — level 4 of 7 active
+- Seat heat row: 0–3 levels shown as orange filled rectangles per zone
+- Outside temp displayed center-bottom from VehicleService CAN data
+
+**UI/UX notes and known issues:**
+- The temp display (52px bold) is the dominant element — correct hierarchy for this screen.
+  But the up/down buttons (80×36px) are small for a touchscreen. Q60 uses a capacitive
+  touch panel — minimum comfortable target is 44×44px. These need to grow.
+- The fan bar is a custom QML canvas component (`FanControl.qml`). It reads well visually
+  but has no intermediate states between segments. A continuous slider might be more precise,
+  but the stepped approach better matches the physical HVAC controller's 7-speed fan.
+- Mode button icons are emoji placeholders. The "face" icon (☻) reads poorly — needs a
+  proper airflow diagram (face silhouette with arrows) matching factory convention.
+- AC button uses a filled green background when ON — correct state indication. The recirc
+  button (same shape, unfilled) is easy to confuse. Consider adding a car-interior icon
+  for recirc and using amber (not green) to match OEM color convention.
+- Seat heat using orange rectangles is functional but raw. Factory typically uses a seat
+  silhouette with zone highlighting. Worth revisiting post-hardware validation.
+- The outside temp reading from CAN is an estimate until IDs are validated — see CAN warning.
+
+---
+
+### Screen 4 — Audio View (Bluetooth source)
+
+![Audio View](docs/mockups/04-audio-view.svg)
+
+**What's here:**
+- Source selector row: BT / FM / AM / SXM / AUX — BT active (cyan border)
+- Album art placeholder (120×120 box — real art comes from AVRCP metadata)
+- Track title, artist, album from BlueZ MediaPlayer1 D-Bus properties
+- Playback progress bar with position scrubber
+- Transport controls: prev / play-pause / next via AVRCP
+- Volume slider (65%) with mute button, right-column layout
+- Bose badge (BOSE® PERSONAL PLUS — this amp is in the car)
+
+**UI/UX notes and known issues:**
+- Album art at 120×120 is undersized for an 800px-wide screen. This should be 200×200
+  minimum, anchored left with track info to its right. The current proportions come from
+  the compact QML layout — easy to fix.
+- AVRCP album art is technically available via `org.bluez.MediaPlayer1` but requires the
+  OBEX/A2DP channel — not yet implemented. The placeholder box is honest about what's
+  currently wired up.
+- The progress bar scrubber is visual-only today — AVRCP seek requires `org.bluez.MediaPlayer1.Seek(position)`.
+  That call is implemented in `AudioService` but untested until hardware is available.
+- FM / AM / SXM views have separate QML `Loader` components in `AudioView.qml` but
+  depend on the DENSO proxy daemons being responsive. Initial hardware testing will
+  determine if the named-pipe IPC approach is reliable enough or needs a polling wrapper.
+- SXM source was previously blocked on a 504 from the channel data service (noted in STATUS.md).
+  That's a data pipeline issue, not a UI issue.
+- Volume range (0–100%) maps to ALSA `amixer sset Master` — actual Bose DSP curves are
+  non-linear. The slider will feel uneven until gain stages are calibrated on hardware.
+
+---
+
+### Screen 5 — Phone View (active call)
+
+![Phone View](docs/mockups/05-phone-view.svg)
+
+**What's here:**
+- Active call state: pulsing avatar ring, caller name from BlueZ contacts, call timer
+- Three control buttons: Mute · Keypad · Volume
+- DTMF keypad stub (collapsed — expands on "KEYPAD" tap per `PhoneView.qml`)
+- Prominent red END CALL button spanning the full width
+- Call duration in the status bar (replaces nav summary when a call is active)
+
+**UI/UX notes and known issues:**
+- Auto-switching to PhoneView on incoming call is implemented in `StatusBridge.onCallStarted()`.
+  The tab highlight and auto-restore to previous tab on hang-up is in the QML. Works in code —
+  not yet validated on hardware.
+- Caller name comes from BlueZ `org.bluez.MediaPlayer1` / HFP profile. Contact lookup via
+  PBAP (Phone Book Access Profile) is not yet implemented — will show the phone number until it is.
+- The END CALL button needs to be physically large. Current 370×72px size on the 800×420 screen
+  is adequate but placement is too far right. For a driver-accessible touchscreen this should
+  span the full width and be positioned lower, closer to the bottom bezel.
+- The DTMF keypad uses a `Loader` that swaps in a 3×4 grid overlay when expanded.
+  `PhoneView.qml` has this implemented; the collapsed state shown here is intentional.
+- Mute state indicator is missing — the MUTE button needs a filled/active state when muted.
+  Currently just changes opacity. Easy fix.
+- No ringtone UI implemented yet. Incoming call state needs its own visual (flashing ring
+  animation, accept/reject buttons). The current code auto-switches to PhoneView but shows
+  the active-call layout immediately — need an intermediate "ringing" state.
 
 ---
 

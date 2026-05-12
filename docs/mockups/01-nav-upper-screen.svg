@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480" viewBox="0 0 800 480">
+  <defs>
+    <linearGradient id="hudGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a1208" stop-opacity="0.97"/>
+      <stop offset="100%" stop-color="#0a1208" stop-opacity="0.85"/>
+    </linearGradient>
+    <linearGradient id="bottomGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a1208" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#0a1208" stop-opacity="0.97"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="routeGlow">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Map background -->
+  <rect width="800" height="480" fill="#0f1a12"/>
+
+  <!-- Landcover / residential fill areas -->
+  <polygon points="0,200 180,180 200,320 0,340" fill="#0d1510" opacity="0.7"/>
+  <polygon points="300,150 500,140 520,280 290,300" fill="#0d1510" opacity="0.6"/>
+  <polygon points="580,200 780,190 800,350 560,360" fill="#0d1510" opacity="0.7"/>
+  <polygon points="100,350 350,330 370,480 80,480" fill="#0d1510" opacity="0.5"/>
+  <polygon points="420,360 700,340 720,480 400,480" fill="#0d1510" opacity="0.5"/>
+
+  <!-- Water body -->
+  <ellipse cx="680" cy="130" rx="90" ry="50" fill="#0a1a28" opacity="0.9"/>
+
+  <!-- Grid / minor roads (faint) -->
+  <line x1="0" y1="160" x2="800" y2="165" stroke="#1e2e1e" stroke-width="1.5" opacity="0.8"/>
+  <line x1="0" y1="250" x2="800" y2="245" stroke="#1e2e1e" stroke-width="1.5" opacity="0.8"/>
+  <line x1="0" y1="350" x2="800" y2="355" stroke="#1e2e1e" stroke-width="1.5" opacity="0.6"/>
+  <line x1="140" y1="100" x2="145" y2="480" stroke="#1e2e1e" stroke-width="1.5" opacity="0.7"/>
+  <line x1="340" y1="100" x2="345" y2="480" stroke="#1e2e1e" stroke-width="1.5" opacity="0.7"/>
+  <line x1="540" y1="100" x2="545" y2="480" stroke="#1e2e1e" stroke-width="1.5" opacity="0.7"/>
+  <line x1="700" y1="100" x2="705" y2="480" stroke="#1e2e1e" stroke-width="1.5" opacity="0.5"/>
+
+  <!-- Secondary roads -->
+  <path d="M0,200 Q200,195 340,210 Q480,225 800,220" stroke="#243824" stroke-width="3" fill="none"/>
+  <path d="M0,340 Q180,335 340,350 Q520,365 800,355" stroke="#243824" stroke-width="3" fill="none"/>
+  <path d="M140,100 Q138,250 140,480" stroke="#243824" stroke-width="3" fill="none"/>
+  <path d="M540,100 Q542,270 540,480" stroke="#243824" stroke-width="3" fill="none"/>
+
+  <!-- Primary roads -->
+  <path d="M0,250 Q200,248 400,252 Q600,256 800,250" stroke="#2d4a2d" stroke-width="5" fill="none"/>
+  <path d="M340,100 Q342,250 344,480" stroke="#2d4a2d" stroke-width="5" fill="none"/>
+
+  <!-- Motorway casing -->
+  <path d="M0,300 Q150,260 300,240 Q450,220 800,195" stroke="#1a3010" stroke-width="12" fill="none"/>
+  <!-- Motorway fill -->
+  <path d="M0,300 Q150,260 300,240 Q450,220 800,195" stroke="#3a7a20" stroke-width="8" fill="none"/>
+  <!-- Motorway label -->
+  <text x="180" y="272" fill="#5a8a4a" font-family="sans-serif" font-size="10" text-anchor="middle" transform="rotate(-10,180,272)">I-40</text>
+  <text x="480" y="225" fill="#5a8a4a" font-family="sans-serif" font-size="10" text-anchor="middle" transform="rotate(-8,480,225)">I-40</text>
+
+  <!-- Active route (cyan, glowing) -->
+  <path d="M400,480 Q390,400 342,340 Q310,290 300,240 Q290,200 280,160 Q270,130 265,100" stroke="#004466" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <path d="M400,480 Q390,400 342,340 Q310,290 300,240 Q290,200 280,160 Q270,130 265,100" stroke="#00d4ff" stroke-width="6" fill="none" stroke-linecap="round" filter="url(#routeGlow)"/>
+
+  <!-- Route direction chevrons -->
+  <g fill="none" stroke="#00d4ff" stroke-width="1.5" opacity="0.6">
+    <polyline points="338,340 342,332 346,340"/>
+    <polyline points="297,248 300,240 303,248"/>
+    <polyline points="277,168 280,160 283,168"/>
+  </g>
+
+  <!-- Current position marker -->
+  <circle cx="400" cy="435" r="14" fill="#0f1a12" stroke="#00d4ff" stroke-width="2.5"/>
+  <circle cx="400" cy="435" r="6" fill="#00d4ff"/>
+  <!-- Heading indicator -->
+  <polygon points="400,413 394,426 406,426" fill="#00d4ff" opacity="0.9"/>
+
+  <!-- Road labels -->
+  <text x="500" y="243" fill="#5a8a4a" font-family="sans-serif" font-size="11" text-anchor="middle" transform="rotate(-1,500,243)">Western Blvd</text>
+  <text x="350" y="300" fill="#5a8a4a" font-family="sans-serif" font-size="10" text-anchor="middle" transform="rotate(90,350,300)">Avent Ferry Rd</text>
+
+  <!-- Place labels -->
+  <text x="220" y="175" fill="#4a6a5a" font-family="sans-serif" font-size="13" font-weight="bold" text-anchor="middle">Cary</text>
+  <text x="620" y="300" fill="#3a5a4a" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">Raleigh</text>
+
+  <!-- ===== TOP HUD BAR ===== -->
+  <rect x="0" y="0" width="800" height="68" fill="url(#hudGrad)"/>
+  <line x1="0" y1="68" x2="800" y2="68" stroke="#1a3a1a" stroke-width="1"/>
+
+  <!-- Turn arrow icon (right turn) -->
+  <g transform="translate(18, 10)" fill="none" stroke="#00d4ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="20" y1="48" x2="20" y2="20"/>
+    <line x1="20" y1="20" x2="36" y2="20"/>
+    <polyline points="28,12 36,20 28,28"/>
+  </g>
+
+  <!-- Distance to turn -->
+  <text x="78" y="30" fill="#ffffff" font-family="sans-serif" font-size="22" font-weight="bold">0.4 mi</text>
+  <!-- Street name -->
+  <text x="78" y="56" fill="#aaccaa" font-family="sans-serif" font-size="15">Turn right onto Avent Ferry Rd</text>
+
+  <!-- Separator -->
+  <line x1="540" y1="10" x2="540" y2="58" stroke="#2a4a2a" stroke-width="1"/>
+
+  <!-- ETA block -->
+  <text x="560" y="25" fill="#888888" font-family="sans-serif" font-size="11">ETA</text>
+  <text x="560" y="48" fill="#ffffff" font-family="sans-serif" font-size="20" font-weight="bold">4:37 PM</text>
+
+  <!-- Separator -->
+  <line x1="680" y1="10" x2="680" y2="58" stroke="#2a4a2a" stroke-width="1"/>
+
+  <!-- Remaining distance -->
+  <text x="698" y="25" fill="#888888" font-family="sans-serif" font-size="11">remain</text>
+  <text x="698" y="48" fill="#ccddcc" font-family="sans-serif" font-size="18" font-weight="bold">7.2 mi</text>
+
+  <!-- Approaching turn orange pulse bar -->
+  <rect x="0" y="66" width="800" height="4" fill="#ff8c00" opacity="0.55"/>
+
+  <!-- ===== BOTTOM HUD BAR ===== -->
+  <rect x="0" y="412" width="800" height="68" fill="url(#bottomGrad)"/>
+  <line x1="0" y1="412" x2="800" y2="412" stroke="#1a3a1a" stroke-width="1"/>
+
+  <!-- Speed display -->
+  <text x="30" y="445" fill="#ffffff" font-family="sans-serif" font-size="32" font-weight="bold">38</text>
+  <text x="30" y="465" fill="#888888" font-family="sans-serif" font-size="12">mph</text>
+
+  <!-- Speed limit sign -->
+  <rect x="82" y="428" width="30" height="34" rx="3" fill="#ffffff"/>
+  <rect x="84" y="430" width="26" height="30" rx="2" fill="#ffffff" stroke="#cc0000" stroke-width="2"/>
+  <text x="97" y="436" fill="#888888" font-family="sans-serif" font-size="8" text-anchor="middle">SPEED</text>
+  <text x="97" y="451" fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle">45</text>
+
+  <!-- GPS lock indicator -->
+  <circle cx="160" cy="445" r="5" fill="#00d4ff" opacity="0.9"/>
+  <text x="172" y="449" fill="#555555" font-family="sans-serif" font-size="11">GPS</text>
+
+  <!-- Spacer -->
+  <line x1="210" y1="425" x2="210" y2="465" stroke="#2a4a2a" stroke-width="1"/>
+
+  <!-- Road name -->
+  <text x="230" y="439" fill="#888888" font-family="sans-serif" font-size="11">on</text>
+  <text x="230" y="458" fill="#ccddcc" font-family="sans-serif" font-size="14">Western Blvd</text>
+
+  <!-- Outside temp (right) -->
+  <text x="720" y="449" fill="#aaaaaa" font-family="sans-serif" font-size="18" text-anchor="middle">74°F</text>
+  <text x="720" y="466" fill="#555555" font-family="sans-serif" font-size="10" text-anchor="middle">outside</text>
+
+  <!-- Watermark label -->
+  <text x="400" y="240" fill="#1e2e1e" font-family="sans-serif" font-size="48" font-weight="bold" text-anchor="middle" opacity="0.25">MAP</text>
+</svg>
