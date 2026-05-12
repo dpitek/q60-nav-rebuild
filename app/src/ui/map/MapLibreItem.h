@@ -69,6 +69,8 @@ public:
 
 public slots:
     Q_INVOKABLE void flyTo(double lat, double lon, double zoom = -1);
+    Q_INVOKABLE void panMap(double dx, double dy);
+    Q_INVOKABLE void joystickSelect();
     Q_INVOKABLE void addMarker(double lat, double lon, const QString &id,
                                 const QVariantMap &props = {});
     Q_INVOKABLE void removeMarker(const QString &id);

@@ -46,9 +46,15 @@ docker run --rm \
             libglib2.0-0:i386 libglib2.0-dev:i386 \
             libpcre2-dev:i386 libicu-dev:i386 \
             libdouble-conversion-dev:i386 \
+            libegl1-mesa-dev:i386 \
+            libuv1-dev:i386 \
+            libpng-dev:i386 \
+            libjpeg-dev:i386 \
             2>/dev/null || \
         DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-            libgl1-mesa-dev:i386 libxkbcommon-dev:i386 libglib2.0-0:i386 2>/dev/null || true
+            libgl1-mesa-dev:i386 libxkbcommon-dev:i386 libglib2.0-0:i386 \
+            libegl1-mesa-dev:i386 libuv1-dev:i386 libpng-dev:i386 libjpeg-dev:i386 \
+            2>/dev/null || true
 
         # ── valhalla-httpd ────────────────────────────────────────────────────
         echo '[build-app] Compiling valhalla-httpd.c...'
@@ -75,6 +81,7 @@ docker run --rm \
             -DOPENGL_opengl_LIBRARY=/usr/lib/i386-linux-gnu/libOpenGL.so \
             -DOPENGL_glx_LIBRARY=/usr/lib/i386-linux-gnu/libGLX.so \
             -DOPENGL_INCLUDE_DIR=/usr/include \
+            -DWITH_MAPLIBRE=ON \
             2>&1 | tee /build/output/q60nav/cmake.log
 
         ninja -j\$(nproc) 2>&1 | tee /build/output/q60nav/build.log

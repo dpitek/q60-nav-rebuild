@@ -31,6 +31,7 @@
 #include <QQuickWindow>
 #include <QDebug>
 #include <QPainter>
+#include <QTimer>
 
 #ifdef MAPLIBRE_AVAILABLE
 #include <mbgl/util/geo.hpp>
@@ -217,12 +218,13 @@ void MapLibreItem::scheduleRender()
 
         if (!img.valid()) {
             // Map not yet ready (tiles still loading) — keep showing previous frame
-            // or placeholder; schedule another render attempt.
+            // or placeholder; schedule another render attempt in 200ms.
             if (m_rendered.isNull())
                 m_rendered = makePlaceholderImage(
                     qMax(static_cast<int>(width()),  32),
                     qMax(static_cast<int>(height()), 32));
             update();
+            QTimer::singleShot(200, this, &MapLibreItem::scheduleRender);
             return;
         }
 
@@ -372,6 +374,43 @@ void MapLibreItem::flyTo(double lat, double lon, double z)
 {
     setCenter(QGeoCoordinate(lat, lon));
     if (z > 0) setZoom(z);
+}
+
+// ─── panMap ───────────────────────────────────────────────────────────────────
+// Pan the map by (dx, dy) screen pixels.  Uses mbgl::Map::latLngForPixel() to
+// convert the screen-space offset to a geographic delta — handles Mercator
+// distortion correctly at any zoom and latitude.
+void MapLibreItem::panMap(double dx, double dy)
+{
+#ifdef MAPLIBRE_AVAILABLE
+    if (!m_map) return;
+
+    // The pixel currently at the screen center (where we want the new center to go).
+    // Panning right (positive dx) shifts the viewport right, so the underlying geo
+    // coordinate moves left — we sample at (cx - dx, cy - dy).
+    const double cx = qMax(static_cast<int>(width()),  32) / 2.0;
+    const double cy = qMax(static_cast<int>(height()), 32) / 2.0;
+
+    const mbgl::LatLng newCenter =
+        m_map->latLngForPixel(mbgl::ScreenCoordinate{ cx - dx, cy - dy });
+
+    m_center = QGeoCoordinate(newCenter.latitude(), newCenter.longitude());
+    emit centerChanged(m_center);
+    applyCamera();
+    scheduleRender();
+#else
+    Q_UNUSED(dx); Q_UNUSED(dy);
+#endif
+}
+
+// ─── joystickSelect ───────────────────────────────────────────────────────────
+// Commander centre-press while map is focused.  Current map is static-mode with
+// no POI selection model, so this is a stub.  Wire to a destination-pin action
+// once the route-to-tap flow is implemented.
+void MapLibreItem::joystickSelect()
+{
+    qDebug() << "[MapLibre] joystickSelect — no action (POI select not yet implemented)";
+    // TODO: pick nearest POI at screen centre, emit mapClicked(lat, lon)
 }
 
 // ─── addMarker ────────────────────────────────────────────────────────────────

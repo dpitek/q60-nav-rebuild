@@ -3,6 +3,7 @@
 // All StatusBridge / NavigationService / VehicleService bindings preserved exactly.
 import QtQuick 6.6
 import QtQuick.Controls 6.6
+import QtPositioning 6.6
 import "../components"
 
 import Q60Nav 1.0 as Q60Nav
@@ -25,7 +26,7 @@ Item {
         Q60Nav.MapLibreMap {
             id: mapLibreMap
             anchors.fill: parent
-            center: Qt.point(35.5, -79.0)
+            center: QtPositioning.coordinate(35.5, -79.0)
             zoom:   12.0
             style:  "file:///opt/nav/style/q60-dark.json"
 

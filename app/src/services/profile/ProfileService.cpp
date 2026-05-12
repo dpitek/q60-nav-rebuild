@@ -93,8 +93,8 @@ void ProfileService::onKeySlotDetected(int slot)
     // Search profiles for one that includes this key slot
     for (int i = 0; i < m_profileData.size(); ++i) {
         QJsonObject p = m_profileData[i].toObject();
-        QJsonArray  slots = p.value("keySlots").toArray();
-        for (const auto &s : slots) {
+        QJsonArray  keySlotArr = p.value("keySlots").toArray();
+        for (const auto &s : keySlotArr) {
             if (s.toInt() == slot) {
                 // Found a match
                 if (i != m_activeProfileIndex) {
@@ -493,16 +493,16 @@ QJsonObject ProfileService::buildDefaultProfile(const QString &name,
                                                  const QString &accent,
                                                  const QVariantList &keySlots) const
 {
-    QJsonArray slots;
+    QJsonArray keySlotArr;
     for (const auto &s : keySlots)
-        slots.append(s.toInt());
+        keySlotArr.append(s.toInt());
 
     QJsonObject profile;
     profile.insert("id",          QUuid::createUuid().toString(QUuid::WithoutBraces));
     profile.insert("name",        name);
     profile.insert("avatar",      avatar.isEmpty() ? "🏎️" : avatar);
     profile.insert("accentColor", accent.isEmpty() ? "#0A84FF" : accent);
-    profile.insert("keySlots",    slots);
+    profile.insert("keySlots",    keySlotArr);
     profile.insert("pinEnabled",  false);
     profile.insert("pin",         QString());
     profile.insert("kidMode",     false);
