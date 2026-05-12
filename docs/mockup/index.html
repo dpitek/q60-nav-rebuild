@@ -1,0 +1,2371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Q60 Nav — Interactive Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0A0A0A;
+    font-family: 'Roboto', sans-serif;
+    color: #FFFFFF;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 40px;
+    overflow-x: hidden;
+  }
+
+  h1.page-title {
+    font-size: 18px;
+    font-weight: 500;
+    color: #8E8E93;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  /* ── BEZEL / DASH FRAME ── */
+  .dash-frame {
+    background: linear-gradient(160deg, #1A1A1A 0%, #0D0D0D 100%);
+    border: 2px solid #2C2C2E;
+    border-radius: 24px;
+    padding: 24px 28px 28px;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    box-shadow: 0 0 60px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.06);
+    position: relative;
+  }
+
+  .dash-frame::before {
+    content: '';
+    position: absolute;
+    top: 12px; left: 50%; transform: translateX(-50%);
+    width: 60px; height: 4px;
+    background: #3A3A3C;
+    border-radius: 2px;
+  }
+
+  .screen-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .screen-label {
+    font-size: 10px;
+    color: #3A3A3C;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+
+  /* ── SCREENS ── */
+  .screen {
+    background: #000000;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid #1C1C1E;
+    box-shadow: 0 0 20px rgba(0,0,0,0.8), inset 0 0 0 1px rgba(255,255,255,0.04);
+  }
+
+  .screen-upper { width: 800px; height: 480px; }
+  .screen-lower { width: 800px; height: 420px; }
+
+  /* ── STATUS BAR ── */
+  .status-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 32px;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    z-index: 20;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .status-time { font-size: 13px; font-weight: 500; }
+
+  .status-center {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: #8E8E93;
+    text-transform: uppercase;
+  }
+
+  .status-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: #8E8E93;
+  }
+
+  .gps-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #30D158;
+    box-shadow: 0 0 6px #30D158;
+    transition: all 200ms ease;
+  }
+  .gps-dot.acquiring {
+    background: #FF9F0A;
+    box-shadow: 0 0 6px #FF9F0A;
+    animation: gpsPulse 1.2s ease-in-out infinite;
+  }
+
+  @keyframes gpsPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* ── MAP BACKGROUND ── */
+  .map-bg {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #0A0A0A;
+    overflow: hidden;
+  }
+
+  .map-grid {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  .map-label {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 96px;
+    font-weight: 900;
+    color: #1C1C1E;
+    user-select: none;
+    pointer-events: none;
+    letter-spacing: -4px;
+  }
+
+  .position-dot {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #0A84FF;
+    box-shadow: 0 0 0 0 rgba(10,132,255,0.6);
+    animation: positionPulse 2s ease-out infinite;
+    z-index: 5;
+  }
+
+  @keyframes positionPulse {
+    0% { box-shadow: 0 0 0 0 rgba(10,132,255,0.6); }
+    70% { box-shadow: 0 0 0 20px rgba(10,132,255,0); }
+    100% { box-shadow: 0 0 0 0 rgba(10,132,255,0); }
+  }
+
+  /* ── TURN CARD ── */
+  .turn-card {
+    position: absolute;
+    top: 44px; left: 14px;
+    width: 280px; height: 88px;
+    background: rgba(28,28,30,0.92);
+    backdrop-filter: blur(12px);
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    padding: 0 18px;
+    gap: 16px;
+    z-index: 10;
+    opacity: 0;
+    transform: translateX(-20px);
+    transition: opacity 200ms ease, transform 200ms ease;
+  }
+
+  .turn-card.visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .turn-arrow-wrap {
+    flex-shrink: 0;
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .turn-arrow-wrap svg {
+    width: 36px; height: 36px;
+    transition: color 200ms ease;
+  }
+
+  .turn-card .turn-dist {
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .turn-card .turn-street {
+    font-size: 13px;
+    color: #8E8E93;
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+  }
+
+  @keyframes approachPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .turn-card.approaching .turn-arrow-wrap svg {
+    animation: approachPulse 700ms ease-in-out infinite;
+  }
+
+  /* ── SPEED BADGE ── */
+  .speed-badge {
+    position: absolute;
+    top: 44px; right: 14px;
+    width: 90px; height: 90px;
+    background: rgba(28,28,30,0.92);
+    backdrop-filter: blur(12px);
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    gap: 2px;
+  }
+
+  .speed-current { font-size: 34px; font-weight: 700; line-height: 1; }
+  .speed-unit { font-size: 11px; color: #8E8E93; font-weight: 500; }
+
+  .speed-limit-badge {
+    margin-top: 4px;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 2.5px solid #FF453A;
+    background: #FFFFFF;
+    color: #000000;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ── BOTTOM INFO STRIP ── */
+  .nav-bottom-strip {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 72px;
+    background: rgba(0,0,0,0.88);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    align-items: center;
+    z-index: 10;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 200ms ease, transform 200ms ease;
+  }
+
+  .nav-bottom-strip.visible { opacity: 1; transform: translateY(0); }
+
+  .nav-strip-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+  }
+
+  .nav-strip-col + .nav-strip-col {
+    border-left: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .nav-strip-val { font-size: 20px; font-weight: 700; }
+  .nav-strip-lbl { font-size: 11px; color: #8E8E93; }
+
+  /* ── GPS ACQUIRING ── */
+  .gps-acquiring {
+    position: absolute;
+    bottom: 80px; left: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #FF9F0A;
+    z-index: 15;
+    transition: opacity 200ms ease;
+  }
+
+  .gps-acquiring.hidden { opacity: 0; pointer-events: none; }
+
+  .gps-acq-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #FF9F0A;
+    animation: gpsPulse 1.2s ease-in-out infinite;
+  }
+
+  /* ── REROUTING BANNER ── */
+  .rerouting-banner {
+    position: absolute;
+    top: 32px; left: 0; right: 0;
+    height: 40px;
+    background: rgba(255,159,10,0.92);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600;
+    color: #000000;
+    z-index: 25;
+    transform: translateY(-40px);
+    transition: transform 200ms ease;
+  }
+
+  .rerouting-banner.visible { transform: translateY(0); }
+
+  /* ── REVERSE OVERLAY ── */
+  .reverse-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(10,132,255,0.12);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 30;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms ease;
+  }
+
+  .reverse-overlay.visible { opacity: 1; pointer-events: auto; }
+
+  .reverse-r {
+    font-size: 120px;
+    font-weight: 900;
+    color: #0A84FF;
+    line-height: 1;
+    opacity: 0.8;
+  }
+
+  .reverse-label {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: #0A84FF;
+    opacity: 0.9;
+  }
+
+  /* ── INCOMING CALL OVERLAY ── */
+  .call-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.88);
+    backdrop-filter: blur(16px);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms ease;
+  }
+
+  .call-overlay.visible { opacity: 1; pointer-events: auto; }
+
+  .call-ring {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: rgba(48,209,88,0.15);
+    border: 2px solid #30D158;
+    display: flex; align-items: center; justify-content: center;
+    animation: callRing 1.4s ease-in-out infinite;
+    margin-bottom: 8px;
+  }
+
+  @keyframes callRing {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(48,209,88,0.4); }
+    50% { transform: scale(1.05); box-shadow: 0 0 0 16px rgba(48,209,88,0); }
+  }
+
+  .call-ring svg { width: 36px; height: 36px; color: #30D158; }
+
+  .call-caller { font-size: 26px; font-weight: 700; }
+  .call-number { font-size: 15px; color: #8E8E93; }
+  .call-label-incoming { font-size: 13px; color: #8E8E93; margin-bottom: 4px; }
+
+  .call-buttons {
+    display: flex;
+    gap: 40px;
+    margin-top: 8px;
+  }
+
+  .call-btn {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: #FFFFFF;
+    transition: all 150ms ease;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .call-btn svg { width: 24px; height: 24px; }
+  .call-btn span { font-size: 11px; margin-top: 2px; }
+
+  .call-btn-answer { background: #30D158; }
+  .call-btn-answer:hover { background: #34E060; transform: scale(1.05); }
+  .call-btn-decline { background: #FF453A; }
+  .call-btn-decline:hover { background: #FF6961; transform: scale(1.05); }
+
+  /* ════════════════════════════════════════
+     LOWER SCREEN
+  ════════════════════════════════════════ */
+
+  .lower-content {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    bottom: 60px;
+    overflow: hidden;
+  }
+
+  .tab-panel {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    padding: 16px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 150ms ease;
+    overflow-y: auto;
+  }
+
+  .tab-panel.active { opacity: 1; pointer-events: auto; }
+
+  /* ── TAB BAR ── */
+  .tab-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 60px;
+    background: #0A0A0A;
+    border-top: 1px solid rgba(255,255,255,0.12);
+    display: flex;
+  }
+
+  .tab-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    cursor: pointer;
+    color: #8E8E93;
+    position: relative;
+    transition: color 150ms ease;
+    border: none;
+    background: transparent;
+  }
+
+  .tab-item::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 20%; right: 20%;
+    height: 2px;
+    background: #0A84FF;
+    border-radius: 0 0 2px 2px;
+    opacity: 0;
+    transition: opacity 150ms ease;
+  }
+
+  .tab-item.active { color: #0A84FF; }
+  .tab-item.active::before { opacity: 1; }
+  .tab-item:hover:not(.active) { color: #CCCCCC; }
+
+  .tab-icon { font-size: 20px; line-height: 1; }
+  .tab-label { font-size: 10px; font-weight: 500; letter-spacing: 0.04em; }
+
+  /* ── SHARED CARD STYLES ── */
+  .card {
+    background: #1C1C1E;
+    border-radius: 16px;
+    padding: 16px;
+  }
+
+  .card-sm {
+    background: #2C2C2E;
+    border-radius: 12px;
+    padding: 12px;
+  }
+
+  .pill-btn {
+    border-radius: 18px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 500;
+    transition: all 150ms ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .pill-btn:hover { filter: brightness(1.15); }
+
+  /* ── TAB 0: NAV COMPANION ── */
+  #tab-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .nav-row-cards {
+    display: flex;
+    gap: 12px;
+  }
+
+  .nav-stat-card {
+    flex: 1;
+    background: #1C1C1E;
+    border-radius: 16px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .nav-stat-lbl { font-size: 11px; color: #8E8E93; text-transform: uppercase; letter-spacing: 0.06em; }
+  .nav-stat-val { font-size: 24px; font-weight: 700; }
+
+  .next-maneuver-card {
+    background: #1C1C1E;
+    border-radius: 16px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .speed-compare {
+    background: #1C1C1E;
+    border-radius: 16px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .speed-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    display: inline-block; margin-right: 8px;
+  }
+
+  .stop-nav-btn {
+    align-self: flex-start;
+    padding: 10px 22px;
+    font-size: 14px;
+    color: #FF453A;
+    border: 1.5px solid #FF453A;
+    background: transparent;
+  }
+
+  .stop-nav-btn:hover { background: rgba(255,69,58,0.12); }
+
+  /* ── TAB 1: AUDIO ── */
+  #tab-audio { display: flex; flex-direction: column; gap: 12px; }
+
+  .source-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .source-pill {
+    padding: 7px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 18px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Roboto', sans-serif;
+    transition: all 150ms ease;
+    background: #2C2C2E;
+    color: #8E8E93;
+  }
+
+  .source-pill.active { background: #0A84FF; color: #FFFFFF; }
+  .source-pill:hover:not(.active) { background: #3A3A3C; color: #FFFFFF; }
+
+  .audio-main {
+    background: #1C1C1E;
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex: 1;
+  }
+
+  .album-art {
+    width: 100px; height: 100px;
+    border-radius: 12px;
+    background: #2C2C2E;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    flex-shrink: 0;
+  }
+
+  .audio-info { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+  .track-name { font-size: 20px; font-weight: 700; }
+  .artist-name { font-size: 15px; color: #8E8E93; }
+
+  .transport-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 4px;
+  }
+
+  .transport-btn {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: #2C2C2E;
+    border: 1px solid rgba(255,255,255,0.1);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    color: #FFFFFF;
+    transition: all 150ms ease;
+  }
+
+  .transport-btn:hover { background: #3A3A3C; }
+  .transport-btn.play { background: #0A84FF; border-color: #0A84FF; }
+  .transport-btn.play:hover { background: #2196FF; }
+
+  .bt-footer { font-size: 12px; color: #8E8E93; display: flex; align-items: center; gap: 6px; }
+
+  .fm-view { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 8px 0; }
+  .fm-label { font-size: 13px; color: #8E8E93; }
+  .fm-freq { font-size: 34px; font-weight: 700; }
+  .fm-station { font-size: 16px; color: #8E8E93; }
+  .fm-seek { display: flex; gap: 16px; margin-top: 4px; }
+
+  .seek-btn {
+    padding: 8px 20px;
+    background: #2C2C2E;
+    border-radius: 12px;
+    border: none;
+    color: #FFFFFF;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Roboto', sans-serif;
+    transition: all 150ms ease;
+  }
+  .seek-btn:hover { background: #3A3A3C; }
+
+  .volume-row {
+    background: #1C1C1E;
+    border-radius: 16px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .mute-btn {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: #2C2C2E;
+    border: 1px solid rgba(255,255,255,0.1);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    transition: all 150ms ease;
+    flex-shrink: 0;
+  }
+  .mute-btn.muted { background: rgba(255,69,58,0.2); border-color: #FF453A; }
+  .mute-btn:hover { background: #3A3A3C; }
+
+  .vol-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 220px;
+    height: 6px;
+    border-radius: 3px;
+    background: #3A3A3C;
+    outline: none;
+    cursor: pointer;
+    transition: background 150ms;
+  }
+
+  .vol-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #FFFFFF;
+    cursor: pointer;
+    box-shadow: 0 0 6px rgba(0,0,0,0.5);
+    transition: transform 150ms;
+  }
+
+  .vol-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+  .vol-pct { font-size: 13px; color: #8E8E93; min-width: 40px; text-align: right; }
+
+  /* ── TAB 2: PHONE ── */
+  #tab-phone { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 16px; }
+
+  .phone-idle {
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    width: 100%;
+  }
+
+  .phone-icon-circle {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    border: 2px solid #0A84FF;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+    background: rgba(10,132,255,0.1);
+  }
+
+  .phone-status { font-size: 18px; font-weight: 600; }
+  .phone-helper { font-size: 13px; color: #8E8E93; }
+
+  .active-call-card {
+    background: #1C1C1E;
+    border-radius: 16px;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .active-call-badge {
+    background: rgba(48,209,88,0.15);
+    border: 1px solid #30D158;
+    border-radius: 12px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #30D158;
+  }
+
+  .active-caller { font-size: 24px; font-weight: 700; }
+  .call-timer { font-size: 16px; color: #8E8E93; font-variant-numeric: tabular-nums; }
+
+  .call-action-row {
+    display: flex;
+    gap: 20px;
+    margin-top: 8px;
+  }
+
+  .call-action-btn {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    transition: all 150ms ease;
+    color: #FFFFFF;
+  }
+
+  .call-action-btn:hover { filter: brightness(1.2); transform: scale(1.05); }
+  .call-mute-btn { background: #2C2C2E; border: 1px solid rgba(255,255,255,0.15); }
+  .call-mute-btn.active { background: #FF9F0A; border-color: #FF9F0A; }
+  .call-end-btn { background: #FF453A; }
+  .call-spkr-btn { background: #2C2C2E; border: 1px solid rgba(255,255,255,0.15); }
+  .call-spkr-btn.active { background: #0A84FF; border-color: #0A84FF; }
+
+  .keypad-toggle {
+    padding: 8px 20px;
+    background: #2C2C2E;
+    border-radius: 12px;
+    border: none;
+    color: #8E8E93;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: 'Roboto', sans-serif;
+    transition: all 150ms ease;
+    margin-top: 4px;
+  }
+  .keypad-toggle:hover { background: #3A3A3C; color: #FFFFFF; }
+
+  .dtmf-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    width: 100%;
+    max-width: 280px;
+    margin-top: 8px;
+    transition: opacity 200ms ease, max-height 200ms ease;
+    overflow: hidden;
+  }
+
+  .dtmf-grid.hidden { opacity: 0; max-height: 0; }
+  .dtmf-grid.visible { opacity: 1; max-height: 400px; }
+
+  .dtmf-key {
+    height: 48px;
+    background: #2C2C2E;
+    border-radius: 10px;
+    border: none;
+    color: #FFFFFF;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Roboto', sans-serif;
+    transition: all 150ms ease;
+  }
+
+  .dtmf-key:hover { background: #3A3A3C; transform: scale(0.97); }
+  .dtmf-key:active { background: #0A84FF; }
+
+  /* ── TAB 3: CLIMATE ── */
+  #tab-climate { display: flex; gap: 10px; height: 100%; }
+
+  .climate-zone {
+    width: 180px;
+    flex-shrink: 0;
+    background: #1C1C1E;
+    border-radius: 16px;
+    padding: 14px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .zone-label { font-size: 11px; color: #8E8E93; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; }
+
+  .temp-btn {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: #2C2C2E;
+    border: 1.5px solid rgba(10,132,255,0.4);
+    color: #0A84FF;
+    font-size: 24px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 150ms ease;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 300;
+  }
+  .temp-btn:hover { background: rgba(10,132,255,0.15); border-color: #0A84FF; }
+  .temp-btn:active { transform: scale(0.93); }
+
+  .temp-display { font-size: 36px; font-weight: 700; line-height: 1; }
+
+  .seat-heat-row {
+    display: flex; gap: 6px; align-items: center; margin-top: 4px;
+  }
+
+  .seat-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #3A3A3C;
+    cursor: pointer;
+    transition: background 150ms ease;
+  }
+
+  .seat-dot.active { background: #FF9F0A; box-shadow: 0 0 6px rgba(255,159,10,0.5); }
+
+  .climate-center {
+    flex: 1;
+    background: #1C1C1E;
+    border-radius: 16px;
+    padding: 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .mode-btns {
+    display: flex;
+    gap: 6px;
+  }
+
+  .mode-btn {
+    flex: 1;
+    height: 38px;
+    border-radius: 10px;
+    background: #2C2C2E;
+    border: none;
+    color: #8E8E93;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 150ms ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font-family: 'Roboto', sans-serif;
+  }
+  .mode-btn.active { background: #0A84FF; color: #FFFFFF; }
+  .mode-btn:hover:not(.active) { background: #3A3A3C; color: #FFFFFF; }
+
+  .fan-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 5px;
+  }
+
+  .fan-label { font-size: 11px; color: #8E8E93; margin-right: 4px; align-self: center; }
+
+  .fan-off-btn {
+    height: 20px;
+    padding: 0 8px;
+    background: #2C2C2E;
+    border-radius: 6px;
+    border: none;
+    color: #8E8E93;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: 'Roboto', sans-serif;
+    transition: all 150ms ease;
+    align-self: center;
+    margin-right: 2px;
+  }
+  .fan-off-btn.active { background: #0A84FF; color: #FFFFFF; }
+  .fan-off-btn:hover:not(.active) { background: #3A3A3C; }
+
+  .fan-bar {
+    width: 18px;
+    border-radius: 3px 3px 0 0;
+    background: #3A3A3C;
+    cursor: pointer;
+    transition: background 150ms ease;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .fan-bar.active { background: #0A84FF; }
+  .fan-bar:hover:not(.active) { background: #5A5A5E; }
+
+  .toggle-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .toggle-chip {
+    flex: 1;
+    height: 36px;
+    border-radius: 10px;
+    background: #2C2C2E;
+    border: none;
+    color: #8E8E93;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Roboto', sans-serif;
+    transition: all 150ms ease;
+    display: flex; align-items: center; justify-content: center;
+    gap: 5px;
+  }
+  .toggle-chip.active { background: rgba(10,132,255,0.2); border: 1px solid #0A84FF; color: #0A84FF; }
+  .toggle-chip:hover:not(.active) { background: #3A3A3C; color: #FFFFFF; }
+
+  .outside-temp { font-size: 12px; color: #8E8E93; text-align: center; margin-top: auto; }
+
+  /* ── TAB 4: VEHICLE ── */
+  #tab-vehicle { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+
+  .vehicle-top { display: flex; gap: 10px; }
+
+  .door-diagram {
+    background: #1C1C1E;
+    border-radius: 16px;
+    padding: 14px;
+    width: 280px;
+    flex-shrink: 0;
+  }
+
+  .door-diagram-title { font-size: 12px; color: #8E8E93; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+
+  .car-outline {
+    position: relative;
+    width: 220px;
+    height: 110px;
+    margin: 0 auto;
+  }
+
+  .car-body {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 140px;
+    height: 60px;
+    border: 2px solid #3A3A3C;
+    border-radius: 12px;
+  }
+
+  .door-rect {
+    position: absolute;
+    width: 46px; height: 22px;
+    border-radius: 6px;
+    background: #2C2C2E;
+    border: 1.5px solid #0A84FF;
+    cursor: pointer;
+    font-size: 9px;
+    font-weight: 700;
+    color: #8E8E93;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 150ms ease;
+    user-select: none;
+  }
+
+  .door-rect.open { background: rgba(255,69,58,0.25); border-color: #FF453A; color: #FF453A; }
+  .door-rect:hover { filter: brightness(1.2); }
+
+  .door-fl { top: 10px; left: 8px; }
+  .door-fr { top: 10px; right: 8px; }
+  .door-rl { bottom: 10px; left: 8px; }
+  .door-rr { bottom: 10px; right: 8px; }
+
+  .trunk-rect {
+    position: absolute;
+    bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 50px; height: 14px;
+    border-radius: 4px;
+    background: #2C2C2E;
+    border: 1.5px solid #3A3A3C;
+    cursor: pointer;
+    font-size: 8px;
+    font-weight: 700;
+    color: #8E8E93;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 150ms ease;
+  }
+  .trunk-rect.open { background: rgba(255,69,58,0.25); border-color: #FF453A; color: #FF453A; }
+
+  .vehicle-stats {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .fuel-card {
+    background: #1C1C1E;
+    border-radius: 16px;
+    padding: 14px 16px;
+  }
+
+  .fuel-arc-wrap {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .fuel-slider-row {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: #8E8E93;
+  }
+
+  .fuel-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 160px;
+    height: 6px;
+    border-radius: 3px;
+    background: #3A3A3C;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .fuel-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #30D158;
+    cursor: pointer;
+  }
+
+  .stat-row {
+    background: #1C1C1E;
+    border-radius: 16px;
+    padding: 12px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .stat-chip {
+    flex: 1;
+    min-width: 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .stat-chip-lbl { font-size: 11px; color: #8E8E93; }
+  .stat-chip-val { font-size: 16px; font-weight: 600; }
+
+  .coolant-bar-wrap {
+    height: 6px;
+    background: #3A3A3C;
+    border-radius: 3px;
+    margin-top: 4px;
+    overflow: hidden;
+    width: 80px;
+  }
+
+  .coolant-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #0A84FF, #FF9F0A);
+    width: 68%;
+  }
+
+  .vehicle-toggles {
+    background: #1C1C1E;
+    border-radius: 16px;
+    padding: 12px 16px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .vtoggle-btn {
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: none;
+    background: #2C2C2E;
+    color: #8E8E93;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Roboto', sans-serif;
+    transition: all 150ms ease;
+    display: flex; align-items: center; gap: 5px;
+    position: relative;
+  }
+  .vtoggle-btn.active { background: rgba(10,132,255,0.2); border: 1px solid #0A84FF; color: #0A84FF; }
+  .vtoggle-btn.active-amber { background: rgba(255,159,10,0.2); border: 1px solid #FF9F0A; color: #FF9F0A; }
+  .vtoggle-btn:hover:not(.active):not(.active-amber) { background: #3A3A3C; color: #FFFFFF; }
+
+  .tooltip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%; transform: translateX(-50%);
+    background: #FF9F0A;
+    color: #000000;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 150ms ease;
+    z-index: 50;
+  }
+  .vtoggle-btn:hover .tooltip { opacity: 1; }
+
+  .lock-btn {
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: none;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Roboto', sans-serif;
+    transition: all 150ms ease;
+    position: relative;
+  }
+  .lock-btn:hover .tooltip { opacity: 1; }
+  .lock-btn-lock { background: rgba(255,69,58,0.15); color: #FF453A; }
+  .lock-btn-lock:hover { background: rgba(255,69,58,0.25); }
+  .lock-btn-unlock { background: rgba(48,209,88,0.15); color: #30D158; }
+  .lock-btn-unlock:hover { background: rgba(48,209,88,0.25); }
+
+  /* ── SIMULATION PANEL ── */
+  .sim-panel {
+    margin-top: 24px;
+    background: #1C1C1E;
+    border-radius: 16px;
+    padding: 0;
+    width: 900px;
+    max-width: 100%;
+    border: 1px solid #2C2C2E;
+    overflow: hidden;
+  }
+
+  .sim-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    cursor: pointer;
+    user-select: none;
+    background: #1C1C1E;
+    border-bottom: 1px solid transparent;
+    transition: border-color 200ms;
+  }
+
+  .sim-header.open { border-color: #2C2C2E; }
+  .sim-title { font-size: 14px; font-weight: 600; color: #8E8E93; }
+  .sim-chevron { font-size: 12px; color: #8E8E93; transition: transform 200ms; }
+  .sim-header.open .sim-chevron { transform: rotate(180deg); }
+
+  .sim-body {
+    padding: 16px 18px;
+    display: none;
+    flex-wrap: wrap;
+    gap: 16px 24px;
+  }
+  .sim-body.open { display: flex; }
+
+  .sim-control {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 140px;
+  }
+
+  .sim-lbl { font-size: 11px; color: #8E8E93; text-transform: uppercase; letter-spacing: 0.06em; }
+
+  .sim-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 180px;
+    height: 6px;
+    border-radius: 3px;
+    background: #3A3A3C;
+    outline: none;
+    cursor: pointer;
+  }
+  .sim-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #0A84FF;
+    cursor: pointer;
+  }
+
+  .sim-check-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #FFFFFF;
+    cursor: pointer;
+  }
+
+  .sim-check {
+    width: 18px; height: 18px;
+    accent-color: #0A84FF;
+    cursor: pointer;
+  }
+
+  /* ── ROUTE BUTTON ── */
+  .route-btn {
+    position: absolute;
+    bottom: -44px;
+    left: 0;
+    padding: 8px 16px;
+    background: rgba(10,132,255,0.15);
+    border: 1px solid #0A84FF;
+    border-radius: 10px;
+    color: #0A84FF;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Roboto', sans-serif;
+    transition: all 150ms ease;
+    z-index: 200;
+  }
+  .route-btn:hover { background: rgba(10,132,255,0.25); }
+
+  /* small RPM flicker */
+  @keyframes rpmTick {
+    0% { content: "1,187 RPM"; }
+    25% { content: "1,214 RPM"; }
+    50% { content: "1,196 RPM"; }
+    75% { content: "1,203 RPM"; }
+    100% { content: "1,189 RPM"; }
+  }
+
+  .audio-view { display: none; }
+  .audio-view.active { display: flex; flex-direction: column; gap: 10px; }
+</style>
+</head>
+<body>
+
+<h1 class="page-title">Q60 Nav — Interactive Mockup</h1>
+
+<div class="dash-frame">
+  <!-- ════════════════════════════════════
+       UPPER SCREEN — NAVIGATION
+  ════════════════════════════════════ -->
+  <div class="screen-wrapper">
+    <div class="screen-label">Navigation Display</div>
+    <div class="screen screen-upper" id="screen-upper" style="position:relative;">
+
+      <!-- MAP BACKGROUND -->
+      <div class="map-bg">
+        <div class="map-grid"></div>
+        <div class="map-label">MAP</div>
+        <div class="position-dot" id="pos-dot"></div>
+      </div>
+
+      <!-- STATUS BAR -->
+      <div class="status-bar">
+        <span class="status-time" id="status-time">9:41 AM</span>
+        <span class="status-center">Q60</span>
+        <div class="status-right">
+          <div class="gps-dot" id="gps-dot-upper"></div>
+          <span id="status-speed">35 mph</span>
+          <span>68°F</span>
+        </div>
+      </div>
+
+      <!-- REROUTING BANNER -->
+      <div class="rerouting-banner" id="rerouting-banner">
+        <span>↻ Recalculating Route…</span>
+      </div>
+
+      <!-- TURN CARD -->
+      <div class="turn-card" id="turn-card-upper">
+        <div class="turn-arrow-wrap" id="turn-arrow-upper">
+          <!-- straight arrow default -->
+          <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" id="arrow-svg-upper">
+            <line x1="18" y1="30" x2="18" y2="6" stroke="#0A84FF" stroke-width="3" stroke-linecap="round"/>
+            <polyline points="10,14 18,6 26,14" stroke="#0A84FF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </div>
+        <div>
+          <div class="turn-dist" id="turn-dist-upper">0.4 mi</div>
+          <div class="turn-street" id="turn-street-upper">Kildaire Farm Rd</div>
+        </div>
+      </div>
+
+      <!-- SPEED BADGE -->
+      <div class="speed-badge">
+        <div class="speed-current" id="speed-badge-upper">35</div>
+        <div class="speed-unit">mph</div>
+        <div class="speed-limit-badge">45</div>
+      </div>
+
+      <!-- GPS ACQUIRING -->
+      <div class="gps-acquiring hidden" id="gps-acquiring">
+        <div class="gps-acq-dot"></div>
+        <span>Acquiring GPS…</span>
+      </div>
+
+      <!-- NAV BOTTOM STRIP -->
+      <div class="nav-bottom-strip" id="nav-bottom-upper">
+        <div class="nav-strip-col">
+          <div class="nav-strip-val" id="eta-val">2:14 PM</div>
+          <div class="nav-strip-lbl">ETA</div>
+        </div>
+        <div class="nav-strip-col">
+          <div class="nav-strip-val" id="remain-val">4.7 mi</div>
+          <div class="nav-strip-lbl">Remaining</div>
+        </div>
+        <div class="nav-strip-col">
+          <div class="nav-strip-val" id="curr-street">US-1 South</div>
+          <div class="nav-strip-lbl">Current Street</div>
+        </div>
+      </div>
+
+      <!-- REVERSE OVERLAY -->
+      <div class="reverse-overlay" id="reverse-overlay-upper">
+        <div class="reverse-r">R</div>
+        <div class="reverse-label">REVERSE</div>
+      </div>
+
+      <!-- INCOMING CALL OVERLAY (UPPER) -->
+      <div class="call-overlay" id="call-overlay-upper">
+        <div class="call-ring">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.94a16 16 0 006.15 6.15l1.3-1.31a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+          </svg>
+        </div>
+        <div class="call-label-incoming">Incoming Call</div>
+        <div class="call-caller">Sarah Johnson</div>
+        <div class="call-number">+1 (919) 555-0147</div>
+        <div class="call-buttons">
+          <button class="call-btn call-btn-answer" onclick="answerCall()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.94a16 16 0 006.15 6.15l1.3-1.31a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+            </svg>
+            <span>Answer</span>
+          </button>
+          <button class="call-btn call-btn-decline" onclick="declineCall()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.94a16 16 0 006.15 6.15l1.3-1.31a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+            </svg>
+            <span>Decline</span>
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /screen-upper -->
+  </div>
+
+  <!-- ════════════════════════════════════
+       LOWER SCREEN — CONTROL HUB
+  ════════════════════════════════════ -->
+  <div class="screen-wrapper">
+    <div class="screen-label">Control Hub</div>
+    <div class="screen screen-lower" id="screen-lower" style="position:relative;">
+
+      <!-- TAB CONTENT -->
+      <div class="lower-content">
+
+        <!-- TAB 0: NAV COMPANION -->
+        <div class="tab-panel active" id="tab-nav">
+          <div class="nav-row-cards">
+            <div class="nav-stat-card">
+              <div class="nav-stat-lbl">ETA</div>
+              <div class="nav-stat-val" id="lwr-eta">2:14 PM</div>
+            </div>
+            <div class="nav-stat-card">
+              <div class="nav-stat-lbl">Remaining</div>
+              <div class="nav-stat-val" id="lwr-remain">4.7 mi</div>
+            </div>
+            <div class="nav-stat-card">
+              <div class="nav-stat-lbl">Current Street</div>
+              <div class="nav-stat-val" style="font-size:17px;" id="lwr-street">US-1 South</div>
+            </div>
+          </div>
+          <div class="next-maneuver-card">
+            <div class="turn-arrow-wrap" style="width:40px;height:40px;">
+              <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" id="arrow-svg-lower">
+                <line x1="18" y1="30" x2="18" y2="6" stroke="#0A84FF" stroke-width="3" stroke-linecap="round"/>
+                <polyline points="10,14 18,6 26,14" stroke="#0A84FF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              </svg>
+            </div>
+            <div>
+              <div style="font-size:13px;color:#8E8E93;margin-bottom:2px;">Next Maneuver</div>
+              <div style="font-size:18px;font-weight:700;" id="lwr-turn-dist">0.4 mi</div>
+              <div style="font-size:13px;color:#8E8E93;" id="lwr-turn-street">Turn right on Kildaire Farm Rd</div>
+            </div>
+          </div>
+          <div class="speed-compare">
+            <div>
+              <span class="speed-dot" id="speed-compare-dot" style="background:#30D158;"></span>
+              <span id="speed-compare-val" style="font-size:18px;font-weight:700;">35 / 45 mph</span>
+            </div>
+            <span style="font-size:12px;color:#8E8E93;">Speed / Limit</span>
+          </div>
+          <div>
+            <button class="pill-btn stop-nav-btn" onclick="app.sim.navActive = false; app.apply();">✕ Stop Navigation</button>
+          </div>
+        </div>
+
+        <!-- TAB 1: AUDIO -->
+        <div class="tab-panel" id="tab-audio">
+          <div class="source-pills" id="source-pills">
+            <button class="source-pill active" data-src="BT" onclick="app.setSource('BT')">BT</button>
+            <button class="source-pill" data-src="FM" onclick="app.setSource('FM')">FM</button>
+            <button class="source-pill" data-src="AM" onclick="app.setSource('AM')">AM</button>
+            <button class="source-pill" data-src="SXM" onclick="app.setSource('SXM')">SXM</button>
+            <button class="source-pill" data-src="AUX" onclick="app.setSource('AUX')">AUX</button>
+          </div>
+
+          <!-- BT View -->
+          <div class="audio-view active" id="audio-bt">
+            <div class="audio-main">
+              <div class="album-art">♪</div>
+              <div class="audio-info">
+                <div class="track-name">Blinding Lights</div>
+                <div class="artist-name">The Weeknd</div>
+                <div class="transport-controls">
+                  <button class="transport-btn" onclick="app.prevTrack()" title="Previous">⏮</button>
+                  <button class="transport-btn play" id="play-btn" onclick="app.togglePlay()">⏸</button>
+                  <button class="transport-btn" onclick="app.nextTrack()" title="Next">⏭</button>
+                </div>
+                <div class="bt-footer">
+                  <span style="color:#0A84FF;">●</span> Bluetooth
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- FM View -->
+          <div class="audio-view" id="audio-fm">
+            <div class="audio-main" style="justify-content:center;">
+              <div class="fm-view" style="width:100%;">
+                <div class="fm-label">FM</div>
+                <div class="fm-freq" id="fm-freq-display">97.5 MHz</div>
+                <div class="fm-station" id="fm-station-display">WRAL 97.5</div>
+                <div class="fm-seek">
+                  <button class="seek-btn" onclick="app.seekFM(-0.2)">◀◀ Seek</button>
+                  <button class="seek-btn" onclick="app.seekFM(0.2)">Seek ▶▶</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- AM View -->
+          <div class="audio-view" id="audio-am">
+            <div class="audio-main" style="justify-content:center;">
+              <div class="fm-view" style="width:100%;">
+                <div class="fm-label">AM</div>
+                <div class="fm-freq" id="am-freq-display">1010 kHz</div>
+                <div class="fm-station">WPTF</div>
+                <div class="fm-seek">
+                  <button class="seek-btn" onclick="app.seekAM(-10)">◀◀ Seek</button>
+                  <button class="seek-btn" onclick="app.seekAM(10)">Seek ▶▶</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SXM View -->
+          <div class="audio-view" id="audio-sxm">
+            <div class="audio-main" style="justify-content:center;">
+              <div class="fm-view" style="width:100%;">
+                <div class="fm-label">SIRIUS XM</div>
+                <div class="fm-freq">Ch. 20</div>
+                <div class="fm-station">The Highway</div>
+                <div class="fm-seek">
+                  <button class="seek-btn">◀◀ Prev</button>
+                  <button class="seek-btn">Next ▶▶</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- AUX View -->
+          <div class="audio-view" id="audio-aux">
+            <div class="audio-main" style="justify-content:center; flex-direction:column; align-items:center; gap:8px;">
+              <div style="font-size:48px;color:#3A3A3C;">🎵</div>
+              <div style="font-size:16px;color:#8E8E93;">AUX Input</div>
+              <div style="font-size:13px;color:#3A3A3C;">Connect a device to the aux jack</div>
+            </div>
+          </div>
+
+          <div class="volume-row">
+            <button class="mute-btn" id="mute-btn" onclick="app.toggleMute()" title="Mute">🔊</button>
+            <input type="range" class="vol-slider" id="vol-slider" min="0" max="100" value="65"
+              oninput="app.setVolume(this.value)">
+            <span class="vol-pct" id="vol-pct">65%</span>
+          </div>
+        </div>
+
+        <!-- TAB 2: PHONE -->
+        <div class="tab-panel" id="tab-phone" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;">
+
+          <!-- Idle state -->
+          <div class="phone-idle" id="phone-idle" style="display:flex;">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;">
+              <div class="phone-icon-circle">✆</div>
+              <div class="phone-status" id="phone-status-lbl">Phone Connected</div>
+              <div class="phone-helper" id="phone-helper-lbl">No active call</div>
+            </div>
+          </div>
+
+          <!-- Active call state -->
+          <div class="active-call-card" id="active-call-card" style="display:none;">
+            <div class="active-call-badge">Active Call</div>
+            <div class="active-caller">John Smith</div>
+            <div class="call-timer" id="call-timer-display">00:00</div>
+            <div class="call-action-row">
+              <button class="call-action-btn call-mute-btn" id="call-mute-btn" onclick="app.toggleCallMute()" title="Mute">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="1" y1="1" x2="23" y2="23" id="mute-slash" style="display:none;"></line>
+                  <path d="M12 1a3 3 0 0 1 3 3v8a3 3 0 0 1-6 0V4a3 3 0 0 1 3-3z"/>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                  <line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+              </button>
+              <button class="call-action-btn call-end-btn" onclick="app.endCall()" title="End Call">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45c.88.31 1.82.52 2.79.61a2 2 0 0 1 1.74 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.42 19.42 0 0 1 3.07 9.68 19.79 19.79 0 0 1 0 1.05a2 2 0 0 1 2-2.18h3a2 2 0 0 1 2 1.72c.09.97.3 1.91.61 2.79a2 2 0 0 1-.45 2.11L5.89 6.76"/>
+                </svg>
+              </button>
+              <button class="call-action-btn call-spkr-btn" id="call-spkr-btn" onclick="app.toggleSpeaker()" title="Speaker">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                </svg>
+              </button>
+            </div>
+            <button class="keypad-toggle" id="keypad-toggle-btn" onclick="app.toggleKeypad()">▼ Keypad</button>
+            <div class="dtmf-grid hidden" id="dtmf-grid">
+              <button class="dtmf-key" onclick="app.dtmfPress('1')">1</button>
+              <button class="dtmf-key" onclick="app.dtmfPress('2')">2</button>
+              <button class="dtmf-key" onclick="app.dtmfPress('3')">3</button>
+              <button class="dtmf-key" onclick="app.dtmfPress('4')">4</button>
+              <button class="dtmf-key" onclick="app.dtmfPress('5')">5</button>
+              <button class="dtmf-key" onclick="app.dtmfPress('6')">6</button>
+              <button class="dtmf-key" onclick="app.dtmfPress('7')">7</button>
+              <button class="dtmf-key" onclick="app.dtmfPress('8')">8</button>
+              <button class="dtmf-key" onclick="app.dtmfPress('9')">9</button>
+              <button class="dtmf-key" onclick="app.dtmfPress('*')">*</button>
+              <button class="dtmf-key" onclick="app.dtmfPress('0')">0</button>
+              <button class="dtmf-key" onclick="app.dtmfPress('#')">#</button>
+            </div>
+          </div>
+
+          <!-- Incoming call overlay (LOWER) -->
+          <div class="call-overlay" id="call-overlay-lower">
+            <div class="call-ring">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.94a16 16 0 006.15 6.15l1.3-1.31a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+              </svg>
+            </div>
+            <div class="call-label-incoming">Incoming Call</div>
+            <div class="call-caller">Sarah Johnson</div>
+            <div class="call-number">+1 (919) 555-0147</div>
+            <div class="call-buttons">
+              <button class="call-btn call-btn-answer" onclick="answerCall()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.94a16 16 0 006.15 6.15l1.3-1.31a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+                </svg>
+                <span>Answer</span>
+              </button>
+              <button class="call-btn call-btn-decline" onclick="declineCall()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.94a16 16 0 006.15 6.15l1.3-1.31a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+                </svg>
+                <span>Decline</span>
+              </button>
+            </div>
+          </div>
+
+        </div><!-- /tab-phone -->
+
+        <!-- TAB 3: CLIMATE -->
+        <div class="tab-panel" id="tab-climate">
+
+          <!-- Driver Zone -->
+          <div class="climate-zone" id="driver-zone">
+            <div class="zone-label">Driver</div>
+            <button class="temp-btn" onclick="app.adjustTemp('driver', 1)">▲</button>
+            <div class="temp-display" id="driver-temp">72°</div>
+            <button class="temp-btn" onclick="app.adjustTemp('driver', -1)">▼</button>
+            <div style="font-size:11px;color:#8E8E93;margin-top:4px;">Seat Heat</div>
+            <div class="seat-heat-row" id="driver-seat">
+              <div class="seat-dot" data-zone="driver" data-idx="0" onclick="app.cycleSeatHeat('driver')"></div>
+              <div class="seat-dot" data-zone="driver" data-idx="1" onclick="app.cycleSeatHeat('driver')"></div>
+              <div class="seat-dot" data-zone="driver" data-idx="2" onclick="app.cycleSeatHeat('driver')"></div>
+            </div>
+          </div>
+
+          <!-- Center Controls -->
+          <div class="climate-center">
+            <div class="mode-btns">
+              <button class="mode-btn active" data-mode="face" onclick="app.setMode('face')">
+                <span>☁</span><span style="font-size:9px;">Face</span>
+              </button>
+              <button class="mode-btn" data-mode="feet" onclick="app.setMode('feet')">
+                <span>↓</span><span style="font-size:9px;">Feet</span>
+              </button>
+              <button class="mode-btn" data-mode="blend" onclick="app.setMode('blend')">
+                <span>◈</span><span style="font-size:9px;">Blend</span>
+              </button>
+              <button class="mode-btn" data-mode="defrost" onclick="app.setMode('defrost')">
+                <span>❄</span><span style="font-size:9px;">Defrost</span>
+              </button>
+            </div>
+
+            <div>
+              <div style="font-size:11px;color:#8E8E93;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">Fan Speed</div>
+              <div class="fan-row">
+                <button class="fan-off-btn" id="fan-off" onclick="app.setFan(0)">Off</button>
+                <div class="fan-bar active" id="fan1" style="height:14px;" onclick="app.setFan(1)"></div>
+                <div class="fan-bar active" id="fan2" style="height:18px;" onclick="app.setFan(2)"></div>
+                <div class="fan-bar active" id="fan3" style="height:22px;" onclick="app.setFan(3)"></div>
+                <div class="fan-bar" id="fan4" style="height:26px;" onclick="app.setFan(4)"></div>
+                <div class="fan-bar" id="fan5" style="height:30px;" onclick="app.setFan(5)"></div>
+              </div>
+            </div>
+
+            <div class="toggle-row">
+              <button class="toggle-chip active" id="ac-btn" onclick="app.toggleAC()">❄ A/C</button>
+              <button class="toggle-chip" id="recirc-btn" onclick="app.toggleRecirc()">↻ Recirc</button>
+            </div>
+
+            <div class="outside-temp">68°F outside</div>
+          </div>
+
+          <!-- Passenger Zone -->
+          <div class="climate-zone" id="pass-zone">
+            <div class="zone-label">Passenger</div>
+            <button class="temp-btn" onclick="app.adjustTemp('pass', 1)">▲</button>
+            <div class="temp-display" id="pass-temp">70°</div>
+            <button class="temp-btn" onclick="app.adjustTemp('pass', -1)">▼</button>
+            <div style="font-size:11px;color:#8E8E93;margin-top:4px;">Seat Heat</div>
+            <div class="seat-heat-row" id="pass-seat">
+              <div class="seat-dot" data-zone="pass" data-idx="0" onclick="app.cycleSeatHeat('pass')"></div>
+              <div class="seat-dot" data-zone="pass" data-idx="1" onclick="app.cycleSeatHeat('pass')"></div>
+              <div class="seat-dot" data-zone="pass" data-idx="2" onclick="app.cycleSeatHeat('pass')"></div>
+            </div>
+          </div>
+
+        </div><!-- /tab-climate -->
+
+        <!-- TAB 4: VEHICLE -->
+        <div class="tab-panel" id="tab-vehicle">
+
+          <div class="vehicle-top">
+
+            <!-- Door Diagram -->
+            <div class="door-diagram">
+              <div class="door-diagram-title">Door Status</div>
+              <div class="car-outline">
+                <div class="car-body"></div>
+                <div class="door-rect door-fl" id="door-fl" onclick="app.toggleDoor('fl')">FL</div>
+                <div class="door-rect door-fr" id="door-fr" onclick="app.toggleDoor('fr')">FR</div>
+                <div class="door-rect door-rl" id="door-rl" onclick="app.toggleDoor('rl')">RL</div>
+                <div class="door-rect door-rr" id="door-rr" onclick="app.toggleDoor('rr')">RR</div>
+                <div class="trunk-rect" id="door-trunk" onclick="app.toggleDoor('trunk')">TRUNK</div>
+              </div>
+            </div>
+
+            <!-- Vehicle Stats -->
+            <div class="vehicle-stats">
+              <div class="fuel-card">
+                <div style="font-size:11px;color:#8E8E93;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Fuel Level</div>
+                <div class="fuel-arc-wrap">
+                  <canvas id="fuel-canvas" width="80" height="80"></canvas>
+                  <div>
+                    <div style="font-size:24px;font-weight:700;" id="fuel-pct-display">62%</div>
+                    <div style="font-size:12px;color:#8E8E93;">~220 mi range</div>
+                  </div>
+                </div>
+                <div class="fuel-slider-row">
+                  <span>E</span>
+                  <input type="range" class="fuel-slider" id="fuel-slider" min="0" max="100" value="62"
+                    oninput="app.setFuel(this.value)">
+                  <span>F</span>
+                </div>
+              </div>
+
+              <div class="stat-row">
+                <div class="stat-chip">
+                  <div class="stat-chip-lbl">Coolant Temp</div>
+                  <div class="stat-chip-val">205°F</div>
+                  <div class="coolant-bar-wrap"><div class="coolant-bar-fill"></div></div>
+                </div>
+                <div class="stat-chip">
+                  <div class="stat-chip-lbl">Battery</div>
+                  <div class="stat-chip-val">12.6V</div>
+                </div>
+                <div class="stat-chip">
+                  <div class="stat-chip-lbl">RPM</div>
+                  <div class="stat-chip-val" id="rpm-display">1,200 RPM</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Vehicle Toggles -->
+          <div class="vehicle-toggles">
+            <button class="vtoggle-btn" id="cruise-btn" onclick="app.toggleVehicle('cruise')">
+              ◈ Cruise Control
+            </button>
+            <button class="vtoggle-btn" id="parkbrake-btn" onclick="app.toggleVehicle('parkbrake')">
+              ⚑ Parking Brake
+            </button>
+            <button class="vtoggle-btn" id="reardefrost-btn" onclick="app.toggleVehicle('reardefrost')">
+              ❄ Rear Defrost
+            </button>
+            <button class="lock-btn lock-btn-lock" onclick="app.lockDoors(true)">
+              <span class="tooltip">⚠ Q50_LIKELY — Confirm UDS command</span>
+              🔒 Lock All
+            </button>
+            <button class="lock-btn lock-btn-unlock" onclick="app.lockDoors(false)">
+              <span class="tooltip">⚠ Q50_LIKELY — Confirm UDS command</span>
+              🔓 Unlock All
+            </button>
+          </div>
+
+        </div><!-- /tab-vehicle -->
+
+      </div><!-- /lower-content -->
+
+      <!-- TAB BAR -->
+      <div class="tab-bar">
+        <button class="tab-item active" data-tab="0" onclick="app.switchTab(0)">
+          <span class="tab-icon">⬆</span>
+          <span class="tab-label">Nav</span>
+        </button>
+        <button class="tab-item" data-tab="1" onclick="app.switchTab(1)">
+          <span class="tab-icon">♪</span>
+          <span class="tab-label">Audio</span>
+        </button>
+        <button class="tab-item" data-tab="2" onclick="app.switchTab(2)">
+          <span class="tab-icon">✆</span>
+          <span class="tab-label">Phone</span>
+        </button>
+        <button class="tab-item" data-tab="3" onclick="app.switchTab(3)">
+          <span class="tab-icon">❄</span>
+          <span class="tab-label">Climate</span>
+        </button>
+        <button class="tab-item" data-tab="4" onclick="app.switchTab(4)">
+          <span class="tab-icon">◈</span>
+          <span class="tab-label">Vehicle</span>
+        </button>
+      </div>
+
+    </div><!-- /screen-lower -->
+  </div>
+
+</div><!-- /dash-frame -->
+
+<!-- ── SIMULATION PANEL ── -->
+<div class="sim-panel" style="margin-top:28px;">
+  <div class="sim-header" id="sim-header" onclick="toggleSimPanel()">
+    <span class="sim-title">🎛 Simulation Controls</span>
+    <span class="sim-chevron" id="sim-chevron">▼</span>
+  </div>
+  <div class="sim-body" id="sim-body">
+
+    <div class="sim-control">
+      <div class="sim-lbl">Speed (mph)</div>
+      <input type="range" class="sim-slider" id="sim-speed" min="0" max="120" value="35"
+        oninput="app.sim.speed=parseInt(this.value); document.getElementById('sim-speed-val').textContent=this.value+' mph'; app.apply();">
+      <span id="sim-speed-val" style="font-size:12px;color:#8E8E93;">35 mph</span>
+    </div>
+
+    <div class="sim-control">
+      <label class="sim-check-row">
+        <input type="checkbox" class="sim-check" id="sim-gps" checked onchange="app.sim.gpsLocked=this.checked; app.apply();">
+        GPS Locked
+      </label>
+    </div>
+
+    <div class="sim-control">
+      <label class="sim-check-row">
+        <input type="checkbox" class="sim-check" id="sim-nav" onchange="app.sim.navActive=this.checked; app.apply();">
+        Nav Active
+      </label>
+    </div>
+
+    <div class="sim-control">
+      <label class="sim-check-row">
+        <input type="checkbox" class="sim-check" id="sim-approach" onchange="app.sim.approachingTurn=this.checked; app.apply();">
+        Approaching Turn
+      </label>
+    </div>
+
+    <div class="sim-control">
+      <label class="sim-check-row">
+        <input type="checkbox" class="sim-check" id="sim-call" onchange="app.sim.incomingCall=this.checked; app.apply();">
+        Incoming Call
+      </label>
+    </div>
+
+    <div class="sim-control">
+      <label class="sim-check-row">
+        <input type="checkbox" class="sim-check" id="sim-bt" checked onchange="app.sim.btConnected=this.checked; app.apply();">
+        BT Connected
+      </label>
+    </div>
+
+    <div class="sim-control">
+      <label class="sim-check-row">
+        <input type="checkbox" class="sim-check" id="sim-reverse" onchange="app.sim.reverse=this.checked; app.apply();">
+        Reverse
+      </label>
+    </div>
+
+    <div class="sim-control">
+      <label class="sim-check-row">
+        <input type="checkbox" class="sim-check" id="sim-reroute" onchange="app.sim.rerouting=this.checked; app.apply();">
+        Rerouting
+      </label>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+//  APP STATE
+// ════════════════════════════════════════════
+const app = {
+  sim: {
+    speed: 35,
+    gpsLocked: true,
+    navActive: false,
+    approachingTurn: false,
+    incomingCall: false,
+    btConnected: true,
+    reverse: false,
+    rerouting: false,
+  },
+
+  ui: {
+    activeTab: 0,
+    audioSource: 'BT',
+    isPlaying: true,
+    volume: 65,
+    isMuted: false,
+    fmFreq: 97.5,
+    amFreq: 1010,
+    driverTemp: 72,
+    passTemp: 70,
+    driverSeatHeat: 0,
+    passSeatHeat: 0,
+    fanSpeed: 3,
+    acOn: true,
+    recircOn: false,
+    climateMode: 'face',
+    fuel: 62,
+    doors: { fl: false, fr: false, rl: false, rr: false, trunk: false },
+    vehicleToggles: { cruise: false, parkbrake: false, reardefrost: false },
+    callMuted: false,
+    speakerOn: false,
+    keypadOpen: false,
+    callStartTime: null,
+    callTimerInterval: null,
+  },
+
+  // ─ APPLY STATE ─
+  apply() {
+    this._applyNav();
+    this._applyGPS();
+    this._applySpeed();
+    this._applyCall();
+    this._applyReverse();
+    this._applyRerouting();
+    this._applyNavTab();
+    this._applyPhone();
+    this._applyBT();
+  },
+
+  _applyNav() {
+    const on = this.sim.navActive;
+    document.getElementById('turn-card-upper').classList.toggle('visible', on);
+    document.getElementById('nav-bottom-upper').classList.toggle('visible', on);
+
+    const approach = on && this.sim.approachingTurn;
+    document.getElementById('turn-card-upper').classList.toggle('approaching', approach);
+
+    // Arrow color
+    const color = approach ? '#FF9F0A' : '#0A84FF';
+    this._setArrowColor('arrow-svg-upper', color);
+    this._setArrowColor('arrow-svg-lower', color);
+  },
+
+  _setArrowColor(svgId, color) {
+    const svg = document.getElementById(svgId);
+    if (!svg) return;
+    svg.querySelectorAll('line, polyline, path').forEach(el => {
+      el.setAttribute('stroke', color);
+    });
+  },
+
+  _applyGPS() {
+    const locked = this.sim.gpsLocked;
+    document.getElementById('gps-dot-upper').classList.toggle('acquiring', !locked);
+    document.getElementById('gps-acquiring').classList.toggle('hidden', locked);
+  },
+
+  _applySpeed() {
+    const s = this.sim.speed;
+    document.getElementById('status-speed').textContent = s + ' mph';
+    document.getElementById('speed-badge-upper').textContent = s;
+    const dot = document.getElementById('speed-compare-dot');
+    const val = document.getElementById('speed-compare-val');
+    val.textContent = s + ' / 45 mph';
+    dot.style.background = s > 45 ? '#FF453A' : s > 40 ? '#FF9F0A' : '#30D158';
+  },
+
+  _applyCall() {
+    const incoming = this.sim.incomingCall;
+    document.getElementById('call-overlay-upper').classList.toggle('visible', incoming);
+    document.getElementById('call-overlay-lower').classList.toggle('visible', incoming);
+  },
+
+  _applyReverse() {
+    const rev = this.sim.reverse;
+    document.getElementById('reverse-overlay-upper').classList.toggle('visible', rev);
+  },
+
+  _applyRerouting() {
+    document.getElementById('rerouting-banner').classList.toggle('visible', this.sim.rerouting);
+  },
+
+  _applyNavTab() {
+    const on = this.sim.navActive;
+    const stopBtn = document.querySelector('.stop-nav-btn');
+    if (stopBtn) stopBtn.style.display = on ? '' : 'none';
+  },
+
+  _applyPhone() {
+    const bt = this.sim.btConnected;
+    document.getElementById('phone-status-lbl').textContent = bt ? 'Phone Connected' : 'No Phone Connected';
+    document.getElementById('phone-helper-lbl').textContent = bt ? 'No active call' : 'Connect via Bluetooth';
+  },
+
+  _applyBT() {
+    const bt = this.sim.btConnected;
+    // Dim BT source pill if disconnected
+    const btPill = document.querySelector('[data-src="BT"]');
+    if (btPill) btPill.style.opacity = bt ? '1' : '0.4';
+  },
+
+  // ─ TABS ─
+  switchTab(idx) {
+    const tabs = ['tab-nav','tab-audio','tab-phone','tab-climate','tab-vehicle'];
+    tabs.forEach((id, i) => {
+      document.getElementById(id).classList.toggle('active', i === idx);
+    });
+    document.querySelectorAll('.tab-item').forEach((btn, i) => {
+      btn.classList.toggle('active', i === idx);
+    });
+    this.ui.activeTab = idx;
+  },
+
+  // ─ AUDIO ─
+  setSource(src) {
+    this.ui.audioSource = src;
+    document.querySelectorAll('.source-pill').forEach(p => {
+      p.classList.toggle('active', p.dataset.src === src);
+    });
+    const views = ['BT','FM','AM','SXM','AUX'];
+    views.forEach(v => {
+      const el = document.getElementById('audio-' + v.toLowerCase());
+      if (el) el.classList.toggle('active', v === src);
+    });
+  },
+
+  togglePlay() {
+    this.ui.isPlaying = !this.ui.isPlaying;
+    const btn = document.getElementById('play-btn');
+    btn.textContent = this.ui.isPlaying ? '⏸' : '▶';
+    btn.classList.toggle('play', this.ui.isPlaying);
+  },
+
+  prevTrack() {
+    const tracks = [
+      ['Blinding Lights','The Weeknd'],
+      ['Levitating','Dua Lipa'],
+      ['Stay','The Kid LAROI'],
+    ];
+    this._currentTrack = ((this._currentTrack || 0) - 1 + tracks.length) % tracks.length;
+    this._updateTrack(tracks[this._currentTrack]);
+  },
+
+  nextTrack() {
+    const tracks = [
+      ['Blinding Lights','The Weeknd'],
+      ['Levitating','Dua Lipa'],
+      ['Stay','The Kid LAROI'],
+    ];
+    this._currentTrack = ((this._currentTrack || 0) + 1) % tracks.length;
+    this._updateTrack(tracks[this._currentTrack]);
+  },
+
+  _updateTrack([name, artist]) {
+    document.querySelector('.track-name').textContent = name;
+    document.querySelector('.artist-name').textContent = artist;
+  },
+
+  toggleMute() {
+    this.ui.isMuted = !this.ui.isMuted;
+    const btn = document.getElementById('mute-btn');
+    btn.classList.toggle('muted', this.ui.isMuted);
+    btn.textContent = this.ui.isMuted ? '🔇' : '🔊';
+  },
+
+  setVolume(val) {
+    this.ui.volume = parseInt(val);
+    document.getElementById('vol-pct').textContent = val + '%';
+    // Update slider fill
+    const slider = document.getElementById('vol-slider');
+    const pct = val;
+    slider.style.background = `linear-gradient(to right, #0A84FF ${pct}%, #3A3A3C ${pct}%)`;
+  },
+
+  seekFM(delta) {
+    this.ui.fmFreq = Math.round((this.ui.fmFreq + delta) * 10) / 10;
+    if (this.ui.fmFreq < 87.5) this.ui.fmFreq = 107.9;
+    if (this.ui.fmFreq > 107.9) this.ui.fmFreq = 87.5;
+    document.getElementById('fm-freq-display').textContent = this.ui.fmFreq.toFixed(1) + ' MHz';
+    document.getElementById('fm-station-display').textContent = 'Scanning…';
+    setTimeout(() => {
+      const stations = {97.5:'WRAL 97.5',99.9:'Mix 99.9',101.5:'Q101',103.5:'Power 103'};
+      const closest = Object.keys(stations).reduce((a,b) =>
+        Math.abs(b - this.ui.fmFreq) < Math.abs(a - this.ui.fmFreq) ? b : a
+      );
+      document.getElementById('fm-station-display').textContent =
+        Math.abs(closest - this.ui.fmFreq) < 0.5 ? stations[closest] : 'No Signal';
+    }, 600);
+  },
+
+  seekAM(delta) {
+    this.ui.amFreq = this.ui.amFreq + delta;
+    if (this.ui.amFreq < 540) this.ui.amFreq = 1700;
+    if (this.ui.amFreq > 1700) this.ui.amFreq = 540;
+    document.getElementById('am-freq-display').textContent = this.ui.amFreq + ' kHz';
+  },
+
+  // ─ PHONE ─
+  startActiveCall() {
+    document.getElementById('phone-idle').style.display = 'none';
+    document.getElementById('active-call-card').style.display = 'flex';
+    this.ui.callStartTime = Date.now();
+    this.ui.callTimerInterval = setInterval(() => this._updateCallTimer(), 1000);
+  },
+
+  endCall() {
+    document.getElementById('phone-idle').style.display = 'flex';
+    document.getElementById('active-call-card').style.display = 'none';
+    if (this.ui.callTimerInterval) clearInterval(this.ui.callTimerInterval);
+    this.ui.callTimerInterval = null;
+    this.ui.keypadOpen = false;
+    document.getElementById('dtmf-grid').className = 'dtmf-grid hidden';
+    document.getElementById('keypad-toggle-btn').textContent = '▼ Keypad';
+  },
+
+  _updateCallTimer() {
+    const elapsed = Math.floor((Date.now() - this.ui.callStartTime) / 1000);
+    const m = Math.floor(elapsed / 60).toString().padStart(2,'0');
+    const s = (elapsed % 60).toString().padStart(2,'0');
+    document.getElementById('call-timer-display').textContent = m + ':' + s;
+  },
+
+  toggleCallMute() {
+    this.ui.callMuted = !this.ui.callMuted;
+    const btn = document.getElementById('call-mute-btn');
+    btn.classList.toggle('active', this.ui.callMuted);
+  },
+
+  toggleSpeaker() {
+    this.ui.speakerOn = !this.ui.speakerOn;
+    document.getElementById('call-spkr-btn').classList.toggle('active', this.ui.speakerOn);
+  },
+
+  toggleKeypad() {
+    this.ui.keypadOpen = !this.ui.keypadOpen;
+    const grid = document.getElementById('dtmf-grid');
+    grid.className = 'dtmf-grid ' + (this.ui.keypadOpen ? 'visible' : 'hidden');
+    document.getElementById('keypad-toggle-btn').textContent = this.ui.keypadOpen ? '▲ Keypad' : '▼ Keypad';
+  },
+
+  dtmfPress(key) {
+    // Visual flash only
+    const keys = document.querySelectorAll('.dtmf-key');
+    keys.forEach(k => {
+      if (k.textContent.trim() === key) {
+        k.style.background = '#0A84FF';
+        setTimeout(() => k.style.background = '', 200);
+      }
+    });
+  },
+
+  // ─ CLIMATE ─
+  adjustTemp(zone, delta) {
+    const key = zone === 'driver' ? 'driverTemp' : 'passTemp';
+    const elId = zone === 'driver' ? 'driver-temp' : 'pass-temp';
+    this.ui[key] = Math.max(60, Math.min(85, this.ui[key] + delta));
+    document.getElementById(elId).textContent = this.ui[key] + '°';
+  },
+
+  cycleSeatHeat(zone) {
+    const key = zone === 'driver' ? 'driverSeatHeat' : 'passSeatHeat';
+    this.ui[key] = (this.ui[key] + 1) % 4;
+    const level = this.ui[key];
+    const dots = document.querySelectorAll(`[data-zone="${zone}"]`);
+    dots.forEach((dot, i) => {
+      dot.classList.toggle('active', i < level);
+    });
+  },
+
+  setMode(mode) {
+    this.ui.climateMode = mode;
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
+  },
+
+  setFan(level) {
+    this.ui.fanSpeed = level;
+    const offBtn = document.getElementById('fan-off');
+    offBtn.classList.toggle('active', level === 0);
+    [1,2,3,4,5].forEach(i => {
+      const bar = document.getElementById('fan' + i);
+      if (bar) bar.classList.toggle('active', i <= level);
+    });
+  },
+
+  toggleAC() {
+    this.ui.acOn = !this.ui.acOn;
+    document.getElementById('ac-btn').classList.toggle('active', this.ui.acOn);
+  },
+
+  toggleRecirc() {
+    this.ui.recircOn = !this.ui.recircOn;
+    document.getElementById('recirc-btn').classList.toggle('active', this.ui.recircOn);
+  },
+
+  // ─ VEHICLE ─
+  toggleDoor(door) {
+    this.ui.doors[door] = !this.ui.doors[door];
+    const el = document.getElementById('door-' + door);
+    if (el) el.classList.toggle('open', this.ui.doors[door]);
+  },
+
+  setFuel(val) {
+    this.ui.fuel = parseInt(val);
+    document.getElementById('fuel-pct-display').textContent = val + '%';
+    const range = Math.round(val * 3.5);
+    const fuelEl = document.getElementById('fuel-pct-display').parentElement;
+    const rangeEl = fuelEl.nextElementSibling;
+    if (rangeEl) rangeEl.textContent = '~' + range + ' mi range';
+    this._drawFuelArc(val / 100);
+  },
+
+  _drawFuelArc(pct) {
+    const canvas = document.getElementById('fuel-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const cx = 40, cy = 40, r = 30;
+    ctx.clearRect(0,0,80,80);
+
+    // Background arc
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, Math.PI * 0.75, Math.PI * 2.25);
+    ctx.strokeStyle = '#3A3A3C';
+    ctx.lineWidth = 7;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // Fill arc
+    const color = pct > 0.5 ? '#30D158' : pct > 0.25 ? '#FF9F0A' : '#FF453A';
+    const endAngle = Math.PI * 0.75 + (Math.PI * 1.5 * pct);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, Math.PI * 0.75, endAngle);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 7;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // Center text
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 13px Roboto, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(Math.round(pct*100)+'%', cx, cy);
+  },
+
+  toggleVehicle(key) {
+    this.ui.vehicleToggles[key] = !this.ui.vehicleToggles[key];
+    const el = document.getElementById(key + '-btn');
+    if (!el) return;
+    if (key === 'reardefrost') {
+      el.classList.toggle('active-amber', this.ui.vehicleToggles[key]);
+    } else {
+      el.classList.toggle('active', this.ui.vehicleToggles[key]);
+    }
+  },
+
+  lockDoors(lock) {
+    ['fl','fr','rl','rr'].forEach(d => {
+      this.ui.doors[d] = false;
+      const el = document.getElementById('door-' + d);
+      if (el) el.classList.remove('open');
+    });
+  },
+};
+
+// ─ Global call helpers ─
+function answerCall() {
+  app.sim.incomingCall = false;
+  document.getElementById('sim-call').checked = false;
+  app.apply();
+  app.switchTab(2);
+  app.startActiveCall();
+}
+
+function declineCall() {
+  app.sim.incomingCall = false;
+  document.getElementById('sim-call').checked = false;
+  app.apply();
+}
+
+// ─ Simulation panel toggle ─
+function toggleSimPanel() {
+  const header = document.getElementById('sim-header');
+  const body = document.getElementById('sim-body');
+  const chevron = document.getElementById('sim-chevron');
+  const isOpen = body.classList.contains('open');
+  header.classList.toggle('open', !isOpen);
+  body.classList.toggle('open', !isOpen);
+}
+
+// ─ Clock ─
+function updateClock() {
+  const now = new Date();
+  let h = now.getHours();
+  const m = now.getMinutes().toString().padStart(2,'0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  document.getElementById('status-time').textContent = h + ':' + m + ' ' + ampm;
+}
+
+setInterval(updateClock, 1000);
+updateClock();
+
+// ─ RPM Simulation ─
+function updateRPM() {
+  const base = 1200;
+  const jitter = Math.round((Math.random() - 0.5) * 60);
+  const rpm = base + jitter;
+  const el = document.getElementById('rpm-display');
+  if (el) el.textContent = rpm.toLocaleString() + ' RPM';
+}
+setInterval(updateRPM, 2200);
+
+// ─ Init volume slider fill ─
+app.setVolume(65);
+
+// ─ Draw initial fuel arc ─
+window.addEventListener('load', () => {
+  app._drawFuelArc(0.62);
+  // Hide stop nav btn initially
+  const stopBtn = document.querySelector('.stop-nav-btn');
+  if (stopBtn) stopBtn.style.display = 'none';
+});
+
+// ─ Initial state apply ─
+app.apply();
+</script>
+
+</body>
+</html>
