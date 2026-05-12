@@ -1,6 +1,5 @@
 // ClimateView — Full HVAC control for lower screen
-// Apple CarPlay aesthetic redesign
-// All VehicleService bindings preserved exactly.
+// Redesigned: top action row + dual-zone cards + extras row + outside temp footer
 import QtQuick 6.6
 import QtQuick.Controls 6.6
 import "../components"
@@ -11,19 +10,153 @@ Item {
 
     Rectangle { anchors.fill: parent; color: "#000000" }
 
-    // ── Two zone cards side-by-side ─────────────────────────────────────────
+    // ── Top action row — AUTO / MAX A/C / MAX DEF / SYNC ─────────────────────
+    Row {
+        id: actionRow
+        anchors {
+            top: parent.top
+            left: parent.left
+            right: parent.right
+            topMargin: 8
+            leftMargin: 8
+            rightMargin: 8
+        }
+        height: 44
+        spacing: 8
+
+        // Distribute evenly: each button = (width - 3*spacing) / 4
+        property real btnW: (parent.width - 3 * spacing - anchors.leftMargin - anchors.rightMargin) / 4
+
+        // AUTO
+        Rectangle {
+            width: actionRow.btnW; height: 44; radius: 22
+            color: VehicleService.autoClimateOn ? "#0A84FF" : "#1C1C1E"
+            border.color: "#0A84FF"; border.width: 1.5
+
+            Behavior on color { ColorAnimation { duration: 150 } }
+
+            Text {
+                anchors.centerIn: parent
+                text: "AUTO"
+                color: VehicleService.autoClimateOn ? "#FFFFFF" : "#0A84FF"
+                font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+            }
+            MouseArea {
+                anchors.fill: parent
+                onClicked: VehicleService.setAutoClimate(!VehicleService.autoClimateOn)
+            }
+        }
+
+        // MAX A/C — flash only, no persistent toggle
+        Rectangle {
+            id: maxAcBtn
+            width: actionRow.btnW; height: 44; radius: 22
+            color: maxAcFlash ? "#0A84FF" : "#1C1C1E"
+            border.color: "#0A84FF"; border.width: 1.5
+
+            property bool maxAcFlash: false
+
+            Behavior on color { ColorAnimation { duration: 150 } }
+
+            Text {
+                anchors.centerIn: parent
+                text: "MAX A/C"
+                color: maxAcBtn.maxAcFlash ? "#FFFFFF" : "#0A84FF"
+                font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+            }
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    VehicleService.setMaxAC()
+                    maxAcBtn.maxAcFlash = true
+                    maxAcFlashTimer.restart()
+                }
+            }
+            Timer {
+                id: maxAcFlashTimer
+                interval: 300
+                onTriggered: maxAcBtn.maxAcFlash = false
+            }
+        }
+
+        // MAX DEF — flash only, no persistent toggle
+        Rectangle {
+            id: maxDefBtn
+            width: actionRow.btnW; height: 44; radius: 22
+            color: maxDefFlash ? "#0A84FF" : "#1C1C1E"
+            border.color: "#0A84FF"; border.width: 1.5
+
+            property bool maxDefFlash: false
+
+            Behavior on color { ColorAnimation { duration: 150 } }
+
+            Text {
+                anchors.centerIn: parent
+                text: "MAX DEF"
+                color: maxDefBtn.maxDefFlash ? "#FFFFFF" : "#0A84FF"
+                font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+            }
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    VehicleService.setMaxDefrost()
+                    maxDefBtn.maxDefFlash = true
+                    maxDefFlashTimer.restart()
+                }
+            }
+            Timer {
+                id: maxDefFlashTimer
+                interval: 300
+                onTriggered: maxDefBtn.maxDefFlash = false
+            }
+        }
+
+        // SYNC
+        Rectangle {
+            id: syncBtn
+            width: actionRow.btnW; height: 44; radius: 22
+            color: syncFlash ? "#0A84FF" : "#1C1C1E"
+            border.color: "#0A84FF"; border.width: 1.5
+
+            property bool syncFlash: false
+
+            Behavior on color { ColorAnimation { duration: 150 } }
+
+            Text {
+                anchors.centerIn: parent
+                text: "SYNC"
+                color: syncBtn.syncFlash ? "#FFFFFF" : "#0A84FF"
+                font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+            }
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    VehicleService.syncZones()
+                    syncBtn.syncFlash = true
+                    syncFlashTimer.restart()
+                }
+            }
+            Timer {
+                id: syncFlashTimer
+                interval: 300
+                onTriggered: syncBtn.syncFlash = false
+            }
+        }
+    }
+
+    // ── Main zone row ─────────────────────────────────────────────────────────
     Row {
         id: zoneRow
         anchors {
-            top: parent.top
+            top: actionRow.bottom
             horizontalCenter: parent.horizontalCenter
-            topMargin: 16
+            topMargin: 8
         }
         spacing: 12
 
-        // ── Driver zone card ─────────────────────────────────────────────────
+        // ── Driver zone card ──────────────────────────────────────────────────
         Rectangle {
-            width: 180; height: 210; radius: 16
+            width: 180; height: 218; radius: 16
             color: "#1C1C1E"
             border { color: "rgba(255,255,255,0.15)"; width: 1 }
 
@@ -38,23 +171,18 @@ Item {
                     font { family: "Roboto"; pixelSize: 11; capitalization: Font.AllUppercase; letterSpacing: 1.5 }
                 }
 
-                // Up button
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
                     width: 56; height: 56; radius: 28
                     color: drvUp.pressed ? "#2C2C2E" : "transparent"
                     border { color: "#0A84FF"; width: 1.5 }
-
                     Text { anchors.centerIn: parent; text: "▲"; color: "#0A84FF"; font { pixelSize: 20 } }
-
                     MouseArea {
                         id: drvUp; anchors.fill: parent
-                        onClicked: VehicleService.setDriverTemp(
-                            Math.min(85, VehicleService.driverTemp + 1))
+                        onClicked: VehicleService.setDriverTemp(Math.min(85, VehicleService.driverTemp + 1))
                     }
                 }
 
-                // Temperature
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: VehicleService.driverTemp.toFixed(0) + "°"
@@ -62,40 +190,30 @@ Item {
                     font { family: "Roboto"; pixelSize: 36; weight: Font.Bold }
                 }
 
-                // Down button
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
                     width: 56; height: 56; radius: 28
                     color: drvDn.pressed ? "#2C2C2E" : "transparent"
                     border { color: "#0A84FF"; width: 1.5 }
-
                     Text { anchors.centerIn: parent; text: "▼"; color: "#0A84FF"; font { pixelSize: 20 } }
-
                     MouseArea {
                         id: drvDn; anchors.fill: parent
-                        onClicked: VehicleService.setDriverTemp(
-                            Math.max(60, VehicleService.driverTemp - 1))
+                        onClicked: VehicleService.setDriverTemp(Math.max(60, VehicleService.driverTemp - 1))
                     }
                 }
 
-                // Seat heat dots (3 levels: ●●○ style)
+                // Seat heat dots
                 Row {
                     anchors.horizontalCenter: parent.horizontalCenter
                     spacing: 6
-
                     Repeater {
                         model: 3
                         delegate: Rectangle {
                             width: 26; height: 26; radius: 13
-                            color: VehicleService.driverSeat > index
-                                   ? "rgba(255,159,10,0.25)" : "#2C2C2E"
-                            border {
-                                color: VehicleService.driverSeat > index ? "#FF9F0A" : "#3A3A3C"
-                                width: 1.5
-                            }
+                            color: VehicleService.driverSeat > index ? "rgba(255,159,10,0.25)" : "#2C2C2E"
+                            border { color: VehicleService.driverSeat > index ? "#FF9F0A" : "#3A3A3C"; width: 1.5 }
                             Text {
-                                anchors.centerIn: parent
-                                text: index === 0 ? "●" : "●"
+                                anchors.centerIn: parent; text: "●"
                                 color: VehicleService.driverSeat > index ? "#FF9F0A" : "#3A3A3C"
                                 font { pixelSize: 10 }
                             }
@@ -110,9 +228,9 @@ Item {
             }
         }
 
-        // ── Center controls card ─────────────────────────────────────────────
+        // ── Center controls card ──────────────────────────────────────────────
         Rectangle {
-            width: 168; height: 210; radius: 16
+            width: 168; height: 218; radius: 16
             color: "#1C1C1E"
             border { color: "rgba(255,255,255,0.15)"; width: 1 }
 
@@ -120,33 +238,33 @@ Item {
                 anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; topMargin: 14 }
                 spacing: 10
 
-                // Mode buttons (4 modes)
+                // Airflow modes — 5 tiles including Feet+Def
                 Row {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    spacing: 6
+                    spacing: 5
 
                     Repeater {
                         model: [
-                            { icon: "☁", mode: 0, tip: "Face" },
-                            { icon: "↓", mode: 1, tip: "Feet" },
-                            { icon: "◈", mode: 2, tip: "Blend" },
-                            { icon: "❄", mode: 3, tip: "Defrost" }
+                            { icon: "☁",  mode: 0, tip: "Face" },
+                            { icon: "↓",  mode: 1, tip: "Feet" },
+                            { icon: "◈",  mode: 2, tip: "Blend" },
+                            { icon: "❄",  mode: 3, tip: "Defrost" },
+                            { icon: "↓❄", mode: 4, tip: "Feet+Def" }
                         ]
                         delegate: Rectangle {
-                            width: 36; height: 36; radius: 10
-                            color: VehicleService.climateMode === modelData.mode
-                                   ? "#0A84FF" : "#2C2C2E"
+                            width: 28; height: 28; radius: 8
+                            color: VehicleService.climateMode === modelData.mode ? "#0A84FF" : "#2C2C2E"
                             border {
                                 color: VehicleService.climateMode === modelData.mode
                                        ? "#0A84FF" : "rgba(255,255,255,0.1)"
                                 width: 1
                             }
+                            Behavior on color { ColorAnimation { duration: 150 } }
                             Text {
                                 anchors.centerIn: parent
                                 text: modelData.icon
-                                color: VehicleService.climateMode === modelData.mode
-                                       ? "#FFFFFF" : "#8E8E93"
-                                font { pixelSize: 16 }
+                                color: VehicleService.climateMode === modelData.mode ? "#FFFFFF" : "#8E8E93"
+                                font { pixelSize: 11 }
                             }
                             MouseArea {
                                 anchors.fill: parent
@@ -156,7 +274,7 @@ Item {
                     }
                 }
 
-                // Fan speed — 5-dot row
+                // Fan speed
                 Column {
                     anchors.horizontalCenter: parent.horizontalCenter
                     spacing: 6
@@ -172,11 +290,11 @@ Item {
                         anchors.horizontalCenter: parent.horizontalCenter
                         spacing: 5
 
-                        // Off button
                         Rectangle {
                             width: 24; height: 24; radius: 12
                             color: VehicleService.fanSpeed === 0 ? "#FF453A" : "#2C2C2E"
                             border { color: VehicleService.fanSpeed === 0 ? "#FF453A" : "#3A3A3C"; width: 1 }
+                            Behavior on color { ColorAnimation { duration: 150 } }
                             Text {
                                 anchors.centerIn: parent; text: "0"
                                 color: VehicleService.fanSpeed === 0 ? "#FFFFFF" : "#8E8E93"
@@ -190,9 +308,9 @@ Item {
                             delegate: Rectangle {
                                 width: 22; height: 22 + index * 3; radius: 4
                                 anchors.bottom: parent ? parent.bottom : undefined
-                                color: VehicleService.fanSpeed > index
-                                       ? "#0A84FF" : "#2C2C2E"
+                                color: VehicleService.fanSpeed > index ? "#0A84FF" : "#2C2C2E"
                                 border { color: VehicleService.fanSpeed > index ? "#0A84FF" : "#3A3A3C"; width: 1 }
+                                Behavior on color { ColorAnimation { duration: 150 } }
                                 MouseArea {
                                     anchors.fill: parent
                                     onClicked: VehicleService.setFanSpeed(index + 1)
@@ -202,7 +320,7 @@ Item {
                     }
                 }
 
-                // AC + Recirc
+                // A/C + Recirc
                 Row {
                     anchors.horizontalCenter: parent.horizontalCenter
                     spacing: 8
@@ -211,7 +329,7 @@ Item {
                         width: 72; height: 40; radius: 12
                         color: VehicleService.acOn ? "rgba(10,132,255,0.2)" : "#2C2C2E"
                         border { color: VehicleService.acOn ? "#0A84FF" : "rgba(255,255,255,0.1)"; width: 1.5 }
-
+                        Behavior on color { ColorAnimation { duration: 150 } }
                         Text {
                             anchors.centerIn: parent; text: "A/C"
                             color: VehicleService.acOn ? "#0A84FF" : "#8E8E93"
@@ -227,7 +345,7 @@ Item {
                         width: 72; height: 40; radius: 12
                         color: VehicleService.recircOn ? "rgba(10,132,255,0.2)" : "#2C2C2E"
                         border { color: VehicleService.recircOn ? "#0A84FF" : "rgba(255,255,255,0.1)"; width: 1.5 }
-
+                        Behavior on color { ColorAnimation { duration: 150 } }
                         Text {
                             anchors.centerIn: parent; text: "⟳ RECIRC"
                             color: VehicleService.recircOn ? "#0A84FF" : "#8E8E93"
@@ -250,9 +368,9 @@ Item {
             }
         }
 
-        // ── Passenger zone card ──────────────────────────────────────────────
+        // ── Passenger zone card ───────────────────────────────────────────────
         Rectangle {
-            width: 180; height: 210; radius: 16
+            width: 180; height: 218; radius: 16
             color: "#1C1C1E"
             border { color: "rgba(255,255,255,0.15)"; width: 1 }
 
@@ -267,23 +385,18 @@ Item {
                     font { family: "Roboto"; pixelSize: 11; capitalization: Font.AllUppercase; letterSpacing: 1.5 }
                 }
 
-                // Up button
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
                     width: 56; height: 56; radius: 28
                     color: paxUp.pressed ? "#2C2C2E" : "transparent"
                     border { color: "#0A84FF"; width: 1.5 }
-
                     Text { anchors.centerIn: parent; text: "▲"; color: "#0A84FF"; font { pixelSize: 20 } }
-
                     MouseArea {
                         id: paxUp; anchors.fill: parent
-                        onClicked: VehicleService.setPassengerTemp(
-                            Math.min(85, VehicleService.passengerTemp + 1))
+                        onClicked: VehicleService.setPassengerTemp(Math.min(85, VehicleService.passengerTemp + 1))
                     }
                 }
 
-                // Temperature
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: VehicleService.passengerTemp.toFixed(0) + "°"
@@ -291,19 +404,15 @@ Item {
                     font { family: "Roboto"; pixelSize: 36; weight: Font.Bold }
                 }
 
-                // Down button
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
                     width: 56; height: 56; radius: 28
                     color: paxDn.pressed ? "#2C2C2E" : "transparent"
                     border { color: "#0A84FF"; width: 1.5 }
-
                     Text { anchors.centerIn: parent; text: "▼"; color: "#0A84FF"; font { pixelSize: 20 } }
-
                     MouseArea {
                         id: paxDn; anchors.fill: parent
-                        onClicked: VehicleService.setPassengerTemp(
-                            Math.max(60, VehicleService.passengerTemp - 1))
+                        onClicked: VehicleService.setPassengerTemp(Math.max(60, VehicleService.passengerTemp - 1))
                     }
                 }
 
@@ -311,20 +420,14 @@ Item {
                 Row {
                     anchors.horizontalCenter: parent.horizontalCenter
                     spacing: 6
-
                     Repeater {
                         model: 3
                         delegate: Rectangle {
                             width: 26; height: 26; radius: 13
-                            color: VehicleService.passSeat > index
-                                   ? "rgba(255,159,10,0.25)" : "#2C2C2E"
-                            border {
-                                color: VehicleService.passSeat > index ? "#FF9F0A" : "#3A3A3C"
-                                width: 1.5
-                            }
+                            color: VehicleService.passSeat > index ? "rgba(255,159,10,0.25)" : "#2C2C2E"
+                            border { color: VehicleService.passSeat > index ? "#FF9F0A" : "#3A3A3C"; width: 1.5 }
                             Text {
-                                anchors.centerIn: parent
-                                text: "●"
+                                anchors.centerIn: parent; text: "●"
                                 color: VehicleService.passSeat > index ? "#FF9F0A" : "#3A3A3C"
                                 font { pixelSize: 10 }
                             }
@@ -338,5 +441,171 @@ Item {
                 }
             }
         }
+    }
+
+    // ── Bottom extras row ─────────────────────────────────────────────────────
+    Row {
+        id: extrasRow
+        anchors {
+            top: zoneRow.bottom
+            horizontalCenter: parent.horizontalCenter
+            topMargin: 8
+        }
+        spacing: 12
+        height: 56
+
+        // 1. Heated Steering Wheel
+        Rectangle {
+            width: 68; height: 48; radius: 16
+            color: VehicleService.heatedSteeringWheel ? "rgba(255,159,10,0.2)" : "#1C1C1E"
+            border {
+                color: VehicleService.heatedSteeringWheel ? "#FF9F0A" : "#2C2C2E"
+                width: 1.5
+            }
+            Behavior on color { ColorAnimation { duration: 150 } }
+
+            Column {
+                anchors.centerIn: parent
+                spacing: 2
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "⊙"
+                    color: VehicleService.heatedSteeringWheel ? "#FF9F0A" : "#8E8E93"
+                    font { pixelSize: 18 }
+                }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "ST. WHEEL"
+                    color: VehicleService.heatedSteeringWheel ? "#FF9F0A" : "#8E8E93"
+                    font { family: "Roboto"; pixelSize: 8; capitalization: Font.AllUppercase; letterSpacing: 0.8 }
+                }
+            }
+            MouseArea {
+                anchors.fill: parent
+                onClicked: VehicleService.setHeatedSteeringWheel(!VehicleService.heatedSteeringWheel)
+            }
+        }
+
+        // 2. Plasmacluster — 4-level cycle (0–3)
+        Rectangle {
+            id: plasmaCard
+            width: 68; height: 48; radius: 16
+            color: VehicleService.plasmaclusterLevel > 0 ? "rgba(10,132,255,0.18)" : "#1C1C1E"
+            border {
+                color: VehicleService.plasmaclusterLevel > 0 ? "#0A84FF" : "#2C2C2E"
+                width: 1.5
+            }
+            Behavior on color { ColorAnimation { duration: 150 } }
+
+            Column {
+                anchors.centerIn: parent
+                spacing: 2
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "◉"
+                    color: VehicleService.plasmaclusterLevel > 0 ? "#0A84FF" : "#8E8E93"
+                    font { pixelSize: 18 }
+                }
+                // Level dots
+                Row {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    spacing: 2
+                    Repeater {
+                        model: 3
+                        delegate: Text {
+                            text: VehicleService.plasmaclusterLevel > index ? "●" : "○"
+                            color: VehicleService.plasmaclusterLevel > 0 ? "#0A84FF" : "#3A3A3C"
+                            font { pixelSize: 7 }
+                        }
+                    }
+                }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "PLASMA"
+                    color: VehicleService.plasmaclusterLevel > 0 ? "#0A84FF" : "#8E8E93"
+                    font { family: "Roboto"; pixelSize: 8; capitalization: Font.AllUppercase; letterSpacing: 0.8 }
+                }
+            }
+            MouseArea {
+                anchors.fill: parent
+                onClicked: VehicleService.setPlasmacluster((VehicleService.plasmaclusterLevel + 1) % 4)
+            }
+        }
+
+        // 3. Rain Sensor
+        Rectangle {
+            width: 68; height: 48; radius: 16
+            color: VehicleService.rainSensorEnabled ? "rgba(10,132,255,0.18)" : "#1C1C1E"
+            border {
+                color: VehicleService.rainSensorEnabled ? "#0A84FF" : "#2C2C2E"
+                width: 1.5
+            }
+            Behavior on color { ColorAnimation { duration: 150 } }
+
+            Column {
+                anchors.centerIn: parent
+                spacing: 2
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "⛆"
+                    color: VehicleService.rainSensorEnabled ? "#0A84FF" : "#8E8E93"
+                    font { pixelSize: 18 }
+                }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "RAIN SENS"
+                    color: VehicleService.rainSensorEnabled ? "#0A84FF" : "#8E8E93"
+                    font { family: "Roboto"; pixelSize: 8; capitalization: Font.AllUppercase; letterSpacing: 0.8 }
+                }
+            }
+            MouseArea {
+                anchors.fill: parent
+                onClicked: VehicleService.setRainSensor(!VehicleService.rainSensorEnabled)
+            }
+        }
+
+        // 4. Rear Defrost
+        Rectangle {
+            width: 68; height: 48; radius: 16
+            color: VehicleService.rearDefrostOn ? "rgba(255,159,10,0.2)" : "#1C1C1E"
+            border {
+                color: VehicleService.rearDefrostOn ? "#FF9F0A" : "#2C2C2E"
+                width: 1.5
+            }
+            Behavior on color { ColorAnimation { duration: 150 } }
+
+            Column {
+                anchors.centerIn: parent
+                spacing: 2
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "▦"
+                    color: VehicleService.rearDefrostOn ? "#FF9F0A" : "#8E8E93"
+                    font { pixelSize: 18 }
+                }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "REAR DEF"
+                    color: VehicleService.rearDefrostOn ? "#FF9F0A" : "#8E8E93"
+                    font { family: "Roboto"; pixelSize: 8; capitalization: Font.AllUppercase; letterSpacing: 0.8 }
+                }
+            }
+            MouseArea {
+                anchors.fill: parent
+                onClicked: VehicleService.setRearDefrost(!VehicleService.rearDefrostOn)
+            }
+        }
+    }
+
+    // ── Outside temp footer ───────────────────────────────────────────────────
+    Text {
+        anchors {
+            top: extrasRow.bottom
+            horizontalCenter: parent.horizontalCenter
+            topMargin: 4
+        }
+        text: VehicleService.outsideTemp.toFixed(0) + "°F outside"
+        color: "#8E8E93"
+        font { family: "Roboto"; pixelSize: 12 }
     }
 }
