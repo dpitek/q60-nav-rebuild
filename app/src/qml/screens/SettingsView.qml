@@ -1206,7 +1206,10 @@ Item {
                     anchors.centerIn: parent
                     text: modelData
                     color: pillGroupBase.selected === index ? "#FFFFFF" : "#8E8E93"
-                    font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
+                    // Font.SemiBold (= 600) evaluated inside a Repeater delegate within
+                    // an inline component fires undefined→int ~50×/boot due to QML init
+                    // ordering. Use numeric weight to avoid the warning.
+                    font { family: "Roboto"; pixelSize: 12; weight: 600 }
                 }
                 MouseArea {
                     anchors.fill: parent
