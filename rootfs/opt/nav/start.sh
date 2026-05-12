@@ -84,6 +84,17 @@ export QT_QUICK_BACKEND=software
 export QSG_RENDER_LOOP=basic
 export XDG_RUNTIME_DIR=/run
 
+# ── Mesa / MapLibre GL (software renderer) ────────────────────────────────
+# Required for HeadlessFrontend EGL pbuffer via Mesa swrast.
+# libEGL.so + swrast_dri.so must be present at these paths (from Qt6 build
+# or Mesa package). If absent, MapLibreItem falls back to placeholder grid.
+export LD_LIBRARY_PATH=/opt/nav/lib:/usr/lib/i386-linux-gnu:$LD_LIBRARY_PATH
+export LIBGL_DRIVERS_PATH=/opt/nav/lib/dri
+export EGL_PLATFORM=surfaceless          # headless EGL — no display server needed
+export MESA_GL_VERSION_OVERRIDE=3.3      # swrast may report GL 2.1; mbgl needs 3.x
+export MESA_GLSL_VERSION_OVERRIDE=330
+export GALLIUM_DRIVER=softpipe           # force softpipe (Atom has no llvmpipe support)
+
 echo "[$(date)] All pre-launch checks passed. Clearing boot counter."
 rm -f "$COUNT_FILE"
 sync
