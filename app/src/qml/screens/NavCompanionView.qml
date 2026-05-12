@@ -4,6 +4,7 @@
 // Expanded: destination entry (recents, favorites, search, route options sheet)
 //           Active route: stop nav + route options inline expander
 import QtQuick 6.6
+import QtQuick.Controls 6.6
 import "../components"
 
 Item {
@@ -51,7 +52,7 @@ Item {
                     width: parent.width; height: 48
                     radius: 24
                     color: "#1C1C1E"
-                    border { color: searchActive ? "#0A84FF" : "rgba(255,255,255,0.10)"; width: 1 }
+                    border { color: searchActive ? "#0A84FF" : Qt.rgba(1, 1, 1, 0.1); width: 1 }
 
                     Behavior on border.color { ColorAnimation { duration: 150 } }
 
@@ -66,7 +67,7 @@ Item {
                             font { pixelSize: 20 }
                         }
 
-                        TextInput {
+                        TextField {
                             id: searchInput
                             anchors.verticalCenter: parent.verticalCenter
                             width: parent.width - 50
@@ -75,6 +76,7 @@ Item {
                             font { family: "Roboto"; pixelSize: 15 }
                             placeholderText: "Search destination…"
                             placeholderTextColor: "#8E8E93"
+                            background: Item {}  // transparent — parent Row handles bg
 
                             onTextChanged: {
                                 searchQuery = text
@@ -129,7 +131,7 @@ Item {
                             width: parent.width; height: 54
                             radius: 12
                             color: "#1C1C1E"
-                            border { color: "rgba(255,255,255,0.07)"; width: 1 }
+                            border { color: Qt.rgba(1, 1, 1, 0.07); width: 1 }
 
                             Row {
                                 anchors { fill: parent; margins: 12 }
@@ -207,7 +209,7 @@ Item {
                             width: parent.width; height: 54
                             radius: 12
                             color: "#1C1C1E"
-                            border { color: "rgba(255,255,255,0.07)"; width: 1 }
+                            border { color: Qt.rgba(1, 1, 1, 0.07); width: 1 }
 
                             Row {
                                 anchors { fill: parent; margins: 12 }
@@ -285,7 +287,7 @@ Item {
                             width: parent.width; height: 54
                             radius: 12
                             color: "#1C1C1E"
-                            border { color: "rgba(255,255,255,0.07)"; width: 1 }
+                            border { color: Qt.rgba(1, 1, 1, 0.07); width: 1 }
 
                             Row {
                                 anchors { fill: parent; margins: 12 }
@@ -340,7 +342,7 @@ Item {
                         width: parent.width; height: 40
                         radius: 12
                         color: "transparent"
-                        border { color: "rgba(255,255,255,0.12)"; width: 1 }
+                        border { color: Qt.rgba(1, 1, 1, 0.12); width: 1 }
 
                         Row {
                             anchors.centerIn: parent
@@ -382,7 +384,7 @@ Item {
             width: parent.width; height: 96
             radius: 16
             color: "#1C1C1E"
-            border { color: "rgba(255,255,255,0.15)"; width: 1 }
+            border { color: Qt.rgba(1, 1, 1, 0.15); width: 1 }
 
             Row {
                 anchors { fill: parent; margins: 12 }
@@ -456,7 +458,7 @@ Item {
             width: parent.width; height: 72
             radius: 16
             color: "#1C1C1E"
-            border { color: "rgba(255,255,255,0.15)"; width: 1 }
+            border { color: Qt.rgba(1, 1, 1, 0.15); width: 1 }
 
             Row {
                 anchors.fill: parent
@@ -496,7 +498,7 @@ Item {
                     }
                 }
 
-                Rectangle { width: 1; height: 40; color: "rgba(255,255,255,0.12)"; anchors.verticalCenter: parent.verticalCenter }
+                Rectangle { width: 1; height: 40; color: Qt.rgba(1, 1, 1, 0.12); anchors.verticalCenter: parent.verticalCenter }
 
                 Item {
                     width: parent.width / 3; height: parent.height
@@ -520,7 +522,7 @@ Item {
                     }
                 }
 
-                Rectangle { width: 1; height: 40; color: "rgba(255,255,255,0.12)"; anchors.verticalCenter: parent.verticalCenter }
+                Rectangle { width: 1; height: 40; color: Qt.rgba(1, 1, 1, 0.12); anchors.verticalCenter: parent.verticalCenter }
 
                 Item {
                     width: parent.width / 3; height: parent.height
@@ -613,7 +615,7 @@ Item {
             height: routeOptsExpanded ? routeOptsCol.implicitHeight + 24 : 0
             radius: 12
             color: "#1C1C1E"
-            border { color: "rgba(255,255,255,0.08)"; width: 1 }
+            border { color: Qt.rgba(1, 1, 1, 0.08); width: 1 }
             clip: true
             visible: routeOptsExpanded
 
@@ -731,7 +733,7 @@ Item {
         height: 210
         radius: 16
         color: "#1C1C1E"
-        border { color: "rgba(255,255,255,0.10)"; width: 1 }
+        border { color: Qt.rgba(1, 1, 1, 0.1); width: 1 }
 
         // Slide from bottom
         y: sheetVisible ? parent.height - height : parent.height

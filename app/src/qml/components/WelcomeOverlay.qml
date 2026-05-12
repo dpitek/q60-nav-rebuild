@@ -124,7 +124,7 @@ Item {
                 visible: ProfileService.lastSessionSummary !== ""
                 width: sessionLabel.implicitWidth + 28
                 height: 28; radius: 14
-                color: "rgba(255,255,255,0.10)"
+                color: Qt.rgba(1, 1, 1, 0.1)
                 opacity: 0
 
                 Text {
@@ -212,7 +212,7 @@ Item {
             Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: 120; height: 32; radius: 16
-                color: "rgba(255,255,255,0.08)"
+                color: Qt.rgba(1, 1, 1, 0.08)
 
                 Text {
                     anchors.centerIn: parent

@@ -104,7 +104,7 @@ Item {
         Rectangle {
             anchors.bottom: parent.bottom
             width: parent.width; height: 1
-            color: "rgba(255,255,255,0.1)"
+            color: Qt.rgba(1, 1, 1, 0.1)
         }
 
         Text {
@@ -266,7 +266,7 @@ Item {
                 Rectangle {
                     anchors.bottom: parent.bottom
                     width: parent.width; height: 1
-                    color: "rgba(255,255,255,0.06)"
+                    color: Qt.rgba(1, 1, 1, 0.06)
                 }
 
                 Row {
@@ -309,7 +309,7 @@ Item {
                         onValueModified: settings.clockHour = value
                     }
 
-                    Text { text: ":"; color: "#FFFFFF"; font { pixelSize: 18; weight: Font.Bold }; anchors.verticalCenter: parent.verticalCenter }
+                    Text { text: ":"; color: "#FFFFFF"; font { pixelSize: 18; weight: Font.Bold } anchors.verticalCenter: parent.verticalCenter }
 
                     // Minute spinner
                     SpinBox {
@@ -390,7 +390,7 @@ Item {
                 Rectangle {
                     anchors.bottom: parent.bottom
                     width: parent.width; height: 1
-                    color: "rgba(255,255,255,0.06)"
+                    color: Qt.rgba(1, 1, 1, 0.06)
                     visible: false
                 }
 
@@ -540,7 +540,7 @@ Item {
                 label: "Rain Sensor"
                 control: ToggleSwitch {
                     checked: VehicleService.rainSensorEnabled
-                    onCheckedChanged: VehicleService.setRainSensor(checked)
+                    onCheckedChanged: if (checked !== VehicleService.rainSensorEnabled) VehicleService.setRainSensor(checked)
                 }
             }
 
@@ -561,7 +561,7 @@ Item {
                     width: contentCol.width
                     height: settings.vdcEnabled ? 0 : 36
                     clip: true
-                    color: "rgba(255,69,58,0.08)"
+                    color: Qt.rgba(1, 0.2706, 0.2275, 0.08)
                     visible: !settings.vdcEnabled
 
                     Behavior on height { NumberAnimation { duration: 150 } }
@@ -868,7 +868,7 @@ Item {
     Rectangle {
         id: pairingSheet
         anchors.fill: parent
-        color: "rgba(0,0,0,0.72)"
+        color: Qt.rgba(0, 0, 0, 0.72)
         visible: root.pairingSheetVisible
         opacity: root.pairingSheetVisible ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: 200 } }
@@ -930,7 +930,7 @@ Item {
     Rectangle {
         id: resetDialog
         anchors.fill: parent
-        color: "rgba(0,0,0,0.72)"
+        color: Qt.rgba(0, 0, 0, 0.72)
         visible: root.resetDialogVisible
         opacity: root.resetDialogVisible ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: 200 } }
@@ -1037,7 +1037,7 @@ Item {
         Rectangle {
             anchors.bottom: parent.bottom
             width: parent.width; height: 1
-            color: "rgba(255,255,255,0.06)"
+            color: Qt.rgba(1, 1, 1, 0.06)
         }
 
         Column {
@@ -1080,7 +1080,7 @@ Item {
         Rectangle {
             anchors.bottom: parent.bottom
             width: parent.width; height: 1
-            color: "rgba(255,255,255,0.06)"
+            color: Qt.rgba(1, 1, 1, 0.06)
         }
 
         Text {
@@ -1103,7 +1103,6 @@ Item {
         id: sliderRowBase
         property string label: ""
         property int value: 0
-        signal valueChanged(int value)
 
         width: contentCol.width
         height: 56
@@ -1112,7 +1111,7 @@ Item {
         Rectangle {
             anchors.bottom: parent.bottom
             width: parent.width; height: 1
-            color: "rgba(255,255,255,0.06)"
+            color: Qt.rgba(1, 1, 1, 0.06)
         }
 
         Text {
@@ -1167,7 +1166,6 @@ Item {
     component ToggleSwitch: Rectangle {
         id: toggleBase
         property bool checked: false
-        signal checkedChanged(bool checked)
 
         width: 44; height: 24; radius: 12
         color: checked ? "#0A84FF" : "#2C2C2E"
@@ -1184,7 +1182,7 @@ Item {
 
         MouseArea {
             anchors.fill: parent
-            onClicked: toggleBase.checkedChanged(!toggleBase.checked)
+            onClicked: toggleBase.checked = !toggleBase.checked
         }
     }
 
@@ -1193,7 +1191,6 @@ Item {
         id: pillGroupBase
         property var options: []
         property int selected: 0
-        signal selectedChanged(int selected)
 
         spacing: 4
 

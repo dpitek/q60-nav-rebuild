@@ -23,10 +23,17 @@ Q_LOGGING_CATEGORY(lcMain, "q60nav.main")
 
 int main(int argc, char *argv[])
 {
-    // Wayland backend for dual LVDS output
-    qputenv("QT_QPA_PLATFORM", "wayland");
-    qputenv("QT_QUICK_BACKEND", "software"); // Mesa swrast — no PowerVR driver
-    qputenv("QSG_RENDER_LOOP", "basic");     // Single-threaded render on Atom
+    // Platform defaults — only set if not already provided by the environment.
+    // The simulator overrides QT_QPA_PLATFORM=vnc; start.sh sets wayland.
+    // qputenv is unconditional, so we guard with qgetenv first.
+    if (qgetenv("QT_QPA_PLATFORM").isEmpty())
+        qputenv("QT_QPA_PLATFORM", "wayland");           // Wayland for dual LVDS on DCU
+    if (qgetenv("QT_QUICK_BACKEND").isEmpty())
+        qputenv("QT_QUICK_BACKEND", "software");         // Mesa swrast — no PowerVR driver
+    if (qgetenv("QSG_RENDER_LOOP").isEmpty())
+        qputenv("QSG_RENDER_LOOP", "basic");             // Single-threaded render on Atom
+    if (qgetenv("QT_QUICK_CONTROLS_STYLE").isEmpty())
+        qputenv("QT_QUICK_CONTROLS_STYLE", "Basic");     // Embedded build: only Basic style present
 
     QGuiApplication app(argc, argv);
     app.setApplicationName("Q60 Nav");
@@ -98,10 +105,19 @@ int main(int argc, char *argv[])
         windows[1]->showFullScreen();
         qCInfo(lcMain) << "Lower screen:" << windows[1]->objectName() << "on" << screens[1]->name();
     } else {
-        // Single screen dev mode — show all windows
-        qCWarning(lcMain) << "Single screen detected — dev layout mode";
-        for (auto *win : windows)
-            win->show();
+        // Single screen (simulator / dev) — show all windows.
+        // In Q60_SIM mode, position them side-by-side on the VNC virtual screen:
+        //   upper (800×480) at (0, 0), lower (800×420) at (860, 30)
+        qCWarning(lcMain) << "Single screen — dev/simulator layout";
+        const bool simMode = !qgetenv("Q60_SIM").isEmpty();
+        for (int i = 0; i < windows.size(); ++i) {
+            if (simMode && windows.size() >= 2) {
+                // windows[0] = upperScreen, windows[1] = lowerScreen (after sort+reverse)
+                windows[i]->setX(i == 0 ? 0   : 860);
+                windows[i]->setY(i == 0 ? 0   : 30);   // 30px = (480-420)/2 vertical centre
+            }
+            windows[i]->show();
+        }
     }
 
     // Start services

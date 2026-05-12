@@ -123,7 +123,11 @@ qt6_add_qml_module(q60nav
         src/qml/screens/SettingsView.qml
         src/qml/screens/InfoView.qml
         src/qml/screens/ProfileView.qml
+        src/qml/screens/IncomingCallView.qml
+        src/qml/screens/VehicleStatusView.qml
+        src/qml/screens/VoiceCommandView.qml
         src/qml/components/WelcomeOverlay.qml
+        src/qml/components/StatusBar.qml
 )
 
 target_include_directories(q60nav PRIVATE

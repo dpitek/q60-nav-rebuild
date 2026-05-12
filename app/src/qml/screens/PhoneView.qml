@@ -31,7 +31,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 color: root.activeTab === index ? "#0A84FF" : "#1C1C1E"
                 border {
-                    color: root.activeTab === index ? "#0A84FF" : "rgba(255,255,255,0.15)"
+                    color: root.activeTab === index ? "#0A84FF" : Qt.rgba(1, 1, 1, 0.15)
                     width: 1
                 }
                 Behavior on color { ColorAnimation { duration: 150 } }
@@ -72,9 +72,9 @@ Item {
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
                     width: 80; height: 80; radius: 40
-                    color: StatusBridge.btConnected ? "rgba(10,132,255,0.15)" : "#1C1C1E"
+                    color: StatusBridge.btConnected ? Qt.rgba(0.0392, 0.5176, 1, 0.15) : "#1C1C1E"
                     border {
-                        color: StatusBridge.btConnected ? "#0A84FF" : "rgba(255,255,255,0.1)"
+                        color: StatusBridge.btConnected ? "#0A84FF" : Qt.rgba(1, 1, 1, 0.1)
                         width: 2
                     }
                     Text {
@@ -113,7 +113,7 @@ Item {
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
                     height: 28; radius: 14; width: activeBadgeLbl.width + 28
-                    color: "rgba(48,209,88,0.2)"; border { color: "#30D158"; width: 1 }
+                    color: Qt.rgba(0.1882, 0.8196, 0.3451, 0.2); border { color: "#30D158"; width: 1 }
                     Text {
                         id: activeBadgeLbl; anchors.centerIn: parent; text: "Active Call"
                         color: "#30D158"; font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
@@ -127,7 +127,7 @@ Item {
                         color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 26; weight: Font.Bold }
                     }
                     Text {
-                        anchors.horizontalCenter: parent.horizontalCenter; text: callTimer.elapsed
+                        anchors.horizontalCenter: parent.horizontalCenter; text: callTimerHost.elapsed
                         color: "#8E8E93"; font { family: "Roboto"; pixelSize: 16; weight: Font.Light }
                     }
                 }
@@ -142,7 +142,7 @@ Item {
                             anchors.horizontalCenter: parent.horizontalCenter
                             width: 64; height: 64; radius: 32
                             color: muteArea.pressed ? "#2C2C2E" : "#1C1C1E"
-                            border { color: "rgba(255,255,255,0.15)"; width: 1.5 }
+                            border { color: Qt.rgba(1, 1, 1, 0.15); width: 1.5 }
                             Text { anchors.centerIn: parent; text: "🎤"; font.pixelSize: 24 }
                             MouseArea { id: muteArea; anchors.fill: parent; onClicked: {} }
                         }
@@ -171,7 +171,7 @@ Item {
                             anchors.horizontalCenter: parent.horizontalCenter
                             width: 64; height: 64; radius: 32
                             color: spkArea.pressed ? "#2C2C2E" : "#1C1C1E"
-                            border { color: "rgba(255,255,255,0.15)"; width: 1.5 }
+                            border { color: Qt.rgba(1, 1, 1, 0.15); width: 1.5 }
                             Text { anchors.centerIn: parent; text: "🔊"; font.pixelSize: 24 }
                             MouseArea { id: spkArea; anchors.fill: parent; onClicked: {} }
                         }
@@ -201,7 +201,7 @@ Item {
 
                 Rectangle {
                     anchors { top: parent.top; left: parent.left; right: parent.right }
-                    height: 1; color: "rgba(255,255,255,0.15)"
+                    height: 1; color: Qt.rgba(1, 1, 1, 0.15)
                 }
 
                 Grid {
@@ -237,19 +237,20 @@ Item {
                 Rectangle {
                     anchors { left: parent.left; right: parent.right; leftMargin: 12; rightMargin: 12 }
                     height: 36; radius: 10; color: "#1C1C1E"
-                    border { color: "rgba(255,255,255,0.12)"; width: 1 }
+                    border { color: Qt.rgba(1, 1, 1, 0.12); width: 1 }
 
                     Row {
                         anchors { verticalCenter: parent.verticalCenter; left: parent.left; leftMargin: 10 }
                         spacing: 6
 
                         Text { text: "🔍"; font.pixelSize: 14; color: "#636366"; anchors.verticalCenter: parent.verticalCenter }
-                        TextInput {
+                        TextField {
                             id: contactSearch
                             width: 260; color: "#FFFFFF"
                             font { family: "Roboto"; pixelSize: 14 }
                             placeholderText: "Search contacts"
                             placeholderTextColor: "#636366"
+                            background: Item {}
                         }
                     }
                 }
@@ -384,7 +385,7 @@ Item {
                             color: parent.parent.parent.recentSubTab === index ? "#2C2C2E" : "transparent"
                             border {
                                 color: parent.parent.parent.recentSubTab === index
-                                       ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.1)"
+                                       ? Qt.rgba(1, 1, 1, 0.3) : Qt.rgba(1, 1, 1, 0.1)
                                 width: 1
                             }
                             Text {
@@ -529,7 +530,7 @@ Item {
         // Top separator
         Rectangle {
             anchors { top: parent.top; left: parent.left; right: parent.right }
-            height: 1; color: "rgba(255,255,255,0.08)"
+            height: 1; color: Qt.rgba(1, 1, 1, 0.08)
         }
 
         Row {
@@ -572,24 +573,29 @@ Item {
     }
 
     // ── Call timer ───────────────────────────────────────────────────────────
-    QtObject {
-        id: callTimer
+    // Note: Timer can't be a child of QtObject (no default property).
+    // Use a plain Item container so both the state object and Timer coexist.
+    Item {
+        id: callTimerHost
+        visible: false  // no visual — logic only
+
         property int seconds: 0
         property string elapsed: {
             var m = Math.floor(seconds / 60)
             var s = seconds % 60
             return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s
         }
+
         Timer {
             interval: 1000; repeat: true; running: StatusBridge.callActive
-            onTriggered: callTimer.seconds++
+            onTriggered: callTimerHost.seconds++
         }
     }
 
     Connections {
         target: StatusBridge
         function onCallActiveChanged(active) {
-            if (!active) callTimer.seconds = 0
+            if (!active) callTimerHost.seconds = 0
         }
     }
 }

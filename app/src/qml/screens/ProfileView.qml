@@ -40,7 +40,7 @@ Item {
         Rectangle {
             anchors.bottom: parent.bottom
             width: parent.width; height: 1
-            color: "rgba(255,255,255,0.10)"
+            color: Qt.rgba(1, 1, 1, 0.1)
         }
 
         // Back button
@@ -121,7 +121,7 @@ Item {
                     radius: 16
                     color: isActive ? accentCol : "#1C1C1E"
                     border {
-                        color: isActive ? accentCol : "rgba(255,255,255,0.08)"
+                        color: isActive ? accentCol : Qt.rgba(1, 1, 1, 0.08)
                         width: isActive ? 2 : 1
                     }
 
@@ -169,7 +169,7 @@ Item {
                                 model: modelData.keySlots || []
                                 delegate: Rectangle {
                                     width: 36; height: 16; radius: 8
-                                    color: "rgba(255,255,255,0.15)"
+                                    color: Qt.rgba(1, 1, 1, 0.15)
                                     Text {
                                         anchors.centerIn: parent
                                         text: "Key " + modelData
@@ -185,7 +185,7 @@ Item {
                             anchors.horizontalCenter: parent.horizontalCenter
                             visible: cardRoot.isActive
                             width: 52; height: 16; radius: 8
-                            color: "rgba(255,255,255,0.25)"
+                            color: Qt.rgba(1, 1, 1, 0.25)
                             Text {
                                 anchors.centerIn: parent
                                 text: "Active"
@@ -199,7 +199,7 @@ Item {
                             anchors.horizontalCenter: parent.horizontalCenter
                             visible: cardRoot.isKid
                             width: 60; height: 16; radius: 8
-                            color: "rgba(255,204,0,0.25)"
+                            color: Qt.rgba(1, 0.8, 0, 0.25)
                             Text {
                                 anchors.centerIn: parent
                                 text: "Kid Mode"
@@ -226,7 +226,7 @@ Item {
                 height: carousel.height
                 radius: 16
                 color: "#1C1C1E"
-                border { color: "rgba(255,255,255,0.08)"; width: 1 }
+                border { color: Qt.rgba(1, 1, 1, 0.08); width: 1 }
 
                 Column {
                     anchors {
@@ -293,7 +293,7 @@ Item {
     Rectangle {
         id: deleteOverlay
         anchors.fill: parent
-        color: "rgba(0,0,0,0.75)"
+        color: Qt.rgba(0, 0, 0, 0.75)
         visible: root.deleteConfirmVisible
         opacity: visible ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: 180 } }
@@ -361,7 +361,7 @@ Item {
     Rectangle {
         id: createSheet
         anchors.fill: parent
-        color: "rgba(0,0,0,0.72)"
+        color: Qt.rgba(0, 0, 0, 0.72)
         visible: root.createSheetVisible
         opacity: visible ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: 200 } }
@@ -402,7 +402,6 @@ Item {
                         text: root.newName
                         color: "#FFFFFF"
                         font { family: "Roboto"; pixelSize: 14 }
-                        placeholderText: "Your name"
                         inputMethodHints: Qt.ImhNoPredictiveText
                         onTextChanged: root.newName = text
 
@@ -575,7 +574,7 @@ Item {
             Rectangle {
                 anchors.bottom: parent.bottom
                 width: parent.width; height: 1
-                color: "rgba(255,255,255,0.10)"
+                color: Qt.rgba(1, 1, 1, 0.1)
             }
             Rectangle {
                 anchors { left: parent.left; leftMargin: 8; verticalCenter: parent.verticalCenter }
@@ -759,7 +758,7 @@ Item {
         Rectangle {
             anchors.bottom: parent.bottom
             width: parent.width; height: 1
-            color: "rgba(255,255,255,0.06)"
+            color: Qt.rgba(1, 1, 1, 0.06)
         }
         Text {
             anchors { left: parent.left; leftMargin: 16; verticalCenter: parent.verticalCenter }
@@ -785,7 +784,7 @@ Item {
         Rectangle {
             anchors.bottom: parent.bottom
             width: parent.width; height: 1
-            color: "rgba(255,255,255,0.06)"
+            color: Qt.rgba(1, 1, 1, 0.06)
         }
         Text {
             anchors { left: parent.left; leftMargin: 16; verticalCenter: parent.verticalCenter }
@@ -821,7 +820,7 @@ Item {
         Rectangle {
             anchors.bottom: parent.bottom
             width: parent.width; height: 1
-            color: "rgba(255,255,255,0.06)"
+            color: Qt.rgba(1, 1, 1, 0.06)
         }
         Text {
             anchors { left: parent.left; leftMargin: 16; verticalCenter: parent.verticalCenter }
@@ -879,7 +878,7 @@ Item {
         Rectangle {
             anchors.bottom: parent.bottom
             width: parent.width; height: 1
-            color: "rgba(255,255,255,0.06)"
+            color: Qt.rgba(1, 1, 1, 0.06)
         }
         Text {
             anchors { left: parent.left; leftMargin: 16; top: parent.top; topMargin: 8 }

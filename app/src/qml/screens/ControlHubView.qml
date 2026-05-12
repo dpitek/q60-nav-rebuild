@@ -6,7 +6,6 @@
 import QtQuick 6.6
 import QtQuick.Controls 6.6
 import "../components"
-import "screens"
 
 Item {
     id: root
@@ -94,7 +93,7 @@ Item {
         Rectangle {
             anchors { top: parent.top; left: parent.left; right: parent.right }
             height: 1
-            color: "rgba(255,255,255,0.12)"
+            color: Qt.rgba(1, 1, 1, 0.12)
         }
 
         Row {

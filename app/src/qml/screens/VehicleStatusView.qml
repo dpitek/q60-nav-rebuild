@@ -147,7 +147,7 @@ Item {
                         anchors.centerIn: parent; anchors.verticalCenterOffset: 4
                         width: 52; height: 76; radius: 8
                         color: "#2C2C2E"
-                        border { color: "rgba(255,255,255,0.12)"; width: 1 }
+                        border { color: Qt.rgba(1, 1, 1, 0.12); width: 1 }
 
                         // Windshield
                         Rectangle {
@@ -167,7 +167,7 @@ Item {
                     Rectangle {
                         x: 10; y: 30; width: 28; height: 28; radius: 14
                         color: parent.psiColor(VehicleService.tirePSI_FL)
-                        border { color: "rgba(0,0,0,0.3)"; width: 1 }
+                        border { color: Qt.rgba(0, 0, 0, 0.3); width: 1 }
                         Text {
                             anchors.centerIn: parent
                             text: parent.parent.psiText(VehicleService.tirePSI_FL)
@@ -183,7 +183,7 @@ Item {
                     Rectangle {
                         x: 117; y: 30; width: 28; height: 28; radius: 14
                         color: parent.psiColor(VehicleService.tirePSI_FR)
-                        border { color: "rgba(0,0,0,0.3)"; width: 1 }
+                        border { color: Qt.rgba(0, 0, 0, 0.3); width: 1 }
                         Text {
                             anchors.centerIn: parent
                             text: parent.parent.psiText(VehicleService.tirePSI_FR)
@@ -199,7 +199,7 @@ Item {
                     Rectangle {
                         x: 10; y: 88; width: 28; height: 28; radius: 14
                         color: parent.psiColor(VehicleService.tirePSI_RL)
-                        border { color: "rgba(0,0,0,0.3)"; width: 1 }
+                        border { color: Qt.rgba(0, 0, 0, 0.3); width: 1 }
                         Text {
                             anchors.centerIn: parent
                             text: parent.parent.psiText(VehicleService.tirePSI_RL)
@@ -215,7 +215,7 @@ Item {
                     Rectangle {
                         x: 117; y: 88; width: 28; height: 28; radius: 14
                         color: parent.psiColor(VehicleService.tirePSI_RR)
-                        border { color: "rgba(0,0,0,0.3)"; width: 1 }
+                        border { color: Qt.rgba(0, 0, 0, 0.3); width: 1 }
                         Text {
                             anchors.centerIn: parent
                             text: parent.parent.psiText(VehicleService.tirePSI_RR)
@@ -250,7 +250,7 @@ Item {
                         Rectangle {
                             anchors { top: parent.top; horizontalCenter: parent.horizontalCenter; topMargin: 12 }
                             width: 44; height: 50; radius: 6; color: "#2C2C2E"
-                            border { color: "rgba(255,255,255,0.1)"; width: 1 }
+                            border { color: Qt.rgba(1, 1, 1, 0.1); width: 1 }
                         }
 
                         function doorColor(open) { return open ? "#FF453A" : "#1C1C1E" }
@@ -647,7 +647,7 @@ Item {
                         width: 120; height: 82; radius: 12
                         color: VehicleService.driveMode === index ? "transparent" : "#1C1C1E"
                         border {
-                            color: VehicleService.driveMode === index ? "transparent" : "rgba(255,255,255,0.08)"
+                            color: VehicleService.driveMode === index ? "transparent" : Qt.rgba(1, 1, 1, 0.08)
                             width: 1
                         }
 
@@ -658,7 +658,7 @@ Item {
                             gradient: Gradient {
                                 orientation: Gradient.Horizontal
                                 GradientStop { position: 0.0; color: "#0A84FF" }
-                                GradientStop { position: 1.0; color: "rgba(10,132,255,0.6)" }
+                                GradientStop { position: 1.0; color: Qt.rgba(0.0392, 0.5176, 1, 0.6) }
                             }
                         }
 
@@ -679,7 +679,7 @@ Item {
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: modelData.desc
-                                color: VehicleService.driveMode === index ? "rgba(255,255,255,0.85)" : "#8E8E93"
+                                color: VehicleService.driveMode === index ? Qt.rgba(1, 1, 1, 0.85) : "#8E8E93"
                                 font { family: "Roboto"; pixelSize: 9 }
                                 width: 112; wrapMode: Text.WordWrap; horizontalAlignment: Text.AlignHCenter
                             }
@@ -1071,7 +1071,7 @@ Item {
                         // Car body
                         ctx.beginPath()
                         ctx.roundRect(bodyX, bodyY, bodyW, bodyH, 10)
-                        ctx.strokeStyle = "rgba(255,255,255,0.25)"
+                        ctx.strokeStyle = Qt.rgba(1, 1, 1, 0.25)
                         ctx.lineWidth = 1.5
                         ctx.stroke()
 
@@ -1080,7 +1080,7 @@ Item {
                         ctx.beginPath()
                         ctx.moveTo(cx - 90, frontY)
                         ctx.lineTo(cx + 90, frontY)
-                        ctx.strokeStyle = "rgba(255,255,255,0.15)"
+                        ctx.strokeStyle = Qt.rgba(1, 1, 1, 0.15)
                         ctx.lineWidth = 1; ctx.stroke()
 
                         // Rear axle line
@@ -1088,14 +1088,14 @@ Item {
                         ctx.beginPath()
                         ctx.moveTo(cx - 90, rearY)
                         ctx.lineTo(cx + 90, rearY)
-                        ctx.strokeStyle = "rgba(255,255,255,0.15)"
+                        ctx.strokeStyle = Qt.rgba(1, 1, 1, 0.15)
                         ctx.lineWidth = 1; ctx.stroke()
 
                         // Driveshaft
                         ctx.beginPath()
                         ctx.moveTo(cx, frontY)
                         ctx.lineTo(cx, rearY)
-                        ctx.strokeStyle = "rgba(255,255,255,0.1)"
+                        ctx.strokeStyle = Qt.rgba(1, 1, 1, 0.1)
                         ctx.lineWidth = 2; ctx.stroke()
 
                         // Wheel dots
@@ -1110,7 +1110,7 @@ Item {
                             ctx.arc(w.x, w.y, 7, 0, Math.PI * 2)
                             ctx.fillStyle = "#2C2C2E"
                             ctx.fill()
-                            ctx.strokeStyle = "rgba(255,255,255,0.3)"
+                            ctx.strokeStyle = Qt.rgba(1, 1, 1, 0.3)
                             ctx.lineWidth = 1.5; ctx.stroke()
                         })
 

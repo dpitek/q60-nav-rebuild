@@ -40,7 +40,7 @@ Item {
                 color: AudioService.source === modelData.src ? "#0A84FF" : "#1C1C1E"
                 border {
                     color: AudioService.source === modelData.src
-                           ? "#0A84FF" : "rgba(255,255,255,0.15)"
+                           ? "#0A84FF" : Qt.rgba(1, 1, 1, 0.15)
                     width: 1
                 }
                 Behavior on color { ColorAnimation { duration: 150 } }
@@ -104,7 +104,7 @@ Item {
             // Top border accent
             Rectangle {
                 anchors { top: parent.top; left: parent.left; right: parent.right }
-                height: 1; color: "rgba(255,255,255,0.12)"
+                height: 1; color: Qt.rgba(1, 1, 1, 0.12)
             }
 
             Column {
@@ -228,9 +228,9 @@ Item {
         Rectangle {
             width: 40; height: 40; radius: 20
             anchors.verticalCenter: parent.verticalCenter
-            color: AudioService.muted ? "rgba(255,69,58,0.2)" : "#1C1C1E"
+            color: AudioService.muted ? Qt.rgba(1, 0.2706, 0.2275, 0.2) : "#1C1C1E"
             border {
-                color: AudioService.muted ? "#FF453A" : "rgba(255,255,255,0.15)"
+                color: AudioService.muted ? "#FF453A" : Qt.rgba(1, 1, 1, 0.15)
                 width: 1
             }
             Behavior on color { ColorAnimation { duration: 150 } }
@@ -283,8 +283,8 @@ Item {
         Rectangle {
             height: 32; radius: 16; width: eqPillLbl.width + 24
             anchors.verticalCenter: parent.verticalCenter
-            color: root.eqPanelVisible ? "rgba(10,132,255,0.25)" : "#1C1C1E"
-            border { color: root.eqPanelVisible ? "#0A84FF" : "rgba(255,255,255,0.15)"; width: 1 }
+            color: root.eqPanelVisible ? Qt.rgba(0.0392, 0.5176, 1, 0.25) : "#1C1C1E"
+            border { color: root.eqPanelVisible ? "#0A84FF" : Qt.rgba(1, 1, 1, 0.15); width: 1 }
             Behavior on color { ColorAnimation { duration: 150 } }
             Text {
                 id: eqPillLbl; anchors.centerIn: parent; text: "EQ"
@@ -310,7 +310,7 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: 96; height: 96; radius: 16
                 color: "#1C1C1E"
-                border { color: "rgba(255,255,255,0.1)"; width: 1 }
+                border { color: Qt.rgba(1, 1, 1, 0.1); width: 1 }
                 Text { anchors.centerIn: parent; text: "♪"; color: "#3A3A3C"; font.pixelSize: 42 }
             }
 
@@ -353,7 +353,7 @@ Item {
                     delegate: Rectangle {
                         width: 50; height: 50; radius: 25
                         color: btBtn.pressed ? "#2C2C2E" : "#1C1C1E"
-                        border { color: "rgba(255,255,255,0.15)"; width: 1 }
+                        border { color: Qt.rgba(1, 1, 1, 0.15); width: 1 }
                         Behavior on color { ColorAnimation { duration: 100 } }
                         Text {
                             anchors.centerIn: parent; text: modelData.icon
@@ -435,7 +435,7 @@ Item {
                     delegate: Rectangle {
                         width: 72; height: 38; radius: 19
                         color: fmSeek.pressed ? "#2C2C2E" : "#1C1C1E"
-                        border { color: "rgba(255,255,255,0.15)"; width: 1 }
+                        border { color: Qt.rgba(1, 1, 1, 0.15); width: 1 }
                         Text { anchors.centerIn: parent; text: modelData.icon; color: "#0A84FF"; font.pixelSize: 15 }
                         MouseArea { id: fmSeek; anchors.fill: parent; onClicked: AudioService.seekFM(modelData.fwd) }
                     }
@@ -458,7 +458,7 @@ Item {
                         width: presetContent.width + 20
                         color: isActive ? "#0A84FF" : "#1C1C1E"
                         border {
-                            color: isActive ? "#0A84FF" : "rgba(255,255,255,0.2)"; width: 1
+                            color: isActive ? "#0A84FF" : Qt.rgba(1, 1, 1, 0.2); width: 1
                         }
                         Behavior on color { ColorAnimation { duration: 150 } }
 
@@ -476,7 +476,7 @@ Item {
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: preset && preset.name.length > 0 ? preset.name : ""
-                                color: isActive ? "rgba(255,255,255,0.85)" : "#8E8E93"
+                                color: isActive ? Qt.rgba(1, 1, 1, 0.85) : "#8E8E93"
                                 font { family: "Roboto"; pixelSize: 9 }
                                 visible: preset && preset.name.length > 0
                             }
@@ -542,7 +542,7 @@ Item {
                     delegate: Rectangle {
                         width: 72; height: 38; radius: 19
                         color: amSeek.pressed ? "#2C2C2E" : "#1C1C1E"
-                        border { color: "rgba(255,255,255,0.15)"; width: 1 }
+                        border { color: Qt.rgba(1, 1, 1, 0.15); width: 1 }
                         Text { anchors.centerIn: parent; text: modelData.icon; color: "#0A84FF"; font.pixelSize: 15 }
                         MouseArea { id: amSeek; anchors.fill: parent; onClicked: AudioService.seekFM(modelData.fwd) }
                     }
@@ -563,7 +563,7 @@ Item {
 
                         height: 34; radius: 17; width: amPresetContent.width + 20
                         color: isActive ? "#0A84FF" : "#1C1C1E"
-                        border { color: isActive ? "#0A84FF" : "rgba(255,255,255,0.2)"; width: 1 }
+                        border { color: isActive ? "#0A84FF" : Qt.rgba(1, 1, 1, 0.2); width: 1 }
                         Behavior on color { ColorAnimation { duration: 150 } }
 
                         Column {
@@ -578,7 +578,7 @@ Item {
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: preset && preset.name.length > 0 ? preset.name : ""
-                                color: isActive ? "rgba(255,255,255,0.85)" : "#8E8E93"
+                                color: isActive ? Qt.rgba(1, 1, 1, 0.85) : "#8E8E93"
                                 font { family: "Roboto"; pixelSize: 9 }
                                 visible: preset && preset.name.length > 0
                             }
@@ -640,7 +640,7 @@ Item {
 
                 Rectangle {
                     height: 24; radius: 12; width: sxmCatLbl.width + 16
-                    color: "rgba(10,132,255,0.2)"
+                    color: Qt.rgba(0.0392, 0.5176, 1, 0.2)
                     border { color: "#0A84FF"; width: 1 }
                     visible: AudioService.sxmCategory.length > 0
                     Text {
@@ -673,7 +673,7 @@ Item {
                     delegate: Rectangle {
                         width: 62; height: 38; radius: 19
                         color: sxmChBtn.pressed ? "#2C2C2E" : "#1C1C1E"
-                        border { color: "rgba(255,255,255,0.15)"; width: 1 }
+                        border { color: Qt.rgba(1, 1, 1, 0.15); width: 1 }
                         Text { anchors.centerIn: parent; text: modelData.icon; color: "#0A84FF"; font.pixelSize: 17 }
                         MouseArea {
                             id: sxmChBtn; anchors.fill: parent
@@ -700,7 +700,7 @@ Item {
 
                         height: 34; radius: 17; width: sxmPresetContent.width + 20
                         color: isActive ? "#0A84FF" : "#1C1C1E"
-                        border { color: isActive ? "#0A84FF" : "rgba(255,255,255,0.2)"; width: 1 }
+                        border { color: isActive ? "#0A84FF" : Qt.rgba(1, 1, 1, 0.2); width: 1 }
                         Behavior on color { ColorAnimation { duration: 150 } }
 
                         Column {
@@ -715,7 +715,7 @@ Item {
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: preset && preset.name.length > 0 ? preset.name : ""
-                                color: isActive ? "rgba(255,255,255,0.85)" : "#8E8E93"
+                                color: isActive ? Qt.rgba(1, 1, 1, 0.85) : "#8E8E93"
                                 font { family: "Roboto"; pixelSize: 9 }
                                 visible: preset && preset.name.length > 0
                             }
@@ -829,8 +829,8 @@ Item {
         signal toggled()
 
         height: 28; radius: 14; width: bosePillLbl.width + 20
-        color: active ? "rgba(10,132,255,0.2)" : "#2C2C2E"
-        border { color: active ? "#0A84FF" : "rgba(255,255,255,0.15)"; width: 1 }
+        color: active ? Qt.rgba(0.0392, 0.5176, 1, 0.2) : "#2C2C2E"
+        border { color: active ? "#0A84FF" : Qt.rgba(1, 1, 1, 0.15); width: 1 }
         Behavior on color { ColorAnimation { duration: 150 } }
 
         Text {

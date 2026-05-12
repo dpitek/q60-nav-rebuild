@@ -89,8 +89,8 @@ Item {
         id: turnCard
         anchors { top: parent.top; left: parent.left; topMargin: 40; leftMargin: 16 }
         width: 280; height: 88; radius: 16
-        color: "rgba(28,28,30,0.92)"
-        border { color: "rgba(255,255,255,0.15)"; width: 1 }
+        color: Qt.rgba(0.1098, 0.1098, 0.1176, 0.92)
+        border { color: Qt.rgba(1, 1, 1, 0.15); width: 1 }
         visible: StatusBridge.navActive
 
         Behavior on opacity { NumberAnimation { duration: 200 } }
@@ -165,7 +165,7 @@ Item {
         anchors { top: parent.top; left: parent.left; topMargin: 48; leftMargin: 24 }
         visible: !StatusBridge.navActive
         text: "Q60"
-        color: "rgba(255,255,255,0.06)"
+        color: Qt.rgba(1, 1, 1, 0.06)
         font { pixelSize: 28; weight: Font.Light; letterSpacing: 6 }
     }
 
@@ -181,14 +181,14 @@ Item {
         id: bottomStrip
         anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
         height: 72
-        color: "rgba(0,0,0,0.88)"
+        color: Qt.rgba(0, 0, 0, 0.88)
         visible: StatusBridge.navActive
 
         // Top separator
         Rectangle {
             anchors { top: parent.top; left: parent.left; right: parent.right }
             height: 1
-            color: "rgba(255,255,255,0.12)"
+            color: Qt.rgba(1, 1, 1, 0.12)
         }
 
         Row {
@@ -215,7 +215,7 @@ Item {
 
             // Separator
             Rectangle {
-                width: 1; height: 36; color: "rgba(255,255,255,0.15)"
+                width: 1; height: 36; color: Qt.rgba(1, 1, 1, 0.15)
                 anchors.verticalCenter: parent.verticalCenter
             }
 
@@ -240,7 +240,7 @@ Item {
 
             // Separator
             Rectangle {
-                width: 1; height: 36; color: "rgba(255,255,255,0.15)"
+                width: 1; height: 36; color: Qt.rgba(1, 1, 1, 0.15)
                 anchors.verticalCenter: parent.verticalCenter
             }
 
@@ -295,7 +295,7 @@ Item {
     Rectangle {
         anchors { top: parent.top; left: parent.left; right: parent.right; topMargin: 32 }
         height: 40
-        color: "rgba(255,159,10,0.92)"
+        color: Qt.rgba(1, 0.6235, 0.0392, 0.92)
         visible: NavigationService.rerouting
         z: 10
 
@@ -367,7 +367,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         visible: StatusBridge.reverseActive
-        color: "rgba(10,132,255,0.18)"
+        color: Qt.rgba(0.0392, 0.5176, 1, 0.18)
         z: 20
 
         Column {

@@ -1,0 +1,40 @@
+# Dockerfile.simulator — Q60 Nav hardware simulator
+# Extends q60-toolchain with i386 runtime libs needed to execute the target binary.
+# Build once:  docker build -t q60-simulator -f Dockerfile.simulator .
+# Run via:     scripts/run-simulator.sh
+#
+# Why a separate image: the build container installs dev headers which are not
+# persisted between 'docker run --rm' invocations.  This image bakes the runtime
+# .so files in so the simulator starts instantly without a per-run apt install.
+FROM q60-toolchain
+
+# i386 runtime libraries — same set the binary links against (NEEDED from objdump).
+# Runtime only (.so, not -dev headers).
+RUN dpkg --add-architecture i386 2>/dev/null || true && \
+    apt-get update -qq && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        # EGL + GL (Mesa swrast — no hardware GPU, matches target)
+        libglvnd0:i386 \
+        libopengl0:i386 \
+        libegl1:i386 \
+        libgl1:i386 \
+        libgles2:i386 \
+        # Image libs (MapLibre tile decoding)
+        libpng16-16:i386 \
+        libjpeg8:i386 \
+        # libuv (MapLibre async I/O)
+        libuv1:i386 \
+        # ICU (MapLibre Unicode shaping)
+        libicu70:i386 \
+        # C++ runtime
+        libstdc++6:i386 \
+        libgcc-s1:i386 \
+        # Qt font/input stack
+        libxkbcommon0:i386 \
+        libdouble-conversion3:i386 \
+        libpcre2-16-0:i386 \
+        libfreetype6:i386 \
+        libfontconfig1:i386 \
+        # GLib (Qt6Core dependency on Ubuntu)
+        libglib2.0-0:i386 \
+    && rm -rf /var/lib/apt/lists/*

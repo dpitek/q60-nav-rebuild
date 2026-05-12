@@ -15,7 +15,7 @@ Item {
         Rectangle {
             anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
             height: 1
-            color: "rgba(255,255,255,0.15)"
+            color: Qt.rgba(1, 1, 1, 0.15)
         }
     }
 
@@ -50,7 +50,7 @@ Item {
 
         Rectangle {
             width: 1; height: 14
-            color: "rgba(255,255,255,0.2)"
+            color: Qt.rgba(1, 1, 1, 0.2)
             anchors.verticalCenter: parent.verticalCenter
             visible: StatusBridge.speed > 1
         }

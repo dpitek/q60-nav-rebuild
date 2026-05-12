@@ -33,7 +33,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             width: 80; height: 80; radius: 40
             color: "#1C1C1E"
-            border { color: "rgba(255,255,255,0.15)"; width: 1.5 }
+            border { color: Qt.rgba(1, 1, 1, 0.15); width: 1.5 }
 
             Text {
                 anchors.centerIn: parent

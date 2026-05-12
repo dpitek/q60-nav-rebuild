@@ -28,21 +28,21 @@ Item {
         id: sheet
         anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
         height: 240
-        color: "rgba(0,0,0,0.88)"
+        color: Qt.rgba(0, 0, 0, 0.88)
         radius: 20
 
         // Top border only (flat bottom flush to screen edge)
         Rectangle {
             anchors { top: parent.top; left: parent.left; right: parent.right }
             height: 1
-            color: "rgba(255,255,255,0.15)"
+            color: Qt.rgba(1, 1, 1, 0.15)
         }
 
         // Drag handle
         Rectangle {
             anchors { top: parent.top; horizontalCenter: parent.horizontalCenter; topMargin: 10 }
             width: 36; height: 4; radius: 2
-            color: "rgba(255,255,255,0.3)"
+            color: Qt.rgba(1, 1, 1, 0.3)
         }
 
         Column {

@@ -41,7 +41,7 @@
 // ─── MapLibreItem ─────────────────────────────────────────────────────────────
 class MapLibreItem : public QQuickItem {
     Q_OBJECT
-    QML_ELEMENT
+    QML_NAMED_ELEMENT(MapLibreMap)   // QML type: Q60Nav.MapLibreMap
 
     Q_PROPERTY(QGeoCoordinate center   READ center   WRITE setCenter   NOTIFY centerChanged)
     Q_PROPERTY(double          zoom    READ zoom     WRITE setZoom     NOTIFY zoomChanged)

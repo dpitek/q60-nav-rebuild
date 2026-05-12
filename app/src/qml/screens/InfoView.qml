@@ -27,7 +27,7 @@ Item {
                 width: parent.width; height: 120
                 radius: 16
                 color: "#1C1C1E"
-                border { color: "rgba(255,255,255,0.08)"; width: 1 }
+                border { color: Qt.rgba(1, 1, 1, 0.08); width: 1 }
 
                 Row {
                     anchors { fill: parent; margins: 14 }
@@ -124,7 +124,7 @@ Item {
                 width: parent.width; height: 110
                 radius: 16
                 color: "#1C1C1E"
-                border { color: "rgba(255,255,255,0.08)"; width: 1 }
+                border { color: Qt.rgba(1, 1, 1, 0.08); width: 1 }
 
                 Column {
                     anchors { fill: parent; margins: 12 }
@@ -192,7 +192,7 @@ Item {
                 width: parent.width; height: 100
                 radius: 16
                 color: "#1C1C1E"
-                border { color: "rgba(255,255,255,0.08)"; width: 1 }
+                border { color: Qt.rgba(1, 1, 1, 0.08); width: 1 }
 
                 Column {
                     anchors { fill: parent; margins: 12 }
@@ -270,7 +270,7 @@ Item {
                 width: parent.width; height: 162
                 radius: 16
                 color: "#1C1C1E"
-                border { color: "rgba(255,255,255,0.08)"; width: 1 }
+                border { color: Qt.rgba(1, 1, 1, 0.08); width: 1 }
 
                 Column {
                     anchors { fill: parent; margins: 12 }

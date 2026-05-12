@@ -55,12 +55,18 @@ StatusBridge::StatusBridge(NavigationService *nav,
     });
 
     connect(nav, &NavigationService::positionChanged, this,
-            [this](const QGeoCoordinate &) {
+            [this](const QGeoCoordinate &pos) {
         // GPS lock derived from valid position
-        bool hasLock = m_nav->position().isValid();
+        bool hasLock = pos.isValid();
         if (hasLock != m_gpsLock) {
             m_gpsLock = hasLock;
             emit gpsLockChanged(hasLock);
+        }
+        // Expose coordinates to QML map
+        if (hasLock) {
+            m_latitude  = pos.latitude();
+            m_longitude = pos.longitude();
+            emit positionChanged();
         }
     });
 

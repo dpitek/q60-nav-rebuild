@@ -158,7 +158,7 @@ Item {
         Rectangle {
             width: 180; height: 218; radius: 16
             color: "#1C1C1E"
-            border { color: "rgba(255,255,255,0.15)"; width: 1 }
+            border { color: Qt.rgba(1, 1, 1, 0.15); width: 1 }
 
             Column {
                 anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; topMargin: 12 }
@@ -210,7 +210,7 @@ Item {
                         model: 3
                         delegate: Rectangle {
                             width: 26; height: 26; radius: 13
-                            color: VehicleService.driverSeat > index ? "rgba(255,159,10,0.25)" : "#2C2C2E"
+                            color: VehicleService.driverSeat > index ? Qt.rgba(1, 0.6235, 0.0392, 0.25) : "#2C2C2E"
                             border { color: VehicleService.driverSeat > index ? "#FF9F0A" : "#3A3A3C"; width: 1.5 }
                             Text {
                                 anchors.centerIn: parent; text: "●"
@@ -232,7 +232,7 @@ Item {
         Rectangle {
             width: 168; height: 218; radius: 16
             color: "#1C1C1E"
-            border { color: "rgba(255,255,255,0.15)"; width: 1 }
+            border { color: Qt.rgba(1, 1, 1, 0.15); width: 1 }
 
             Column {
                 anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; topMargin: 14 }
@@ -256,7 +256,7 @@ Item {
                             color: VehicleService.climateMode === modelData.mode ? "#0A84FF" : "#2C2C2E"
                             border {
                                 color: VehicleService.climateMode === modelData.mode
-                                       ? "#0A84FF" : "rgba(255,255,255,0.1)"
+                                       ? "#0A84FF" : Qt.rgba(1, 1, 1, 0.1)
                                 width: 1
                             }
                             Behavior on color { ColorAnimation { duration: 150 } }
@@ -327,8 +327,8 @@ Item {
 
                     Rectangle {
                         width: 72; height: 40; radius: 12
-                        color: VehicleService.acOn ? "rgba(10,132,255,0.2)" : "#2C2C2E"
-                        border { color: VehicleService.acOn ? "#0A84FF" : "rgba(255,255,255,0.1)"; width: 1.5 }
+                        color: VehicleService.acOn ? Qt.rgba(0.0392, 0.5176, 1, 0.2) : "#2C2C2E"
+                        border { color: VehicleService.acOn ? "#0A84FF" : Qt.rgba(1, 1, 1, 0.1); width: 1.5 }
                         Behavior on color { ColorAnimation { duration: 150 } }
                         Text {
                             anchors.centerIn: parent; text: "A/C"
@@ -343,8 +343,8 @@ Item {
 
                     Rectangle {
                         width: 72; height: 40; radius: 12
-                        color: VehicleService.recircOn ? "rgba(10,132,255,0.2)" : "#2C2C2E"
-                        border { color: VehicleService.recircOn ? "#0A84FF" : "rgba(255,255,255,0.1)"; width: 1.5 }
+                        color: VehicleService.recircOn ? Qt.rgba(0.0392, 0.5176, 1, 0.2) : "#2C2C2E"
+                        border { color: VehicleService.recircOn ? "#0A84FF" : Qt.rgba(1, 1, 1, 0.1); width: 1.5 }
                         Behavior on color { ColorAnimation { duration: 150 } }
                         Text {
                             anchors.centerIn: parent; text: "⟳ RECIRC"
@@ -372,7 +372,7 @@ Item {
         Rectangle {
             width: 180; height: 218; radius: 16
             color: "#1C1C1E"
-            border { color: "rgba(255,255,255,0.15)"; width: 1 }
+            border { color: Qt.rgba(1, 1, 1, 0.15); width: 1 }
 
             Column {
                 anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; topMargin: 12 }
@@ -424,7 +424,7 @@ Item {
                         model: 3
                         delegate: Rectangle {
                             width: 26; height: 26; radius: 13
-                            color: VehicleService.passSeat > index ? "rgba(255,159,10,0.25)" : "#2C2C2E"
+                            color: VehicleService.passSeat > index ? Qt.rgba(1, 0.6235, 0.0392, 0.25) : "#2C2C2E"
                             border { color: VehicleService.passSeat > index ? "#FF9F0A" : "#3A3A3C"; width: 1.5 }
                             Text {
                                 anchors.centerIn: parent; text: "●"
@@ -457,7 +457,7 @@ Item {
         // 1. Heated Steering Wheel
         Rectangle {
             width: 68; height: 48; radius: 16
-            color: VehicleService.heatedSteeringWheel ? "rgba(255,159,10,0.2)" : "#1C1C1E"
+            color: VehicleService.heatedSteeringWheel ? Qt.rgba(1, 0.6235, 0.0392, 0.2) : "#1C1C1E"
             border {
                 color: VehicleService.heatedSteeringWheel ? "#FF9F0A" : "#2C2C2E"
                 width: 1.5
@@ -490,7 +490,7 @@ Item {
         Rectangle {
             id: plasmaCard
             width: 68; height: 48; radius: 16
-            color: VehicleService.plasmaclusterLevel > 0 ? "rgba(10,132,255,0.18)" : "#1C1C1E"
+            color: VehicleService.plasmaclusterLevel > 0 ? Qt.rgba(0.0392, 0.5176, 1, 0.18) : "#1C1C1E"
             border {
                 color: VehicleService.plasmaclusterLevel > 0 ? "#0A84FF" : "#2C2C2E"
                 width: 1.5
@@ -535,7 +535,7 @@ Item {
         // 3. Rain Sensor
         Rectangle {
             width: 68; height: 48; radius: 16
-            color: VehicleService.rainSensorEnabled ? "rgba(10,132,255,0.18)" : "#1C1C1E"
+            color: VehicleService.rainSensorEnabled ? Qt.rgba(0.0392, 0.5176, 1, 0.18) : "#1C1C1E"
             border {
                 color: VehicleService.rainSensorEnabled ? "#0A84FF" : "#2C2C2E"
                 width: 1.5
@@ -567,7 +567,7 @@ Item {
         // 4. Rear Defrost
         Rectangle {
             width: 68; height: 48; radius: 16
-            color: VehicleService.rearDefrostOn ? "rgba(255,159,10,0.2)" : "#1C1C1E"
+            color: VehicleService.rearDefrostOn ? Qt.rgba(1, 0.6235, 0.0392, 0.2) : "#1C1C1E"
             border {
                 color: VehicleService.rearDefrostOn ? "#FF9F0A" : "#2C2C2E"
                 width: 1.5

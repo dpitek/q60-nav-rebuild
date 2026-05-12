@@ -29,6 +29,9 @@ class StatusBridge : public QObject {
     Q_PROPERTY(bool    sxmActive      READ sxmActive      NOTIFY sxmActiveChanged)
     Q_PROPERTY(double  outsideTemp    READ outsideTemp    NOTIFY outsideTempChanged)
     Q_PROPERTY(QString timeString     READ timeString     NOTIFY timeChanged)
+    // GPS position (for map tracking)
+    Q_PROPERTY(double  latitude       READ latitude       NOTIFY positionChanged)
+    Q_PROPERTY(double  longitude      READ longitude      NOTIFY positionChanged)
 
 public:
     explicit StatusBridge(NavigationService *nav,
@@ -51,6 +54,8 @@ public:
     bool   sxmActive()      const { return m_sxmActive; }
     double outsideTemp()    const { return m_outsideTemp; }
     QString timeString()    const { return m_timeString; }
+    double latitude()       const { return m_latitude; }
+    double longitude()      const { return m_longitude; }
 
 signals:
     void navActiveChanged(bool);
@@ -65,6 +70,7 @@ signals:
     void sxmActiveChanged(bool);
     void outsideTempChanged(double);
     void timeChanged(QString);
+    void positionChanged();
 
     // Cross-screen commands
     void showTurnBanner();      // Lower screen: flash turn arrow overlay
@@ -100,6 +106,8 @@ private:
     bool    m_sxmActive = false;
     double  m_outsideTemp = 67.0;
     QString m_timeString;
+    double  m_latitude  = 0.0;
+    double  m_longitude = 0.0;
 
     QTimer *m_clockTimer;
     static constexpr double TURN_BANNER_MILES = 0.5;
