@@ -1,30 +1,29 @@
 // MapLibreItem.cpp — QQuickItem MapLibre GL renderer
 // Q60 Nav — DCU i386, Mesa swrast (software GL), Qt 6.6
 //
-// Architecture overview
-// ─────────────────────
-// Map (state machine) → MinimalRendererFrontend::update() → stores UpdateParameters
-//   └─ MapLibreItem::scheduleRender() → MinimalRendererFrontend::renderFrame()
-//        └─ mbgl::Renderer::render(updateParams) — draws into EGL pbuffer (Mesa swrast)
-//             └─ OffscreenBackend::readFramebuffer() → PremultipliedImage
-//                  └─ onFrameReady(QImage) → m_rendered updated → QSGImageNode refresh
+// Architecture (HeadlessFrontend path)
+// ─────────────────────────────────────
+// HeadlessFrontend owns the EGL pbuffer context entirely internally.
+// headless_backend_egl.cpp (compiled into libmbgl-core.a) handles all EGL setup
+// using Mesa swrast.  We never write EGL code here.
 //
-// EGL / Mesa wiring
-// ─────────────────
-// OffscreenBackend must create an EGL display (eglGetDisplay(EGL_DEFAULT_DISPLAY)),
-// a pbuffer surface, and a GL context.  On the DCU target Mesa swrast provides:
-//   /opt/nav/lib/libEGL.so, /opt/nav/lib/libGL.so (swrast driver)
-// Set LD_LIBRARY_PATH=/opt/nav/lib and LIBGL_DRIVERS_PATH=/opt/nav/lib/dri
-// before launching the process.
+// Render flow:
+//   scheduleRender()
+//     → m_runLoop->runOnce()           drain pending mbgl callbacks/tile loads
+//     → m_frontend->render(*m_map)     synchronous — blocks until frame is done
+//     → RenderResult.image             PremultipliedImage (RGBA, w×h)
+//     → wrap as QImage (zero-copy ref) → deep copy → store in m_rendered
+//     → update()                       triggers updatePaintNode() on render thread
 //
-// TODO checklist before enabling MAPLIBRE_AVAILABLE on the DCU:
-//   [1] Implement OffscreenBackend::activate()/deactivate() with eglMakeCurrent()
-//   [2] Implement OffscreenBackend::getExtensionFunctionPointer() with eglGetProcAddress()
-//   [3] Implement OffscreenBackend::getDefaultRenderable() returning a gl::Renderable
-//       that wraps the pbuffer FBO.
-//   [4] Verify libmbgl-core.a is linked: target_link_libraries(q60nav mbgl-core)
-//   [5] Confirm style JSON at /opt/nav/style/q60-dark.json is valid MapLibre style spec.
-//   [6] Run with MESA_DEBUG=1 LIBGL_DEBUG=verbose to confirm swrast is loading.
+// Environment variables required on the DCU target:
+//   LD_LIBRARY_PATH=/opt/nav/lib
+//   LIBGL_DRIVERS_PATH=/opt/nav/lib/dri
+//   MESA_GL_VERSION_OVERRIDE=3.3    (if swrast doesn't advertise GL 3.x)
+//
+// Tile server / offline cache:
+//   /opt/nav/tiles/mbgl-cache.db   — SQLite MBTiles or mbgl offline region DB
+//   /opt/nav/style/                — style JSON + sprites + glyphs
+//   /opt/nav/style/q60-dark.json   — default style
 
 #include "MapLibreItem.h"
 
@@ -34,181 +33,34 @@
 #include <QPainter>
 
 #ifdef MAPLIBRE_AVAILABLE
-#include <mbgl/map/camera.hpp>
 #include <mbgl/util/geo.hpp>
 #include <mbgl/util/image.hpp>
-#include <mbgl/gfx/backend_scope.hpp>
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// OffscreenBackend
-// ═══════════════════════════════════════════════════════════════════════════════
-// Subclasses mbgl::gl::RendererBackend to manage an EGL pbuffer + Mesa swrast
-// context.  All methods below marked TODO require EGL implementation before
-// the MAPLIBRE_AVAILABLE path is activated.
+#if __has_include(<mbgl/style/sources/geojson_source.hpp>)
+#  include <mbgl/style/sources/geojson_source.hpp>
+#  define HAVE_GEOJSON_SOURCE 1
+#endif
 
-#include <mbgl/gl/renderable_resource.hpp>
+#if __has_include(<mbgl/style/layers/line_layer.hpp>)
+#  include <mbgl/style/layers/line_layer.hpp>
+#  define HAVE_LINE_LAYER 1
+#endif
 
-// ── PbufferRenderableResource ──────────────────────────────────────────────────
-// Wraps the EGL pbuffer surface as a gl::RenderableResource.
-// bind() must call eglMakeCurrent on the pbuffer before mbgl renders.
-class PbufferRenderableResource final : public mbgl::gl::RenderableResource {
-public:
-    explicit PbufferRenderableResource() = default;
+#if __has_include(<mbgl/style/layers/circle_layer.hpp>)
+#  include <mbgl/style/layers/circle_layer.hpp>
+#  define HAVE_CIRCLE_LAYER 1
+#endif
 
-    void bind() override {
-        // TODO: eglMakeCurrent(m_display, m_pbuffer, m_pbuffer, m_context)
-        // Bind the default (window/pbuffer) framebuffer: glBindFramebuffer(GL_FRAMEBUFFER, 0)
-    }
-
-    void swap() override {
-        // Pbuffer — no swap needed; pixels are read back via readFramebuffer()
-    }
-};
-
-// ── PbufferRenderable ──────────────────────────────────────────────────────────
-class PbufferRenderable final : public mbgl::gfx::Renderable {
-public:
-    explicit PbufferRenderable(mbgl::Size size)
-        : mbgl::gfx::Renderable(size, std::make_unique<PbufferRenderableResource>())
-    {}
-
-    void resize(mbgl::Size newSize) { size = newSize; }
-};
-
-// ── OffscreenBackend ───────────────────────────────────────────────────────────
-class OffscreenBackend final : public mbgl::gl::RendererBackend {
-public:
-    explicit OffscreenBackend(mbgl::Size size)
-        : mbgl::gl::RendererBackend(mbgl::gfx::ContextMode::Unique)
-        , m_renderable(size)
-    {
-        // TODO: create EGL display, config, pbuffer surface, and GL context.
-        // Pseudocode:
-        //   m_display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-        //   eglInitialize(m_display, nullptr, nullptr);
-        //   EGLint attrs[] = { EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
-        //                      EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
-        //                      EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8,
-        //                      EGL_BLUE_SIZE, 8, EGL_ALPHA_SIZE, 8, EGL_NONE };
-        //   EGLConfig cfg; EGLint n;
-        //   eglChooseConfig(m_display, attrs, &cfg, 1, &n);
-        //   EGLint pbAttrs[] = { EGL_WIDTH, (EGLint)size.width,
-        //                         EGL_HEIGHT, (EGLint)size.height, EGL_NONE };
-        //   m_pbuffer = eglCreatePbufferSurface(m_display, cfg, pbAttrs);
-        //   m_context = eglCreateContext(m_display, cfg, EGL_NO_CONTEXT, nullptr);
-        //   eglMakeCurrent(m_display, m_pbuffer, m_pbuffer, m_context);
-        qDebug() << "[MapLibre] OffscreenBackend created (EGL TODO)";
-    }
-
-    ~OffscreenBackend() override {
-        // TODO: eglDestroyContext / eglDestroySurface / eglTerminate
-    }
-
-    // Resize the pbuffer when the QQuickItem changes size.
-    void resize(mbgl::Size newSize) {
-        m_renderable.resize(newSize);
-        // TODO: destroy and recreate pbuffer surface at new dimensions.
-    }
-
-    // Read pixels from the currently bound framebuffer into a PremultipliedImage.
-    mbgl::PremultipliedImage readPixels() {
-        // Delegates to the protected readFramebuffer() method from gl::RendererBackend.
-        // This calls glReadPixels internally.
-        return readFramebuffer(m_renderable.getSize());
-    }
-
-    // ── RendererBackend interface ────────────────────────────────────────────
-    mbgl::gfx::Renderable& getDefaultRenderable() override {
-        return m_renderable;
-    }
-
-    void updateAssumedState() override {
-        // Called before each render pass.  Tell mbgl which FBO is currently bound.
-        assumeFramebufferBinding(0); // Default framebuffer (pbuffer)
-        assumeViewport(0, 0, m_renderable.getSize());
-        assumeScissorTest(false);
-    }
-
-protected:
-    void activate() override {
-        // TODO: eglMakeCurrent(m_display, m_pbuffer, m_pbuffer, m_context)
-    }
-
-    void deactivate() override {
-        // TODO: eglMakeCurrent(m_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT)
-    }
-
-    ProcAddress getExtensionFunctionPointer(const char* name) override {
-        // TODO: return reinterpret_cast<ProcAddress>(eglGetProcAddress(name));
-        Q_UNUSED(name);
-        return nullptr;
-    }
-
-private:
-    PbufferRenderable m_renderable;
-    // TODO: EGLDisplay m_display = EGL_NO_DISPLAY;
-    // TODO: EGLSurface m_pbuffer = EGL_NO_SURFACE;
-    // TODO: EGLContext m_context = EGL_NO_CONTEXT;
-};
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// MinimalRendererFrontend
-// ═══════════════════════════════════════════════════════════════════════════════
-
-MinimalRendererFrontend::MinimalRendererFrontend(mbgl::gfx::RendererBackend& backend,
-                                                  float pixelRatio,
-                                                  FrameCallback cb)
-    : m_renderer(std::make_unique<mbgl::Renderer>(backend, pixelRatio))
-    , m_frameCb(std::move(cb))
-{}
-
-MinimalRendererFrontend::~MinimalRendererFrontend() = default;
-
-void MinimalRendererFrontend::reset() {
-    m_renderer.reset();
-}
-
-void MinimalRendererFrontend::setObserver(mbgl::RendererObserver& obs) {
-    if (m_renderer) m_renderer->setObserver(&obs);
-}
-
-void MinimalRendererFrontend::update(std::shared_ptr<mbgl::UpdateParameters> params) {
-    // Coalesce — store the latest params; renderFrame() will consume them.
-    m_updateParams = std::move(params);
-    m_dirty = true;
-    // In a Continuous-mode map this would trigger a repaint via a platform timer.
-    // MapLibreItem::scheduleRender() drives the repaint from Qt's update loop.
-}
-
-void MinimalRendererFrontend::renderFrame() {
-    if (!m_renderer || !m_updateParams || !m_dirty) return;
-    m_dirty = false;
-
-    // Renderer::render() issues GL draw calls into the currently bound FBO.
-    m_renderer->render(m_updateParams);
-
-    // TODO: After Renderer::render(), the pixels are in the EGL pbuffer.
-    // Read them back via OffscreenBackend::readPixels() and fire m_frameCb.
-    // For now, m_frameCb is called with an empty image so the Qt side sees
-    // a null render and keeps showing the placeholder.
-    //
-    // When EGL is wired up, replace the line below with:
-    //   auto* backend = dynamic_cast<OffscreenBackend*>(
-    //       &m_renderer->... /* no direct backend access from Renderer */ );
-    // The cleanest way is to store a reference to OffscreenBackend in this
-    // class and call it directly.  See MapLibreItem::initMap() where both
-    // objects are created together.
-    m_frameCb(mbgl::PremultipliedImage{}); // TODO: replace with readPixels()
-}
-
+#include <mbgl/util/color.hpp>
 #endif // MAPLIBRE_AVAILABLE
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Placeholder renderer — used when MAPLIBRE_AVAILABLE is not set, or until EGL
-// is confirmed working.  Draws the same dark-green grid as NavigationView.qml.
+// Placeholder renderer
 // ═══════════════════════════════════════════════════════════════════════════════
-static QImage makePlaceholder(int w, int h,
-                               double lat, double lon, double zoom)
+// Dark-green grid matching NavigationView.qml's fallback Canvas.
+// Used when MAPLIBRE_AVAILABLE is not set, or when EGL init throws.
+
+QImage MapLibreItem::makePlaceholderImage(int w, int h) const
 {
     if (w <= 0 || h <= 0) return {};
     QImage img(w, h, QImage::Format_ARGB32_Premultiplied);
@@ -217,14 +69,14 @@ static QImage makePlaceholder(int w, int h,
     QPainter p(&img);
     p.setRenderHint(QPainter::Antialiasing, false);
 
-    // Grid lines (matches the Canvas in NavigationView.qml)
+    // Grid lines
     p.setPen(QPen(QColor(0x3a, 0xdf, 0x8a, 18), 1));
     for (int x = 0; x < w; x += 60)
         p.drawLine(x, 0, x, h);
     for (int y = 0; y < h; y += 60)
         p.drawLine(0, y, w, y);
 
-    // Watermark
+    // Large watermark
     p.setPen(QColor(0x1a, 0x2a, 0x1a, 38));
     QFont f;
     f.setPixelSize(96);
@@ -232,13 +84,16 @@ static QImage makePlaceholder(int w, int h,
     p.setFont(f);
     p.drawText(img.rect(), Qt::AlignCenter, QStringLiteral("MAP"));
 
-    // Coordinates (debug aid)
+    // Coordinate debug text
     p.setPen(QColor(0x2a, 0x4a, 0x3a, 180));
     QFont f2;
     f2.setPixelSize(11);
     p.setFont(f2);
     p.drawText(8, h - 8,
-               QString("%.5f, %.5f  z%.1f").arg(lat).arg(lon).arg(zoom));
+               QString("%.5f, %.5f  z%.1f")
+                   .arg(m_center.latitude())
+                   .arg(m_center.longitude())
+                   .arg(m_zoom));
     p.end();
     return img;
 }
@@ -251,7 +106,7 @@ MapLibreItem::MapLibreItem(QQuickItem *parent)
     : QQuickItem(parent)
 {
     setFlag(ItemHasContents, true);
-    setAntialiasing(false); // Software renderer on Atom — skip AA cycles
+    setAntialiasing(false); // Software renderer — skip AA cycles
 }
 
 MapLibreItem::~MapLibreItem() = default;
@@ -262,6 +117,7 @@ void MapLibreItem::componentComplete()
     initMap();
 }
 
+// ─── initMap ──────────────────────────────────────────────────────────────────
 void MapLibreItem::initMap()
 {
 #ifdef MAPLIBRE_AVAILABLE
@@ -269,137 +125,125 @@ void MapLibreItem::initMap()
 
     const int w = qMax(static_cast<int>(width()),  32);
     const int h = qMax(static_cast<int>(height()), 32);
-
     qDebug() << "[MapLibre] Initializing" << w << "x" << h;
 
-    // RunLoop must be created on the thread that owns the Map.
-    // Qt main thread == mbgl main thread in this single-threaded setup.
+    // RunLoop must be created on the thread that will own the Map.
+    // This is Qt's main thread in our single-threaded setup.
     m_runLoop = std::make_unique<mbgl::util::RunLoop>(
         mbgl::util::RunLoop::Type::Default);
 
-    // ── Backend + frontend ───────────────────────────────────────────────────
-    // TODO: OffscreenBackend construction will throw / return false until EGL is
-    // wired in.  Wrap in try/catch so the fallback placeholder is shown instead
-    // of crashing the DCU process.
     try {
         mbgl::Size sz{ static_cast<uint32_t>(w), static_cast<uint32_t>(h) };
-        m_backend = std::make_unique<OffscreenBackend>(sz);
 
-        m_frontend = std::make_unique<MinimalRendererFrontend>(
-            *m_backend,
+        // HeadlessFrontend creates and owns an EGL pbuffer + Mesa swrast context.
+        // headless_backend_egl.cpp (in libmbgl-core.a) handles all EGL wiring.
+        // Throws std::runtime_error if EGL / Mesa is unavailable.
+        m_frontend = std::make_unique<mbgl::HeadlessFrontend>(
+            sz,
             /*pixelRatio=*/1.0f,
-            [this](mbgl::PremultipliedImage img) {
-                // Called from renderFrame() on the main thread.
-                if (!img.valid()) {
-                    // EGL not yet wired — show placeholder.
-                    onFrameReady(makePlaceholder(
-                        static_cast<int>(m_backend
-                            ? m_backend->getDefaultRenderable().getSize().width  : w),
-                        static_cast<int>(m_backend
-                            ? m_backend->getDefaultRenderable().getSize().height : h),
-                        m_center.latitude(), m_center.longitude(), m_zoom));
-                    return;
-                }
-                // Valid frame: wrap mbgl image in QImage (zero-copy, deep-copy
-                // before mbgl reclaims the buffer).
-                QImage frame(
-                    reinterpret_cast<const uchar *>(img.data.get()),
-                    static_cast<int>(img.size.width),
-                    static_cast<int>(img.size.height),
-                    QImage::Format_RGBA8888_Premultiplied);
-                onFrameReady(frame.copy());
-            });
+            mbgl::gfx::HeadlessBackend::SwapBehaviour::NoFlush,
+            mbgl::gfx::ContextMode::Unique);
+
+        mbgl::ResourceOptions resOpts;
+        resOpts.withCachePath("/opt/nav/tiles/mbgl-cache.db")
+               .withAssetPath("/opt/nav/style/");
+
+        m_map = std::make_unique<mbgl::Map>(
+            *m_frontend,
+            mbgl::MapObserver::nullObserver(),
+            mbgl::MapOptions()
+                .withMapMode(mbgl::MapMode::Static)
+                .withConstrainMode(mbgl::ConstrainMode::HeightOnly)
+                .withViewportMode(mbgl::ViewportMode::Default)
+                .withSize(sz)
+                .withPixelRatio(1.0f),
+            resOpts);
+
+        m_map->getStyle().loadURL(m_style.toStdString());
+        applyCamera();
+
+        m_ready = true;
+        emit readyChanged(true);
+        qDebug() << "[MapLibre] Map created — scheduling first render";
+
+        scheduleRender();
+
     } catch (const std::exception &e) {
-        qWarning() << "[MapLibre] Backend init failed:" << e.what()
-                   << "— using placeholder";
-        m_rendered = makePlaceholder(w, h,
-                                     m_center.latitude(),
-                                     m_center.longitude(), m_zoom);
-        m_dirty = false;
+        qWarning() << "[MapLibre] Init failed:" << e.what()
+                   << "— falling back to placeholder";
+        m_rendered = makePlaceholderImage(w, h);
         update();
-        return;
     }
-
-    // ── Map ──────────────────────────────────────────────────────────────────
-    mbgl::MapOptions mapOpts;
-    mapOpts.withMapMode(mbgl::MapMode::Static)       // Static = render-on-demand
-           .withConstrainMode(mbgl::ConstrainMode::HeightOnly)
-           .withViewportMode(mbgl::ViewportMode::Default)
-           .withSize({ static_cast<uint32_t>(w), static_cast<uint32_t>(h) })
-           .withPixelRatio(1.0f);
-
-    mbgl::ResourceOptions resOpts;
-    resOpts.withAssetPath("/opt/nav")
-           .withCachePath("/data/mbgl-cache.db");
-    // Note: no API key needed for locally-hosted tiles.
-
-    m_map = std::make_unique<mbgl::Map>(
-        *m_frontend,
-        mbgl::MapObserver::nullObserver(),
-        mapOpts,
-        resOpts
-    );
-
-    // ── Initial camera + style ───────────────────────────────────────────────
-    // Map::setStyle() requires a unique_ptr<style::Style> which needs a FileSource.
-    // The simpler path for URL-based styles is getStyle().loadURL().
-    m_map->getStyle().loadURL(m_style.toStdString());
-
-    applyCamera();
-
-    m_ready = true;
-    emit readyChanged(true);
-    qDebug() << "[MapLibre] Map created — waiting for first frame";
-
-    // Kick the first render; the Map will call frontend->update() as tiles load.
-    scheduleRender();
 
 #else // !MAPLIBRE_AVAILABLE
     qDebug() << "[MapLibre] Not compiled — using placeholder";
-    m_rendered = makePlaceholder(
+    m_rendered = makePlaceholderImage(
         qMax(static_cast<int>(width()),  32),
-        qMax(static_cast<int>(height()), 32),
-        m_center.latitude(), m_center.longitude(), m_zoom);
-    m_dirty = false;
+        qMax(static_cast<int>(height()), 32));
     update();
 #endif
 }
 
 // ─── applyCamera ──────────────────────────────────────────────────────────────
-// Pushes m_center / m_zoom / m_bearing / m_pitch to the Map via CameraOptions.
 void MapLibreItem::applyCamera()
 {
 #ifdef MAPLIBRE_AVAILABLE
     if (!m_map) return;
-    mbgl::CameraOptions cam;
-    cam.withCenter(mbgl::LatLng{ m_center.latitude(), m_center.longitude() })
-       .withZoom(m_zoom)
-       .withBearing(m_bearing)
-       .withPitch(m_pitch);
-    m_map->jumpTo(cam);
+    m_map->jumpTo(
+        mbgl::CameraOptions()
+            .withCenter(mbgl::LatLng{ m_center.latitude(), m_center.longitude() })
+            .withZoom(m_zoom)
+            .withBearing(m_bearing)
+            .withPitch(m_pitch));
 #endif
 }
 
 // ─── scheduleRender ───────────────────────────────────────────────────────────
-// Asks the RunLoop to drain any pending mbgl work, then calls renderFrame().
+// Drains mbgl's run loop (processes tile loads, timers, etc.) then calls
+// HeadlessFrontend::render() synchronously.  Returns immediately if map is not
+// initialised.
 void MapLibreItem::scheduleRender()
 {
 #ifdef MAPLIBRE_AVAILABLE
-    if (!m_frontend) return;
-    // Drain queued mbgl callbacks (tile loads, timer callbacks, etc.)
-    if (m_runLoop) m_runLoop->runOnce();
-    m_frontend->renderFrame();
-#endif
-}
+    if (!m_frontend || !m_map) return;
 
-// ─── onFrameReady ─────────────────────────────────────────────────────────────
-// Receives a rendered QImage from MinimalRendererFrontend, stores it, and
-// triggers a Qt scene-graph update.  Called on the main thread.
-void MapLibreItem::onFrameReady(QImage frame)
-{
-    if (!frame.isNull()) m_rendered = std::move(frame);
-    m_dirty = false;
+    // Drain any pending mbgl work (tile fetches, async tasks) before rendering.
+    if (m_runLoop) m_runLoop->runOnce();
+
+    try {
+        auto result = m_frontend->render(*m_map);
+        const auto &img = result.image;
+
+        if (!img.valid()) {
+            // Map not yet ready (tiles still loading) — keep showing previous frame
+            // or placeholder; schedule another render attempt.
+            if (m_rendered.isNull())
+                m_rendered = makePlaceholderImage(
+                    qMax(static_cast<int>(width()),  32),
+                    qMax(static_cast<int>(height()), 32));
+            update();
+            return;
+        }
+
+        // Wrap mbgl image in QImage (zero-copy, shared buffer reference).
+        // Deep-copy immediately before mbgl can reclaim the buffer.
+        QImage frame(
+            reinterpret_cast<const uchar *>(img.data.get()),
+            static_cast<int>(img.size.width),
+            static_cast<int>(img.size.height),
+            QImage::Format_RGBA8888_Premultiplied);
+        m_rendered = frame.copy();
+
+    } catch (const std::exception &e) {
+        qWarning() << "[MapLibre] render() threw:" << e.what()
+                   << "— showing placeholder";
+        m_rendered = makePlaceholderImage(
+            qMax(static_cast<int>(width()),  32),
+            qMax(static_cast<int>(height()), 32));
+    }
+
     update(); // triggers updatePaintNode() on the render thread
+#endif
 }
 
 // ─── geometryChange ───────────────────────────────────────────────────────────
@@ -413,20 +257,17 @@ void MapLibreItem::geometryChange(const QRectF &newGeometry,
     const int h = qMax(static_cast<int>(newGeometry.height()), 32);
 
 #ifdef MAPLIBRE_AVAILABLE
-    if (m_map && m_backend) {
+    if (m_frontend && m_map) {
         mbgl::Size sz{ static_cast<uint32_t>(w), static_cast<uint32_t>(h) };
-        m_backend->resize(sz);
+        m_frontend->setSize(sz);
         m_map->setSize(sz);
+        scheduleRender();
+        return;
     }
 #endif
 
-    // Always refresh placeholder when not yet rendering real tiles.
-    if (!m_ready || m_rendered.isNull()) {
-        m_rendered = makePlaceholder(w, h,
-                                     m_center.latitude(),
-                                     m_center.longitude(), m_zoom);
-    }
-    m_dirty = true;
+    // Not yet initialised — refresh placeholder at new size.
+    m_rendered = makePlaceholderImage(w, h);
     update();
 }
 
@@ -436,25 +277,21 @@ QSGNode *MapLibreItem::updatePaintNode(QSGNode *oldNode,
                                         UpdatePaintNodeData *)
 {
     if (m_rendered.isNull()) {
-        // Nothing to show yet — seed a placeholder so the screen isn't black.
-        const int w = qMax(static_cast<int>(width()),  1);
-        const int h = qMax(static_cast<int>(height()), 1);
-        m_rendered = makePlaceholder(w, h,
-                                     m_center.latitude(),
-                                     m_center.longitude(), m_zoom);
+        m_rendered = makePlaceholderImage(
+            qMax(static_cast<int>(width()),  1),
+            qMax(static_cast<int>(height()), 1));
     }
 
     QSGImageNode *node = static_cast<QSGImageNode *>(oldNode);
     if (!node) node = window()->createImageNode();
 
-    // createTextureFromImage() uploads m_rendered to GPU (or software raster).
-    // Ownership of the texture passes to the node; destroy the old one first.
+    // Upload texture; destroy the old one first (node doesn't own old tex life).
     QSGTexture *oldTex = node->texture();
     QSGTexture *tex = window()->createTextureFromImage(
         m_rendered, QQuickWindow::TextureHasAlphaChannel);
     node->setTexture(tex);
     node->setRect(boundingRect());
-    delete oldTex; // safe: old texture is no longer referenced by the node
+    delete oldTex;
 
     return node;
 }
@@ -469,12 +306,11 @@ void MapLibreItem::setCenter(const QGeoCoordinate &c)
     m_center = c;
     emit centerChanged(c);
 #ifdef MAPLIBRE_AVAILABLE
-    if (m_map) { applyCamera(); m_dirty = true; scheduleRender(); }
+    if (m_map) { applyCamera(); scheduleRender(); }
 #else
-    m_rendered = makePlaceholder(
+    m_rendered = makePlaceholderImage(
         qMax(static_cast<int>(width()),  32),
-        qMax(static_cast<int>(height()), 32),
-        m_center.latitude(), m_center.longitude(), m_zoom);
+        qMax(static_cast<int>(height()), 32));
     update();
 #endif
 }
@@ -485,12 +321,11 @@ void MapLibreItem::setZoom(double z)
     m_zoom = z;
     emit zoomChanged(z);
 #ifdef MAPLIBRE_AVAILABLE
-    if (m_map) { applyCamera(); m_dirty = true; scheduleRender(); }
+    if (m_map) { applyCamera(); scheduleRender(); }
 #else
-    m_rendered = makePlaceholder(
+    m_rendered = makePlaceholderImage(
         qMax(static_cast<int>(width()),  32),
-        qMax(static_cast<int>(height()), 32),
-        m_center.latitude(), m_center.longitude(), m_zoom);
+        qMax(static_cast<int>(height()), 32));
     update();
 #endif
 }
@@ -501,7 +336,7 @@ void MapLibreItem::setBearing(double b)
     m_bearing = b;
     emit bearingChanged(b);
 #ifdef MAPLIBRE_AVAILABLE
-    if (m_map) { applyCamera(); m_dirty = true; scheduleRender(); }
+    if (m_map) { applyCamera(); scheduleRender(); }
 #endif
 }
 
@@ -511,7 +346,7 @@ void MapLibreItem::setPitch(double p)
     m_pitch = p;
     emit pitchChanged(p);
 #ifdef MAPLIBRE_AVAILABLE
-    if (m_map) { applyCamera(); m_dirty = true; scheduleRender(); }
+    if (m_map) { applyCamera(); scheduleRender(); }
 #endif
 }
 
@@ -523,7 +358,6 @@ void MapLibreItem::setStyle(const QString &url)
 #ifdef MAPLIBRE_AVAILABLE
     if (m_map) {
         m_map->getStyle().loadURL(url.toStdString());
-        m_dirty = true;
         scheduleRender();
     }
 #endif
@@ -539,62 +373,155 @@ void MapLibreItem::flyTo(double lat, double lon, double z)
     if (z > 0) setZoom(z);
 }
 
+// ─── addMarker ────────────────────────────────────────────────────────────────
+// Adds a circle layer at the given coordinates.  Each marker gets its own
+// GeoJSON source + CircleLayer keyed by `id`.
 void MapLibreItem::addMarker(double lat, double lon,
                               const QString &id, const QVariantMap &)
 {
-    Q_UNUSED(lat); Q_UNUSED(lon); Q_UNUSED(id);
-    // TODO: inject a GeoJSON SymbolSource + SymbolLayer via map.getStyle().addSource()
-    // and map.getStyle().addLayer() using mbgl::style::GeoJSONSource /
-    // mbgl::style::SymbolLayer.  The annotation API (map.addAnnotation()) is the
-    // easier path but supports fewer styling options.
-    m_dirty = true;
 #ifdef MAPLIBRE_AVAILABLE
-    if (m_map) scheduleRender();
+    if (!m_map) return;
+
+#ifdef HAVE_GEOJSON_SOURCE
+#ifdef HAVE_CIRCLE_LAYER
+    auto &style = m_map->getStyle();
+    const std::string srcId  = id.toStdString();
+    const std::string lyrId  = srcId;
+
+    // Remove stale layer/source if re-adding same id.
+    try { style.removeLayer(lyrId);   } catch (...) {}
+    try { style.removeSource(srcId);  } catch (...) {}
+
+    // Build GeoJSON Point feature.
+    mapbox::geojson::point pt{ lon, lat };
+    mapbox::geojson::feature feat{ pt };
+    mapbox::geojson::feature_collection fc{ feat };
+    mbgl::GeoJSON geojson{ fc };
+
+    auto src = std::make_unique<mbgl::style::GeoJSONSource>(srcId);
+    src->setGeoJSON(geojson);
+    style.addSource(std::move(src));
+
+    auto layer = std::make_unique<mbgl::style::CircleLayer>(lyrId, srcId);
+    // Route blue: #4A90E2 premultiplied → r=0.29, g=0.565, b=0.886
+    layer->setCircleColor(mbgl::style::PropertyValue<mbgl::Color>(
+        mbgl::Color{ 0.29f, 0.565f, 0.886f, 1.0f }));
+    layer->setCircleRadius(mbgl::style::PropertyValue<float>(8.0f));
+    layer->setCircleStrokeColor(mbgl::style::PropertyValue<mbgl::Color>(
+        mbgl::Color::white()));
+    layer->setCircleStrokeWidth(mbgl::style::PropertyValue<float>(2.0f));
+    style.addLayer(std::move(layer));
+
+    m_markerIds.append(id);
+    scheduleRender();
 #else
+    // TODO: CircleLayer header unavailable — marker not rendered
+    Q_UNUSED(lat); Q_UNUSED(lon); Q_UNUSED(id);
+#endif
+#else
+    // TODO: GeoJSONSource header unavailable — marker not rendered
+    Q_UNUSED(lat); Q_UNUSED(lon); Q_UNUSED(id);
+#endif
+
+#else // !MAPLIBRE_AVAILABLE
+    Q_UNUSED(lat); Q_UNUSED(lon); Q_UNUSED(id);
     update();
 #endif
 }
 
+// ─── removeMarker ─────────────────────────────────────────────────────────────
 void MapLibreItem::removeMarker(const QString &id)
 {
-    Q_UNUSED(id);
-    // TODO: map.getStyle().removeLayer(id) + removeSource(id)
-    m_dirty = true;
 #ifdef MAPLIBRE_AVAILABLE
-    if (m_map) scheduleRender();
+    if (!m_map) return;
+    auto &style = m_map->getStyle();
+    const std::string lyrId = id.toStdString();
+    try { style.removeLayer(lyrId);  } catch (...) {}
+    try { style.removeSource(lyrId); } catch (...) {}
+    m_markerIds.removeAll(id);
+    scheduleRender();
 #else
-    update();
+    Q_UNUSED(id);
 #endif
 }
 
+// ─── clearRoute ───────────────────────────────────────────────────────────────
 void MapLibreItem::clearRoute()
 {
 #ifdef MAPLIBRE_AVAILABLE
     if (!m_map) return;
     auto &style = m_map->getStyle();
-    // removeLayer/removeSource return unique_ptr; ignore the value.
-    try { style.removeLayer("q60-route"); }    catch (...) {}
-    try { style.removeSource("q60-route-src"); } catch (...) {}
-    m_dirty = true;
+    try { style.removeLayer("route-line");   } catch (...) {}
+    try { style.removeSource("route-line"); } catch (...) {}
     scheduleRender();
 #endif
 }
 
+// ─── showRoute ────────────────────────────────────────────────────────────────
+// coordinates: QVariantList where each element is a QGeoCoordinate or a
+// QVariantMap with "lat"/"lon" keys.
 void MapLibreItem::showRoute(const QVariantList &coordinates)
 {
-    Q_UNUSED(coordinates);
-    // TODO: Build a GeoJSON LineString from Valhalla polyline shape and inject:
-    //   auto src = std::make_unique<mbgl::style::GeoJSONSource>("q60-route-src");
-    //   src->setGeoJSON(mapbox::geojson::parse(geojsonStr));
-    //   m_map->getStyle().addSource(std::move(src));
-    //   auto layer = std::make_unique<mbgl::style::LineLayer>("q60-route", "q60-route-src");
-    //   layer->setLineColor(mbgl::style::PropertyExpression<mbgl::Color>(...));
-    //   layer->setLineWidth(...);
-    //   m_map->getStyle().addLayer(std::move(layer));
-    m_dirty = true;
 #ifdef MAPLIBRE_AVAILABLE
-    if (m_map) scheduleRender();
+    if (!m_map || coordinates.isEmpty()) return;
+
+#if defined(HAVE_GEOJSON_SOURCE) && defined(HAVE_LINE_LAYER)
+    // Clear any previous route first.
+    clearRoute();
+
+    // Build a GeoJSON LineString from the coordinate list.
+    mapbox::geojson::line_string line;
+    line.reserve(static_cast<std::size_t>(coordinates.size()));
+
+    for (const QVariant &v : coordinates) {
+        double lat = 0.0, lon = 0.0;
+        if (v.canConvert<QGeoCoordinate>()) {
+            const auto gc = v.value<QGeoCoordinate>();
+            lat = gc.latitude();
+            lon = gc.longitude();
+        } else if (v.canConvert<QVariantMap>()) {
+            const auto m = v.toMap();
+            lat = m.value(QStringLiteral("lat")).toDouble();
+            lon = m.value(QStringLiteral("lon")).toDouble();
+        } else {
+            continue;
+        }
+        line.push_back({ lon, lat });
+    }
+
+    if (line.size() < 2) {
+        qWarning() << "[MapLibre] showRoute: need at least 2 points, got"
+                   << line.size();
+        return;
+    }
+
+    mapbox::geojson::feature feat{ line };
+    mapbox::geojson::feature_collection fc{ feat };
+    mbgl::GeoJSON geojson{ fc };
+
+    auto &style = m_map->getStyle();
+
+    auto src = std::make_unique<mbgl::style::GeoJSONSource>("route-line");
+    src->setGeoJSON(geojson);
+    style.addSource(std::move(src));
+
+    auto layer = std::make_unique<mbgl::style::LineLayer>("route-line", "route-line");
+    // Route blue #4A90E2 — premultiplied: r=0.29, g=0.565, b=0.886
+    layer->setLineColor(mbgl::style::PropertyValue<mbgl::Color>(
+        mbgl::Color{ 0.29f, 0.565f, 0.886f, 1.0f }));
+    layer->setLineWidth(mbgl::style::PropertyValue<float>(4.0f));
+    layer->setLineOpacity(mbgl::style::PropertyValue<float>(0.9f));
+    style.addLayer(std::move(layer));
+
+    scheduleRender();
+
 #else
+    // TODO: geojson_source.hpp or line_layer.hpp not available in this build
+    Q_UNUSED(coordinates);
+#endif
+
+#else // !MAPLIBRE_AVAILABLE
+    Q_UNUSED(coordinates);
     update();
 #endif
 }

@@ -51,6 +51,7 @@ check "$QT6_LIBS/libQt6Core.so.6"       "Qt6 i386 libs (run deps/build-qt6-i386.
 check "$VECTOR_TILES"                   "vector tiles nc.mbtiles (run build-map-tiles.sh)"
 check "$ROUTING_TILES/admins.db"        "routing tiles (run build-tiles.sh)"
 check "$ROOT/output/photon-data"        "Photon geocoder data (run scripts/download-photon.sh)"
+check "$ROOTFS_DIR/usr/bin/java"        "Java JRE in rootfs (run scripts/install-jre-rootfs.sh)"
 
 if [ "$MISSING" -gt 0 ]; then
     echo ""
