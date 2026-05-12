@@ -119,6 +119,8 @@ qt6_add_qml_module(q60nav
         src/qml/components/FanControl.qml
         src/qml/components/TempZone.qml
         src/qml/components/TabBar.qml
+        src/qml/screens/SettingsView.qml
+        src/qml/screens/InfoView.qml
 )
 
 target_include_directories(q60nav PRIVATE

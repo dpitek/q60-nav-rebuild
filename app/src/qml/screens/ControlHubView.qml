@@ -1,16 +1,18 @@
 // ControlHubView — Lower 7" screen
 // Apple CarPlay aesthetic redesign
-// 5-tab bottom nav: Nav | Audio | Phone | Climate | Vehicle
+// 7-tab bottom nav: Nav(0) Audio(1) Phone(2) Climate(3) Vehicle(4) Info(5) Settings(6)
+// Tab 7 = reverse camera (auto-switch only, not in nav bar)
 // Auto-switches on call / reverse — all StatusBridge signals preserved exactly.
 import QtQuick 6.6
 import QtQuick.Controls 6.6
 import "../components"
+import "screens"
 
 Item {
     id: root
     anchors.fill: parent
 
-    property int activeTab: 0   // 0=nav 1=audio 2=phone 3=climate 4=vehicle
+    property int activeTab: 0   // 0=nav 1=audio 2=phone 3=climate 4=vehicle 5=info 6=settings
     property int previousTab: 0
 
     Rectangle { anchors.fill: parent; color: "#000000" }
@@ -25,7 +27,7 @@ Item {
     Connections {
         target: StatusBridge
         function onReverseActiveChanged(rev) {
-            if (rev) { previousTab = activeTab; activeTab = 5 }
+            if (rev) { previousTab = activeTab; activeTab = 7 }
             else      { activeTab = previousTab }
         }
     }
@@ -44,11 +46,13 @@ Item {
         PhoneView         { anchors.fill: parent; visible: activeTab === 2 }
         ClimateView       { anchors.fill: parent; visible: activeTab === 3 }
         VehicleStatusView { anchors.fill: parent; visible: activeTab === 4 }
+        InfoView          { anchors.fill: parent; visible: activeTab === 5 }
+        SettingsView      { anchors.fill: parent; visible: activeTab === 6 }
 
-        // Reverse / camera placeholder (tab 5 — auto only, not in nav bar)
+        // Reverse / camera placeholder (tab 7 — auto only, not in nav bar)
         Rectangle {
             anchors.fill: parent
-            visible: activeTab === 5
+            visible: activeTab === 7
             color: "#000000"
 
             Column {
@@ -98,15 +102,18 @@ Item {
 
             Repeater {
                 model: [
-                    { label: "Nav",     icon: "⬆",  tab: 0 },
-                    { label: "Audio",   icon: "♪",  tab: 1 },
-                    { label: "Phone",   icon: "✆",  tab: 2 },
-                    { label: "Climate", icon: "❄",  tab: 3 },
-                    { label: "Vehicle", icon: "◈",  tab: 4 }
+                    { label: "Nav",      icon: "⬆",  tab: 0 },
+                    { label: "Audio",    icon: "♪",  tab: 1 },
+                    { label: "Phone",    icon: "✆",  tab: 2 },
+                    { label: "Climate",  icon: "❄",  tab: 3 },
+                    { label: "Vehicle",  icon: "◈",  tab: 4 },
+                    { label: "Info",     icon: "ℹ",  tab: 5 },
+                    { label: "Settings", icon: "⚙",  tab: 6 }
                 ]
 
                 delegate: Item {
-                    width: bottomNav.width / 5
+                    // 7 tabs on 800px = ~114px each; labels drop to 10px at this width
+                    width: bottomNav.width / 7
                     height: bottomNav.height
 
                     // Active indicator bar at top
@@ -133,7 +140,8 @@ Item {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: modelData.label
                             color: activeTab === modelData.tab ? "#0A84FF" : "#8E8E93"
-                            font { family: "Roboto"; pixelSize: 11; weight: Font.Medium }
+                            // Drop to 10px at 7-tab width (~114px per item)
+                            font { family: "Roboto"; pixelSize: 10; weight: Font.Medium }
 
                             Behavior on color { ColorAnimation { duration: 150 } }
                         }
@@ -157,7 +165,7 @@ Item {
                     MouseArea {
                         anchors.fill: parent
                         onClicked: {
-                            if (activeTab !== 5)  // Don't allow manual switch during reverse
+                            if (activeTab !== 7)  // Don't allow manual switch during reverse
                                 activeTab = modelData.tab
                         }
                     }
