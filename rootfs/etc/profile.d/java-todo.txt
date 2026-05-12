@@ -1,0 +1,30 @@
+TODO: Java 11+ headless JRE required for Photon geocoder
+==========================================================
+
+The S25-photon init script expects a Java runtime at /usr/bin/java.
+Without it, Photon is skipped gracefully and geocoder search is unavailable.
+
+To add Java to the rootfs image, install into the rootfs sysroot or
+cross-compile an i386 JRE. The simplest approach for a Debian/Ubuntu-based
+rootfs is:
+
+  Option A — QEMU chroot (recommended for i386 target):
+    1. Mount the rootfs image (see package-rootfs.sh for how Docker does this)
+    2. In chroot:
+         apt-get install -y openjdk-11-jre-headless
+
+  Option B — Extract JRE from a Debian i386 package:
+    1. On the build host:
+         dpkg --add-architecture i386
+         apt-get install -y openjdk-11-jre-headless:i386
+    2. Copy /usr/lib/jvm/java-11-openjdk-i386/ into rootfs
+       and symlink /usr/bin/java → /usr/lib/jvm/java-11-openjdk-i386/bin/java
+
+  Option C — Adoptium/Temurin i386 tarball (portable, no apt needed):
+    Download from: https://adoptium.net/temurin/releases/?arch=x86&package=jre
+    Extract to /opt/java/ in rootfs and symlink /usr/bin/java.
+
+Size impact: ~120-180MB (headless JRE, no desktop/GUI components)
+
+Once installed, the S25-photon init script will find java automatically.
+Remove this TODO file when Java is properly included in the build.

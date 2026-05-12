@@ -1,23 +1,81 @@
 // NavigationView — Upper 8" screen
-// Phase 3: MapLibre GL Native renders into mapCanvas via QQuickItem
-// Until Phase 3 lands: vector-style placeholder with live HUD overlays
+// Map canvas: MapLibreMap (C++ QQuickItem) when compiled with MAPLIBRE_AVAILABLE,
+// otherwise falls back to the dark-green grid placeholder.
+// The MapLibreMap type is registered in main.cpp via qmlRegisterType<MapLibreItem>.
 import QtQuick 6.6
 import QtQuick.Controls 6.6
 import "../components"
+
+// Conditional import: Q60Nav module is registered when MAPLIBRE_AVAILABLE=ON.
+// When the module is absent the import is silently ignored and mapLibreLoader
+// will show its fallback placeholder instead.
+import Q60Nav 1.0 as Q60Nav
 
 Item {
     id: root
     anchors.fill: parent
 
     // ── Map canvas ────────────────────────────────────────────────────────
-    // TODO Phase 3: replace with MapLibre QQuickItem
-    // MapLibreMap { id: mapCanvas; anchors.fill: parent; ... }
+    // Loader pattern: attempt to use MapLibreMap; if the type is not available
+    // (module missing or EGL init failed) the sourceComponent falls back to
+    // the static placeholder so the UI always shows something useful.
+    Loader {
+        id: mapLoader
+        anchors.fill: parent
+
+        // Set to true by the MapLibreMap onReadyChanged handler once mbgl is up.
+        property bool mapReady: false
+
+        sourceComponent: mapLibreComponent
+    }
+
+    // ── Real map component (MAPLIBRE_AVAILABLE path) ──────────────────────
+    // If Q60Nav module is not registered, this Component is inert — the Loader
+    // will fail to instantiate it and QML will log a warning.  NavigationView
+    // handles that via mapLoader.status == Loader.Error below.
+    Component {
+        id: mapLibreComponent
+
+        Q60Nav.MapLibreMap {
+            id: mapLibreMap
+            anchors.fill: parent
+
+            // Initial position: can be overridden by NavigationService binding.
+            center: Qt.point(35.5, -79.0)   // TODO: bind to NavigationService.position
+            zoom:   12.0
+            style:  "file:///opt/nav/style/q60-dark.json"
+
+            onReadyChanged: {
+                if (ready) {
+                    mapLoader.mapReady = true
+                    console.log("[NavView] MapLibre ready")
+                }
+            }
+
+            // Keep map centred on vehicle position during active navigation.
+            Connections {
+                target: StatusBridge
+                function onPositionChanged() {
+                    if (StatusBridge.navActive && ready)
+                        mapLibreMap.flyTo(StatusBridge.latitude,
+                                          StatusBridge.longitude)
+                }
+            }
+        }
+    }
+
+    // ── Fallback placeholder (shown when MapLibre is not available/ready) ──
+    // Visible whenever the Loader either failed to instantiate MapLibreMap or
+    // the map has not signalled ready yet.
     Rectangle {
-        id: mapCanvas
+        id: mapPlaceholder
         anchors.fill: parent
         color: "#0f1a12"   // Dark map green
 
-        // Simulated road grid — placeholder until MapLibre
+        // Only show placeholder when real map is not active.
+        visible: mapLoader.status !== Loader.Ready || !mapLoader.mapReady
+
+        // Simulated road grid
         Canvas {
             anchors.fill: parent
             opacity: 0.07

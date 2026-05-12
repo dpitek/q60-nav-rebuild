@@ -14,6 +14,10 @@ export WAYLAND_DISPLAY=wayland-0
 case "$1" in
 start)
     echo -n "Starting Weston... "
+
+    # Generate weston.ini from detected DRM connectors (before launching Weston)
+    [ -x /opt/nav/gen-weston-ini.sh ] && /opt/nav/gen-weston-ini.sh
+
     if [ ! -x "$DAEMON" ]; then
         # Fall back to linuxfb if Weston not available
         echo "MISSING — q60nav will fall back to linuxfb"

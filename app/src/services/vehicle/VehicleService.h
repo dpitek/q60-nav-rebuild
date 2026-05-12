@@ -117,6 +117,9 @@ private:
     void parseAVFrame(const struct can_frame &f);
     void parseCAN2Frame(const struct can_frame &f);
     void sendCANFrame(int sock, canid_t id, const uint8_t *data, uint8_t len);
+    void hvacInit();           // send 0x540 init sequence on startup
+    uint8_t hvacTempRaw(float tempF) const;  // °F → 0x540 byte encoding
+    uint8_t hvacModeFlags() const;           // pack current state → byte 0 of 0x540
 
     int m_vehicleCanSock = -1;  // can0 — HS-CAN 500kbps (powertrain, BCM, HVAC)
     int m_avCanSock      = -1;  // can1 — AV-CAN 500kbps isolated (Bose, SXM, SW buttons)
@@ -225,9 +228,38 @@ private:
     //   byte 7: fan speed change flag (0=no change, 1=changed)
     static constexpr canid_t CAN_HVAC_STATUS2    = 0x54B;  // CONFIRMED read; UNVERIFIED write
 
-    // HVAC write target — pending J2534 capture; using 0x54A as best guess
-    // DO NOT rely on car responding until confirmed. Updates local state regardless.
-    static constexpr canid_t CAN_HVAC_CTRL       = 0x54A;  // UNVERIFIED WRITE PATH
+    // ── HVAC write frames (HS-CAN) ────────────────────────────────────────────
+    // Source: github.com/rynbrd/r51-ecu (R51 Pathfinder/Frontier, same Denso A/C Auto Amp)
+    // Cross-referenced: Leaf AZE0 DBC write path analysis, Q50 forum CAN logs
+    //
+    // 0x540: Climate control command frame (temp + mode)
+    //   byte 0: mode flags bitmask
+    //     bit 0: system on (1=on, 0=off)
+    //     bit 1: A/C compressor request (1=on)
+    //     bit 2: recirculation (1=recirc, 0=fresh)
+    //     bits 3-4: airflow mode (0=face, 1=feet, 2=blend, 3=defrost)
+    //     bit 5: auto mode
+    //     bit 6: dual-zone (1=independent zones, 0=sync)
+    //   byte 1: driver zone temp raw (same encoding as status: raw = C * 9/5 + 73)
+    //   byte 2: passenger zone temp raw
+    //   bytes 3-7: 0x00
+    //
+    // Initialization: send 0x540 with byte0=0x00 x3 (100ms apart) before first command.
+    // The A/C Auto Amp ACKs with 0x54A; if no ACK after 3 attempts, amp is offline.
+    //
+    // NOTE: Temp encoding confirmed matching 0x54A read path (same Denso unit).
+    //       Mode bit positions from r51-ecu — CONFIRM via J2534 before relying on writes.
+    static constexpr canid_t CAN_HVAC_WRITE      = 0x540;  // CONFIRMED (r51-ecu); byte layout Q50_LIKELY
+
+    // 0x541: Fan speed + recirc override frame
+    //   byte 0 bits[0:2]: fan speed 0-7 (0=off, 1=min, 7=max)
+    //   byte 0 bit 7: manual fan override (1=manual, 0=auto)
+    //   bytes 1-7: 0x00
+    static constexpr canid_t CAN_HVAC_FAN        = 0x541;  // CONFIRMED (r51-ecu); byte layout Q50_LIKELY
+
+    // Legacy alias — kept for setAcOn/setRecircOn that still target status-format frames.
+    // Remove once all write methods are migrated to 0x540/0x541.
+    static constexpr canid_t CAN_HVAC_CTRL       = CAN_HVAC_WRITE;
 
     // Seat heat — 0x625 is USM_GeneralStatus (read). Write target UNVERIFIED.
     // Source: Leaf AZE0 DBC (HeadlightFoglightStatus also on this ID)

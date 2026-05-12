@@ -57,6 +57,9 @@ void VehicleService::start()
         qDebug() << "[VehicleService] can2 (TBD) ready";
     }
 
+    // HVAC init — send handshake sequence after bus settles (300ms)
+    QTimer::singleShot(300, this, &VehicleService::hvacInit);
+
     // Bose wake on startup — send on AV-CAN after bus settles
     QTimer::singleShot(500, this, &VehicleService::wakeBosse);
 }
@@ -343,81 +346,135 @@ void VehicleService::sendCANFrame(int sock, canid_t id,
         qWarning() << "[VehicleService] CAN write failed:" << strerror(errno);
 }
 
+// ─── HVAC helpers ──────────────────────────────────────────────────────────
+
+// Encode °F display temp to 0x540 raw byte.
+// Same scale as status 0x54A (confirmed matching Denso unit read path):
+//   raw = (temp_C * 9/5) + 73   → inverse of: temp_F = (raw - 73) * 5/9 * 9/5 + 32
+// Clamp to [0x48, 0x90] ≈ [60°F, 90°F] — typical A/C setpoint range.
+uint8_t VehicleService::hvacTempRaw(float tempF) const
+{
+    float c   = (tempF - 32.0f) * 5.0f / 9.0f;
+    float raw = c * 9.0f / 5.0f + 73.0f;
+    return static_cast<uint8_t>(qBound(0x48, static_cast<int>(raw), 0x90));
+}
+
+// Pack current HVAC state into the mode-flags byte (byte 0) of 0x540.
+// Bit layout from r51-ecu (R51 Pathfinder, same Denso A/C Auto Amp):
+//   bit 0: system on
+//   bit 1: A/C compressor on
+//   bit 2: recirculation on
+//   bits 3-4: airflow mode (0=face, 1=feet, 2=blend, 3=defrost)
+//   bit 5: auto mode (0 = manual)
+//   bit 6: dual-zone independent mode
+// Q50_LIKELY — bit positions from r51-ecu; verify via J2534 before relying on writes.
+uint8_t VehicleService::hvacModeFlags() const
+{
+    uint8_t f = 0;
+    f |= 0x01;                                       // system on
+    if (m_acOn)    f |= 0x02;
+    if (m_recircOn) f |= 0x04;
+    f |= static_cast<uint8_t>((m_climateMode & 0x03) << 3);
+    f |= 0x40;                                       // dual-zone (Q60 has two zones)
+    return f;
+}
+
+// HVAC initialization sequence — send three null frames on 0x540 (100ms apart)
+// to register as the infotainment unit with the A/C Auto Amp. The amp starts
+// sending status frames (0x54A/0x54B) in response once it sees the handshake.
+// Source: r51-ecu observation — amp ignores control frames until handshake completes.
+void VehicleService::hvacInit()
+{
+    if (m_vehicleCanSock < 0) {
+        qDebug() << "[VehicleService] hvacInit: can0 not open — skipping HVAC handshake";
+        return;
+    }
+    static int initStep = 0;
+    uint8_t d[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    sendCANFrame(m_vehicleCanSock, CAN_HVAC_WRITE, d, 8);
+    sendCANFrame(m_vehicleCanSock, CAN_HVAC_FAN,   d, 8);
+    ++initStep;
+    if (initStep < 3) {
+        // Three handshake frames, 100ms apart
+        QTimer::singleShot(100, this, &VehicleService::hvacInit);
+    } else {
+        initStep = 0;
+        qDebug() << "[VehicleService] HVAC handshake complete — A/C Auto Amp should respond on 0x54A";
+    }
+}
+
 // ─── Climate write slots ───────────────────────────────────────────────────
-// CAUTION: Q50/Q60 HVAC write path NOT publicly documented.
-// These build and send frames on CAN_HVAC_CTRL (0x54A) which is the best available
-// candidate, but the A/C Auto Amp's actual command interface is unverified.
-// Car behavior is undefined until confirmed via J2534 capture.
-// Local state is updated regardless so the UI reflects the requested change.
+// Write path: 0x540 (temp/mode) and 0x541 (fan speed).
+// Source: github.com/rynbrd/r51-ecu — confirmed on R51 Denso A/C Auto Amp.
+// Same amp used on Q50/Q60; byte layout Q50_LIKELY. Verify via J2534 on first boot.
+// Local state updated immediately so UI is responsive regardless of car ACK.
 
 void VehicleService::setDriverTemp(float temp)
 {
-    m_driverTemp = temp;
-    emit driverTempChanged(temp);
-    // Convert °F display temp back to 0x54A raw: raw = (F_to_C(temp) * 9/5) + 73
-    float c   = (temp - 32.0f) * 5.0f / 9.0f;
-    uint8_t dr = static_cast<uint8_t>(qBound(0.0f, c * 9.0f / 5.0f + 73.0f, 255.0f));
-    uint8_t pr = static_cast<uint8_t>(qBound(0.0f,
-        (m_passengerTemp - 32.0f) * 5.0f / 9.0f * 9.0f / 5.0f + 73.0f, 255.0f));
-    uint8_t d[8] = { 0xA0, 0x00, 0x00, 0x00, dr, pr,
-                     static_cast<uint8_t>(m_fanSpeed & 0x07), 0x00 };
-    sendCANFrame(m_vehicleCanSock, CAN_HVAC_CTRL, d, 8);
+    m_driverTemp = qBound(60.0f, temp, 90.0f);
+    emit driverTempChanged(m_driverTemp);
+    uint8_t d[8] = { hvacModeFlags(),
+                     hvacTempRaw(m_driverTemp),
+                     hvacTempRaw(m_passengerTemp),
+                     0x00, 0x00, 0x00, 0x00, 0x00 };
+    sendCANFrame(m_vehicleCanSock, CAN_HVAC_WRITE, d, 8);
 }
 
 void VehicleService::setPassengerTemp(float temp)
 {
-    m_passengerTemp = temp;
-    emit passengerTempChanged(temp);
-    uint8_t dr = static_cast<uint8_t>(qBound(0.0f,
-        (m_driverTemp - 32.0f) * 5.0f / 9.0f * 9.0f / 5.0f + 73.0f, 255.0f));
-    float c    = (temp - 32.0f) * 5.0f / 9.0f;
-    uint8_t pr = static_cast<uint8_t>(qBound(0.0f, c * 9.0f / 5.0f + 73.0f, 255.0f));
-    uint8_t d[8] = { 0xA0, 0x00, 0x00, 0x00, dr, pr,
-                     static_cast<uint8_t>(m_fanSpeed & 0x07), 0x00 };
-    sendCANFrame(m_vehicleCanSock, CAN_HVAC_CTRL, d, 8);
+    m_passengerTemp = qBound(60.0f, temp, 90.0f);
+    emit passengerTempChanged(m_passengerTemp);
+    uint8_t d[8] = { hvacModeFlags(),
+                     hvacTempRaw(m_driverTemp),
+                     hvacTempRaw(m_passengerTemp),
+                     0x00, 0x00, 0x00, 0x00, 0x00 };
+    sendCANFrame(m_vehicleCanSock, CAN_HVAC_WRITE, d, 8);
 }
 
 void VehicleService::setFanSpeed(int level)
 {
     m_fanSpeed = qBound(0, level, 7);
     emit fanSpeedChanged(m_fanSpeed);
-    // 0x54B fan speed: (level << 3) into byte 4
-    uint8_t d[8] = { 0x78, 0x00, 0x00, 0x00,
-                     static_cast<uint8_t>(m_fanSpeed << 3),
-                     0x00, 0x00, 0x00 };
-    sendCANFrame(m_vehicleCanSock, CAN_HVAC_STATUS2, d, 8);
+    // 0x541 byte 0: bits[0:2] = fan level, bit 7 = manual override
+    uint8_t d[8] = { static_cast<uint8_t>(0x80 | (m_fanSpeed & 0x07)),
+                     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    sendCANFrame(m_vehicleCanSock, CAN_HVAC_FAN, d, 8);
 }
 
 void VehicleService::setAcOn(bool on)
 {
     m_acOn = on;
     emit acOnChanged(on);
-    uint8_t d[8] = { on ? uint8_t(0x78) : uint8_t(0x08),
-                     on ? uint8_t(0x88) : uint8_t(0x80),
-                     0x00, 0x00, 0x00, 0x00, 0x00, 0x01 };
-    sendCANFrame(m_vehicleCanSock, CAN_HVAC_STATUS2, d, 8);
+    // AC bit is in mode flags byte — resend full 0x540 frame
+    uint8_t d[8] = { hvacModeFlags(),
+                     hvacTempRaw(m_driverTemp),
+                     hvacTempRaw(m_passengerTemp),
+                     0x00, 0x00, 0x00, 0x00, 0x00 };
+    sendCANFrame(m_vehicleCanSock, CAN_HVAC_WRITE, d, 8);
 }
 
 void VehicleService::setRecircOn(bool on)
 {
     m_recircOn = on;
     emit recircOnChanged(on);
-    // Recirc bit position unconfirmed — placeholder byte 3 bit 0
-    uint8_t d[8] = { 0xA0, 0x00, 0x00,
-                     static_cast<uint8_t>(on ? 0x01 : 0x00),
-                     0x00, 0x00, 0x00, 0x01 };
-    sendCANFrame(m_vehicleCanSock, CAN_HVAC_CTRL, d, 8);
+    // Recirc bit is in mode flags byte — resend full 0x540 frame
+    uint8_t d[8] = { hvacModeFlags(),
+                     hvacTempRaw(m_driverTemp),
+                     hvacTempRaw(m_passengerTemp),
+                     0x00, 0x00, 0x00, 0x00, 0x00 };
+    sendCANFrame(m_vehicleCanSock, CAN_HVAC_WRITE, d, 8);
 }
 
 void VehicleService::setClimateMode(int mode)
 {
     m_climateMode = qBound(0, mode, 3);
     emit climateModeChanged(m_climateMode);
-    // Mode byte position unconfirmed — placeholder byte 2 nibble
-    uint8_t d[8] = { 0xA0, 0x00,
-                     static_cast<uint8_t>(m_climateMode & 0x07),
-                     0x00, 0x00, 0x00, 0x00, 0x01 };
-    sendCANFrame(m_vehicleCanSock, CAN_HVAC_CTRL, d, 8);
+    // Airflow mode bits [3:4] in mode flags — resend full 0x540 frame
+    uint8_t d[8] = { hvacModeFlags(),
+                     hvacTempRaw(m_driverTemp),
+                     hvacTempRaw(m_passengerTemp),
+                     0x00, 0x00, 0x00, 0x00, 0x00 };
+    sendCANFrame(m_vehicleCanSock, CAN_HVAC_WRITE, d, 8);
 }
 
 void VehicleService::setDriverSeatHeat(int level)

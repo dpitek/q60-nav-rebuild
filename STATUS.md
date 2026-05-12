@@ -20,11 +20,12 @@ Last updated: 2026-05-12
 - [x] Watchdog: `watchdog-pet.sh` pets iTCO every 20s, init.d as respawn
 
 ### C++ Services (all .h + .cpp complete)
-- [x] `VehicleService` — SocketCAN (can0/can1/can2), CAN frame parsing, full HVAC write, Bose wake
+- [x] `VehicleService` — SocketCAN (can0/can1/can2), CAN frame parsing, HVAC write via r51-ecu confirmed path (0x540/0x541), Bose wake
 - [x] `NavigationService` — GPSD TCP socket, Valhalla HTTP client, route parsing, rerouting
 - [x] `AudioService` — BlueZ D-Bus AVRCP (guarded with `HAVE_QT_DBUS`), DENSO proxy IPC, ALSA volume
-- [x] `SearchService` — offline geocoding on port 4000 (Nominatim/Photon, graceful if absent)
+- [x] `SearchService` — offline geocoding on port 4000 (Photon/Pelias-compatible, graceful if absent)
 - [x] `StatusBridge` — full signal wiring, clock, cross-screen coordination
+- [x] `MapLibreItem` — QQuickItem Phase 3 stub; correct `RendererFrontend` / `OffscreenBackend` API (no HeadlessFrontend); EGL wiring TODO
 
 ### QML UI (all screens fully implemented)
 - [x] `NavigationView` — turn HUD, TurnArrow, approaching-turn pulse, SpeedWidget, reverse overlay
@@ -40,9 +41,12 @@ Last updated: 2026-05-12
 - [x] `rcS` — mount vfs, udev, kernel modules
 - [x] `S10-gpsd` — GPSD on ttyS0
 - [x] `S20-valhalla` — valhalla-httpd wrapper + valhalla_service on port 8002
-- [x] `S30-weston` — Weston Wayland compositor (DRM + fbdev fallback)
+- [x] `S25-photon` — Photon offline geocoder on port 4000 (graceful if Java/JAR absent)
+- [x] `S30-weston` — Weston compositor; runs `gen-weston-ini.sh` to detect DRM connectors before launch
 - [x] `S50-q60nav` — app launch via start.sh
-- [x] `weston.ini` — dual LVDS: LVDS-1 800×480 + LVDS-2 800×420
+- [x] `weston.ini` / `weston.ini.default` — static fallback; `gen-weston-ini.sh` writes live config at boot
+- [x] `detect-display.sh` — scans `/sys/class/drm/card*-*` for connected connectors
+- [x] `gen-weston-ini.sh` — generates `/etc/xdg/weston/weston.ini` from detected connectors (fallback: LVDS-1)
 - [x] `valhalla.json` — device config, tiles at /opt/valhalla/tiles
 
 ### Target Binaries — ALL BUILT ✅
@@ -63,38 +67,53 @@ Last updated: 2026-05-12
 - [x] `scripts/build-app.sh` — compiles valhalla-httpd + q60nav for i686 inside Docker
 
 ### Build + Deploy Scripts
-- [x] `scripts/deploy-to-image.sh` — write kernel to FAT32, flip elilo.conf for test
+- [x] `scripts/deploy-to-image.sh` — write kernel to FAT32, flip elilo.conf for test; `--verify` / `--restore` modes
 - [x] `scripts/restore-logan1.sh` — emergency recovery from Mac
-- [x] `scripts/package-rootfs.sh` — build 1GB ext4 rootfs image from rootfs/
+- [x] `scripts/package-rootfs.sh` — build 3GB ext4 rootfs image; Photon-aware (skips gracefully if not indexed)
+- [x] `scripts/download-photon.sh` — download + index NC OSM data for Photon geocoder (~20 min on Mac)
 
 ---
 
 ## 🔄 In Progress
 
-| Item | Status |
-|---|---|
-| Vector tiles (`.mbtiles`) | ⏳ Not yet built — run `./scripts/build-map-tiles.sh` |
+| Item | Status | Notes |
+|---|---|---|
+| Vector tiles (`.mbtiles`) | ✅ Built | `output/vector-tiles/nc.mbtiles` 464MB |
+| Rootfs image | ✅ Built | `output/q60nav-rootfs.img` 3GB ext4, 1.3GB used |
+| Phase 3: MapLibre EGL wiring | ⏳ Stub complete | `OffscreenBackend` needs EGL pbuffer impl; placeholder renders until then |
+| Photon geocoder data | ⏳ Not indexed | Run `scripts/download-photon.sh` (~20 min, needs Java 11 on Mac) |
 
 ---
 
 ## ⏳ Remaining Work (ordered)
 
-1. **Vector tiles**: `./scripts/build-map-tiles.sh` — tilemaker Docker, ~30-60 min
-2. **Phase 3**: Build `libqmaplibregl.so` Qt/MapLibre GL wrapper
-3. **Phase 3**: Replace `NavigationView` Canvas placeholder with `MapLibreItem` (enable `-DWITH_MAPLIBRE=ON`)
-4. **[hardware]** J2534 CAN sniff — verify all `CAN_*` IDs in `VehicleService.h`
-5. **[hardware]** GPS UART probe — confirm ttyS device for GPSD
-6. **[hardware]** Verify Weston LVDS connector names (LVDS-1/LVDS-2)
-7. **[hardware]** Physical boot test — `deploy-to-image.sh --test`
-8. **[future]** Offline geocoder for SearchService (Nominatim-lite or Photon on port 4000)
+### Software
+1. **Phase 3 — EGL wiring**: Implement `OffscreenBackend::activate()` in `MapLibreItem.cpp` — create EGL pbuffer backed by Mesa swrast, wire `readPixels()` into frame callback. Rebuild with `-DWITH_MAPLIBRE=ON`.
+2. **Photon data**: Run `scripts/download-photon.sh` on Mac to index NC OSM → `output/photon-data/`. Repackage rootfs.
+3. **Java runtime**: Install `openjdk-11-jre-headless:i386` into rootfs for Photon. See `rootfs/etc/profile.d/java-todo.txt`.
+4. **Bose wake frame**: Sniff AV-CAN at Bose amp connector (trunk). `CAN_BOSE_WAKE = 0x3B3` is a placeholder — see wakeBosse() in VehicleService.cpp.
+
+### Hardware (boot test prerequisites)
+5. **[hardware]** Physical boot test — `deploy-to-image.sh --test` (write kernel + rootfs, flip elilo.conf)
+6. **[hardware]** J2534 CAN sniff — verify all `CAN_*` IDs, especially HVAC write (0x540/0x541) and body status (0x60D)
+7. **[hardware]** GPS UART probe — confirm ttyS device for GPSD
+8. **[hardware]** Weston LVDS — dynamic detection will run at boot; verify connector names in `gen-weston-ini.sh` output vs actual DRM driver names
 
 ---
 
-## ⚠️ CAN IDs — PLACEHOLDER ONLY
+## ⚠️ CAN IDs — Verify Before Writing
 
-All `CAN_*` constants in `VehicleService.h` are estimates based on community
-research for similar Infiniti/Nissan platforms. **DO NOT send write frames to
-the car until IDs are verified via J2534 capture.**
+Read IDs confirmed via opendbc/carhack/Leaf AZE0 DBC cross-reference. **Write path needs J2534 verification.**
+
+| Frame | ID | Status | Notes |
+|---|---|---|---|
+| Speed, RPM, brake, gear, cluster | 0x280, 0x1F9, 0x354, 0x421, 0x5C5 | CONFIRMED read | Cross-platform Nissan/Infiniti |
+| HVAC status read | 0x54A, 0x54B | CONFIRMED read | Leaf AZE0 DBC |
+| HVAC write (temp/mode) | 0x540 | Q50_LIKELY write | From r51-ecu (R51 Pathfinder, same Denso amp) |
+| HVAC write (fan) | 0x541 | Q50_LIKELY write | From r51-ecu |
+| Body / BCM | 0x60D | CONFIRMED read | carhack 370Z |
+| AV buttons | 0x681 | Q50_LIKELY | Leaf AV-CAN DBC |
+| Bose wake | 0x3B3 | UNVERIFIED | Sniff AV-CAN at amp connector |
 
 ---
 
@@ -114,6 +133,9 @@ the car until IDs are verified via J2534 capture.**
 | Qt6 DBus not available in embedded build | `HAVE_QT_DBUS` compile guard; `AudioService` falls back gracefully |
 | MapLibre `mbgl/util/optional.hpp` → missing `optional.hpp` (mapbox-base legacy) | C++17 compatibility shim at `output/maplibre-i386/include/optional.hpp` |
 | MapLibre include path cascades to all TUs via `INTERFACE_INCLUDE_DIRECTORIES` | `WITH_MAPLIBRE=OFF` by default; Phase 3 opt-in via `-DWITH_MAPLIBRE=ON` |
+| `mbgl::HeadlessFrontend` does not exist in built library | Custom `MinimalRendererFrontend : RendererFrontend` + `OffscreenBackend : gl::RendererBackend`; EGL pbuffer stub |
+| Weston connector names unknown pre-boot | `detect-display.sh` + `gen-weston-ini.sh` probe DRM sysfs at boot; fallback to LVDS-1 |
+| HVAC write path (Q50/Q60) not publicly documented | r51-ecu research: 0x540 (temp/mode) + 0x541 (fan); Q50_LIKELY, verify via J2534 |
 | Valhalla official Docker image is amd64-only (`valhalla/valhalla:run-latest`) | Use `ghcr.io/valhalla/valhalla:latest` — has native arm64 (v3.7.0) |
 | Valhalla config paths default to `/data/valhalla/` (not mounted) | Override all paths to `/tiles/` in generated config |
 

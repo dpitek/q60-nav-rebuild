@@ -8,8 +8,9 @@
 #   q60nav app binary + QML:          ~1MB
 #   Valhalla routing tiles:          ~717MB
 #   MapLibre vector tiles (mbtiles): ~464MB
+#   Photon geocoder JAR + index:     ~700MB  (NC region, optional)
 #   Base rootfs + misc:              ~50MB
-#   Total:                          ~1.43GB  →  3GB image gives comfortable headroom
+#   Total (with Photon):            ~2.12GB  →  3GB image gives comfortable headroom
 #
 # Usage:
 #   ./scripts/package-rootfs.sh          # default 3GB
@@ -49,6 +50,7 @@ check "$VALHALLA_BIN/valhalla_service"  "valhalla_service (run Valhalla i386 bui
 check "$QT6_LIBS/libQt6Core.so.6"       "Qt6 i386 libs (run deps/build-qt6-i386.sh)"
 check "$VECTOR_TILES"                   "vector tiles nc.mbtiles (run build-map-tiles.sh)"
 check "$ROUTING_TILES/admins.db"        "routing tiles (run build-tiles.sh)"
+check "$ROOT/output/photon-data"        "Photon geocoder data (run scripts/download-photon.sh)"
 
 if [ "$MISSING" -gt 0 ]; then
     echo ""
@@ -114,6 +116,17 @@ docker run --rm --privileged \
             echo '  routing tiles copied'
         fi
 
+        # ── Photon offline geocoder ────────────────────────────────────────
+        if [ -d /build/output/photon-data/photon_data ] && [ -f /build/output/photon-data/photon.jar ]; then
+            mkdir -p \$MOUNT/opt/photon
+            cp /build/output/photon-data/photon.jar \$MOUNT/opt/photon/
+            cp -r /build/output/photon-data/photon_data/. \$MOUNT/opt/photon/photon_data/
+            echo '  Photon geocoder JAR + data copied'
+        else
+            echo '  WARNING: Photon data not found — geocoder will be unavailable'
+            echo '           Run scripts/download-photon.sh to build it'
+        fi
+
         # ── MapLibre vector tiles ──────────────────────────────────────────
         if [ -f /build/output/vector-tiles/nc.mbtiles ]; then
             mkdir -p \$MOUNT/opt/nav/tiles
@@ -170,6 +183,7 @@ docker run --rm --privileged \
         du -sh \$MOUNT/opt/nav/bin    2>/dev/null || true
         du -sh \$MOUNT/opt/nav/tiles  2>/dev/null || true
         du -sh \$MOUNT/opt/valhalla   2>/dev/null || true
+        du -sh \$MOUNT/opt/photon     2>/dev/null || true
         du -sh \$MOUNT/usr/lib        2>/dev/null || true
         echo '--- Disk usage ---'
         df -h \$MOUNT

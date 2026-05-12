@@ -1,0 +1,28 @@
+[core]
+# DRM backend for Intel GMA 500 (PowerVR SGX 535 stub) on Atom E6xx
+# Mesa software render via llvmpipe/swrast since no PowerVR driver
+backend=drm-backend.so
+repaint-window=16
+idle-time=0
+require-input=false
+
+[output]
+# Upper LVDS — 8" display (800x480)
+name=LVDS-1
+mode=800x480
+transform=normal
+
+[output]
+# Lower LVDS — 7" display (800x420)
+name=LVDS-2
+mode=800x420
+transform=normal
+
+[shell]
+# No desktop shell — q60nav is the only client
+panel-position=none
+locking=false
+startup-animation=none
+
+[keyboard]
+# No physical keyboard

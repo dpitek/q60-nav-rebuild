@@ -32,8 +32,10 @@ int main(int argc, char *argv[])
     app.setApplicationVersion("0.1.0");
     app.setOrganizationName("Q60Rebuild");
 
-    // Register MapLibre QML type (no-op if MAPLIBRE_AVAILABLE not defined)
-    qmlRegisterType<MapLibreItem>("Q60Nav.Map", 1, 0, "MapLibreMap");
+    // MapLibreItem is registered as "MapLibreMap" in the "Q60Nav" QML module via
+    // QML_ELEMENT + qt6_add_qml_module (CMakeLists.txt). No manual qmlRegisterType
+    // needed — the auto-registration covers both WITH_MAPLIBRE=ON and OFF builds
+    // (stub rendering when MAPLIBRE_AVAILABLE is not defined).
 
     // ── Services ──────────────────────────────────────────────────────────
     VehicleService  vehicleSvc;   // SocketCAN: Vehicle CAN + CAN2
