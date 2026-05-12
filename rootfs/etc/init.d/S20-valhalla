@@ -1,0 +1,63 @@
+#!/bin/sh
+# S20-valhalla — Start Valhalla routing service (offline, HTTP on port 8002)
+# valhalla-httpd wraps valhalla_service (CLI mode) behind a simple HTTP server.
+# NavigationService calls http://localhost:8002/route
+
+DAEMON=/opt/valhalla/bin/valhalla-httpd
+VALHALLA=/opt/valhalla/bin/valhalla_service
+CONFIG=/opt/valhalla/valhalla.json
+PORT=8002
+LOG=/var/log/valhalla.log
+PIDFILE=/var/run/valhalla.pid
+
+case "$1" in
+start)
+    echo -n "Starting Valhalla... "
+    if [ ! -x "$DAEMON" ]; then
+        echo "MISSING ($DAEMON not found)"
+        exit 0
+    fi
+    if [ ! -x "$VALHALLA" ]; then
+        echo "MISSING ($VALHALLA not found)"
+        exit 0
+    fi
+    if [ ! -f "$CONFIG" ]; then
+        echo "NO CONFIG ($CONFIG missing)"
+        exit 0
+    fi
+    # Verify tiles exist
+    if [ ! -d "/opt/valhalla/tiles" ]; then
+        echo "NO TILES (/opt/valhalla/tiles missing)"
+        exit 0
+    fi
+    mkdir -p /var/log /var/run
+    $DAEMON "$CONFIG" "$PORT" >> "$LOG" 2>&1 &
+    echo $! > "$PIDFILE"
+    echo "OK (PID $!, port $PORT)"
+    ;;
+stop)
+    echo -n "Stopping Valhalla... "
+    if [ -f "$PIDFILE" ]; then
+        kill $(cat "$PIDFILE") 2>/dev/null
+        # Also kill any valhalla_service children
+        killall valhalla_service 2>/dev/null
+        rm -f "$PIDFILE"
+        echo "OK"
+    else
+        killall valhalla-httpd 2>/dev/null
+        killall valhalla_service 2>/dev/null
+        echo "OK"
+    fi
+    ;;
+status)
+    if [ -f "$PIDFILE" ] && kill -0 $(cat "$PIDFILE") 2>/dev/null; then
+        echo "Valhalla running (PID $(cat $PIDFILE))"
+    else
+        echo "Valhalla stopped"
+    fi
+    ;;
+*)
+    echo "Usage: $0 {start|stop|status}"
+    exit 1
+    ;;
+esac

@@ -1,0 +1,39 @@
+#!/bin/sh
+# rcS — System initialization (runs once at boot before runlevel scripts)
+# For Q60 Nav Rebuild on Linux 4.19
+
+set -e
+
+# Mount essential virtual filesystems
+mount -t proc proc /proc 2>/dev/null || true
+mount -t sysfs sysfs /sys 2>/dev/null || true
+mount -t devtmpfs devtmpfs /dev 2>/dev/null || true
+mount -t tmpfs -o nosuid,nodev,size=32M,mode=755 tmpfs /run 2>/dev/null || true
+mount -t tmpfs -o nosuid,nodev,size=64M tmpfs /tmp 2>/dev/null || true
+
+# /dev/pts for pseudo-terminals
+mkdir -p /dev/pts
+mount -t devpts devpts /dev/pts 2>/dev/null || true
+
+# Mount FAT32 boot partition (read-write — needed for boot counter)
+mount -a 2>/dev/null || true
+
+# Set hostname
+echo q60nav > /proc/sys/kernel/hostname 2>/dev/null || true
+
+# Seed RNG
+[ -f /var/lib/random-seed ] && cat /var/lib/random-seed > /dev/urandom
+
+# Load essential kernel modules
+modprobe iTCO_wdt    2>/dev/null || true
+modprobe can         2>/dev/null || true
+modprobe can_raw     2>/dev/null || true
+modprobe mcp251x     2>/dev/null || true
+
+# udev — device node population
+/sbin/udevd --daemon 2>/dev/null || true
+udevadm trigger --type=subsystems 2>/dev/null || true
+udevadm trigger --type=devices    2>/dev/null || true
+udevadm settle --timeout=8        2>/dev/null || true
+
+echo "[rcS] System init complete"

@@ -1,0 +1,54 @@
+# Build outputs — large binaries and generated files not tracked
+output/
+*.img
+*.tar.gz
+*.tar.xz
+*.mbtiles
+*.osm.pbf
+*.db
+
+# Docker layer caches
+.build-cache/
+
+# Logs
+*.log
+aqtinstall.log
+
+# Kernel source tarball (downloadable separately)
+linux-4.19.tar.xz
+
+# Qt source tarball (downloadable separately)
+deps/qt-everywhere-src-6.6.3.tar.xz
+
+# MapLibre GL Native source (submodule or separate download)
+# Tracked because it contains patches — see deps/build-maplibre-i386.sh
+
+# SpatiaLite/GEOS tarballs
+deps/spatialite-*.tar.gz
+deps/geos-*.tar.bz2
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Compiled objects (should live in output/)
+*.o
+*.a
+*.so
+*.so.*
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+build.ninja
+.ninja_deps
+.ninja_log
+install_manifest.txt

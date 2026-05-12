@@ -1,0 +1,33 @@
+#!/bin/sh
+# S50-q60nav — Start the Q60 navigation application
+# Delegates to /opt/nav/start.sh which handles boot counter, CAN, DENSO daemons
+
+LOG=/var/log/nav-init.log
+
+case "$1" in
+start)
+    echo -n "Starting q60nav... "
+    if [ ! -f /opt/nav/start.sh ]; then
+        echo "MISSING (/opt/nav/start.sh)"
+        exit 1
+    fi
+    /opt/nav/start.sh >> "$LOG" 2>&1 &
+    echo "OK (PID $!)"
+    ;;
+stop)
+    echo -n "Stopping q60nav... "
+    killall q60nav 2>/dev/null && echo "OK" || echo "not running"
+    ;;
+restart)
+    $0 stop
+    sleep 1
+    $0 start
+    ;;
+status)
+    pgrep -x q60nav > /dev/null && echo "q60nav running" || echo "q60nav stopped"
+    ;;
+*)
+    echo "Usage: $0 {start|stop|restart|status}"
+    exit 1
+    ;;
+esac

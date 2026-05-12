@@ -1,0 +1,34 @@
+#!/bin/sh
+# S10-gpsd — Start GPSD for GPS receiver
+# The Q60 GPS receiver is on a UART (ttyS0 or ttyAMA0 — verify via J2534 hardware probe)
+# GPSD provides JSON protocol on TCP localhost:2947 for NavigationService
+
+DAEMON=/usr/sbin/gpsd
+DEVICE=/dev/ttyS0       # adjust if GPS is on different UART
+SPEED=9600              # typical NMEA baud; may be 4800 or 38400
+
+case "$1" in
+start)
+    echo -n "Starting GPSD... "
+    if [ ! -c "$DEVICE" ]; then
+        echo "SKIPPED (no GPS device at $DEVICE)"
+        exit 0
+    fi
+    if [ -x "$DAEMON" ]; then
+        $DAEMON -n -G "$DEVICE" &
+        echo "OK"
+    else
+        echo "MISSING ($DAEMON not found)"
+    fi
+    ;;
+stop)
+    killall gpsd 2>/dev/null && echo "GPSD stopped" || true
+    ;;
+status)
+    pgrep gpsd > /dev/null && echo "GPSD running" || echo "GPSD stopped"
+    ;;
+*)
+    echo "Usage: $0 {start|stop|status}"
+    exit 1
+    ;;
+esac

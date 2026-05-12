@@ -1,0 +1,15 @@
+# SocketCAN — auto-bring-up on DCU
+# Vehicle CAN (500 kbps) — main chassis bus
+ACTION=="add", SUBSYSTEM=="net", KERNEL=="can0", \
+    RUN+="/sbin/ip link set can0 type can bitrate 500000 restart-ms 100", \
+    RUN+="/sbin/ip link set can0 up"
+
+# AVCAN (500 kbps) — infotainment internal
+ACTION=="add", SUBSYSTEM=="net", KERNEL=="can1", \
+    RUN+="/sbin/ip link set can1 type can bitrate 500000 restart-ms 100", \
+    RUN+="/sbin/ip link set can1 up"
+
+# CAN2 — steering column (250 kbps)
+ACTION=="add", SUBSYSTEM=="net", KERNEL=="can2", \
+    RUN+="/sbin/ip link set can2 type can bitrate 250000 restart-ms 100", \
+    RUN+="/sbin/ip link set can2 up"

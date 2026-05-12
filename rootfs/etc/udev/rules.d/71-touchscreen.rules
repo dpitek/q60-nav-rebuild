@@ -1,0 +1,8 @@
+# Map touchscreens to named devices for Qt
+# Upper 8" display
+SUBSYSTEM=="input", ATTRS{name}=="*atmel*", KERNEL=="event*", \
+    SYMLINK+="input/touchscreen-upper"
+
+# Lower 7" display
+SUBSYSTEM=="input", ATTRS{name}=="*ft5x06*", KERNEL=="event*", \
+    SYMLINK+="input/touchscreen-lower"

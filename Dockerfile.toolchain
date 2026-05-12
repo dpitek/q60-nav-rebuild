@@ -1,0 +1,34 @@
+# Q60 Nav Rebuild — Cross-compile toolchain
+# Target: Intel Atom E6xx (i686, 32-bit, Bonnell microarch)
+# Platform: linux/amd64 via QEMU on Apple Silicon
+FROM --platform=linux/amd64 ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN dpkg --add-architecture i386 && \
+    apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    gcc-multilib \
+    g++-multilib \
+    build-essential \
+    cmake \
+    ninja-build \
+    pkg-config \
+    qemu-user-static \
+    git curl wget unzip file \
+    python3 python3-pip python3-dev \
+    flex bison bc \
+    libssl-dev libelf-dev libncurses-dev \
+    rsync cpio kmod e2fsprogs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Atom E6xx = Bonnell microarch, 32-bit
+ENV ARCH=i386
+ENV CFLAGS="-m32 -march=bonnell -mtune=bonnell"
+ENV CXXFLAGS="-m32 -march=bonnell -mtune=bonnell"
+
+RUN echo "Toolchain OK" && gcc --version
+
+WORKDIR /build
+CMD ["/bin/bash"]

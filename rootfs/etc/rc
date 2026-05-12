@@ -1,0 +1,39 @@
+#!/bin/sh
+# /etc/init.d/rc — SysV runlevel script runner
+# Runs S* scripts in /etc/init.d/ for the given runlevel
+# Simplified version for embedded use
+
+RUNLEVEL=$1
+INIT_D=/etc/init.d
+
+echo "[rc] Entering runlevel $RUNLEVEL"
+
+case "$RUNLEVEL" in
+5)
+    # Normal boot: start all S* scripts in order
+    for script in "${INIT_D}"/S[0-9][0-9]-*; do
+        [ -x "$script" ] || continue
+        echo "[rc] Starting $(basename $script)..."
+        "$script" start
+    done
+    ;;
+0)
+    # Halt: stop all K* scripts
+    for script in "${INIT_D}"/K[0-9][0-9]-*; do
+        [ -x "$script" ] || continue
+        "$script" stop
+    done
+    halt -f
+    ;;
+6)
+    # Reboot
+    for script in "${INIT_D}"/K[0-9][0-9]-*; do
+        [ -x "$script" ] || continue
+        "$script" stop
+    done
+    reboot -f
+    ;;
+*)
+    echo "[rc] Runlevel $RUNLEVEL: no action defined"
+    ;;
+esac

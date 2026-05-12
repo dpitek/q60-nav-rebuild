@@ -1,0 +1,28 @@
+# /etc/inittab — Q60 Nav Rebuild init configuration
+# SysV init for Linux 4.19 on Intel Atom E6xx (Crossville Lapis)
+# Slot B root: /dev/mmcblk0p3
+
+# Default runlevel (5 = graphical)
+id:5:initdefault:
+
+# Boot sequence
+si::sysinit:/etc/init.d/rcS
+
+# Runlevel scripts
+l0:0:wait:/etc/init.d/rc 0
+l1:1:wait:/etc/init.d/rc 1
+l2:2:wait:/etc/init.d/rc 2
+l3:3:wait:/etc/init.d/rc 3
+l4:4:wait:/etc/init.d/rc 4
+l5:5:wait:/etc/init.d/rc 5
+l6:6:wait:/etc/init.d/rc 6
+
+# Emergency shell (ctrl+alt+del → reboot)
+ca::ctrlaltdel:/sbin/reboot -f
+
+# Serial console for debugging (tty1 via kernel cmdline androidboot.console=tty1)
+# Uncomment below for development builds only
+# T0:5:respawn:/sbin/getty -L tty1 115200 vt100
+
+# Watchdog keepalive (runs as separate process, pets /dev/watchdog every 20s)
+wd:5:respawn:/opt/nav/watchdog-pet.sh

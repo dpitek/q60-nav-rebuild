@@ -1,0 +1,64 @@
+#!/bin/sh
+# S30-weston — Start Weston Wayland compositor for dual LVDS output
+# Weston runs headless with DRM backend for the two physical screens
+# The q60nav app connects as a Wayland client
+
+DAEMON=/usr/bin/weston
+LOG=/var/log/weston.log
+PIDFILE=/var/run/weston.pid
+
+# Weston config at /etc/xdg/weston/weston.ini
+export XDG_RUNTIME_DIR=/run
+export WAYLAND_DISPLAY=wayland-0
+
+case "$1" in
+start)
+    echo -n "Starting Weston... "
+    if [ ! -x "$DAEMON" ]; then
+        # Fall back to linuxfb if Weston not available
+        echo "MISSING — q60nav will fall back to linuxfb"
+        exit 0
+    fi
+
+    # Check for DRM device
+    if [ ! -c /dev/dri/card0 ]; then
+        echo "NO DRM DEVICE — falling back to fbdev backend"
+        $DAEMON --backend=fbdev-backend.so \
+                --config=/etc/xdg/weston/weston.ini \
+                >> "$LOG" 2>&1 &
+    else
+        $DAEMON --backend=drm-backend.so \
+                --config=/etc/xdg/weston/weston.ini \
+                >> "$LOG" 2>&1 &
+    fi
+
+    echo $! > "$PIDFILE"
+    # Wait up to 5s for Wayland socket
+    i=0
+    while [ $i -lt 10 ]; do
+        [ -S /run/wayland-0 ] && { echo "OK (PID $(cat $PIDFILE))"; exit 0; }
+        sleep 0.5
+        i=$((i+1))
+    done
+    echo "TIMEOUT waiting for wayland-0 socket"
+    ;;
+
+stop)
+    echo -n "Stopping Weston... "
+    if [ -f "$PIDFILE" ]; then
+        kill $(cat "$PIDFILE") 2>/dev/null && rm -f "$PIDFILE"
+        echo "OK"
+    else
+        echo "not running"
+    fi
+    ;;
+
+status)
+    [ -S /run/wayland-0 ] && echo "Weston running" || echo "Weston stopped"
+    ;;
+
+*)
+    echo "Usage: $0 {start|stop|status}"
+    exit 1
+    ;;
+esac
