@@ -340,6 +340,198 @@
 
   .rerouting-banner.visible { transform: translateY(0); }
 
+  /* ── DRIVE MODE BAR ── */
+  .drive-mode-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 36px;
+    background: rgba(0,0,0,0.80);
+    border-top: 1px solid rgba(255,255,255,0.07);
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    z-index: 9;
+    gap: 10px;
+  }
+
+  .dm-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px 4px 8px;
+    border-radius: 20px;
+    border: 1.5px solid currentColor;
+    background: transparent;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1;
+    transition: color 0.2s, border-color 0.2s;
+  }
+
+  .dm-badge .dm-icon { font-size: 14px; line-height: 1; }
+  .dm-bar-spacer { flex: 1; }
+  .dm-bar-right { font-size: 12px; color: #8E8E93; display: flex; align-items: center; gap: 10px; }
+
+  /* ── NOTIFICATION BANNER ── */
+  .notif-banner {
+    position: absolute;
+    top: 32px; left: 50%;
+    transform: translateX(-50%) translateY(-56px);
+    width: 480px;
+    height: 44px;
+    border-radius: 0 0 14px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 18px;
+    z-index: 30;
+    transition: transform 250ms cubic-bezier(0.34,1.56,0.64,1);
+    pointer-events: none;
+    backdrop-filter: blur(8px);
+  }
+
+  .notif-banner.visible {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .notif-icon { font-size: 18px; flex-shrink: 0; line-height: 1; }
+  .notif-text { font-size: 13px; font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .notif-dismiss { font-size: 14px; color: rgba(255,255,255,0.5); cursor: pointer; pointer-events: all; flex-shrink: 0; }
+
+  /* severity color themes */
+  .notif-warn  { background: rgba(255,159,10,0.92); color: #000; }
+  .notif-alert { background: rgba(255,69,58,0.92);  color: #FFF; }
+  .notif-info  { background: rgba(10,132,255,0.88); color: #FFF; }
+  .notif-ok    { background: rgba(48,209,88,0.88);  color: #000; }
+
+  /* ── BRIGHTNESS OVERLAY ── */
+  .brightness-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0);
+    pointer-events: none;
+    z-index: 200;
+    transition: background 0.4s ease;
+  }
+
+  /* ── DAY MODE ── */
+  .day-mode .screen-upper,
+  .day-mode .screen-lower {
+    background: #E8E8ED;
+  }
+  .day-mode .map-bg {
+    background: #C8C8D0;
+  }
+  .day-mode .map-grid {
+    background-image:
+      linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,0,0,0.06) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+  .day-mode .map-label { color: #D0D0D8; }
+  .day-mode .status-bar {
+    background: rgba(232,232,237,0.94);
+    border-bottom-color: rgba(0,0,0,0.1);
+    color: #1C1C1E;
+  }
+  .day-mode .status-time,
+  .day-mode .status-center { color: #1C1C1E; }
+  .day-mode .status-right span { color: #3C3C43; }
+  .day-mode .tab-bar {
+    background: rgba(232,232,237,0.96);
+    border-top-color: rgba(0,0,0,0.1);
+  }
+  .day-mode .tab-item { color: #6C6C70; }
+  .day-mode .tab-item.active { color: #0A84FF; }
+  .day-mode .tab-panel {
+    background: #E8E8ED;
+  }
+  .day-mode .nav-stat-card,
+  .day-mode .next-maneuver-card,
+  .day-mode .speed-compare {
+    background: #FFFFFF;
+    color: #1C1C1E;
+  }
+  .day-mode .nav-stat-lbl { color: #6C6C70; }
+  .day-mode .nav-stat-val { color: #1C1C1E; }
+  .day-mode .nav-bottom-strip {
+    background: rgba(232,232,237,0.94);
+    border-top-color: rgba(0,0,0,0.1);
+  }
+  .day-mode .nav-strip-val { color: #1C1C1E; }
+  .day-mode .nav-strip-lbl { color: #6C6C70; }
+  .day-mode .drive-mode-bar {
+    background: rgba(232,232,237,0.92);
+    border-top-color: rgba(0,0,0,0.1);
+  }
+  .day-mode .dm-bar-right { color: #6C6C70; }
+  .day-mode .climate-center {
+    background: #FFFFFF;
+  }
+  .day-mode .climate-zone {
+    background: #F2F2F7;
+  }
+  .day-mode .turn-card {
+    background: rgba(255,255,255,0.94);
+    color: #1C1C1E;
+  }
+  .day-mode .turn-dist { color: #1C1C1E; }
+  .day-mode .turn-street { color: #3C3C43; }
+  .day-mode .speed-badge {
+    background: rgba(255,255,255,0.92);
+  }
+  .day-mode .speed-current { color: #1C1C1E; }
+  .day-mode .speed-unit { color: #6C6C70; }
+  .day-mode .speed-limit-badge { background: #FF453A; color: #FFF; }
+  .day-mode .notif-banner.notif-warn { background: rgba(255,159,10,0.95); }
+  .day-mode .notif-banner.notif-alert { background: rgba(255,69,58,0.95); }
+
+  /* ── DAY/NIGHT + BRIGHTNESS UI ── */
+  .daynight-bar {
+    position: absolute;
+    top: 36px; right: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    z-index: 50;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .daynight-bar.visible {
+    opacity: 1;
+    pointer-events: all;
+  }
+  .dn-btn {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: rgba(28,28,30,0.88);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: #FFF;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+    transition: background 0.15s;
+  }
+  .dn-btn:hover { background: rgba(58,58,60,0.92); }
+  .dn-btn.mode-toggle { font-size: 16px; }
+  .day-mode .dn-btn {
+    background: rgba(242,242,247,0.9);
+    border-color: rgba(0,0,0,0.12);
+    color: #1C1C1E;
+  }
+  .brightness-label {
+    font-size: 10px;
+    color: rgba(255,255,255,0.6);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+  }
+  .day-mode .brightness-label { color: rgba(0,0,0,0.4); }
+
   /* ── REVERSE OVERLAY ── */
   .reverse-overlay {
     position: absolute;
@@ -1579,6 +1771,13 @@
         <span>↻ Recalculating Route…</span>
       </div>
 
+      <!-- NOTIFICATION BANNER -->
+      <div class="notif-banner notif-warn" id="notif-banner">
+        <span class="notif-icon" id="notif-icon">⚠️</span>
+        <span class="notif-text" id="notif-text">Low Fuel — approximately 40 miles remaining</span>
+        <span class="notif-dismiss" onclick="app.dismissNotif()">✕</span>
+      </div>
+
       <!-- TURN CARD -->
       <div class="turn-card" id="turn-card-upper">
         <div class="turn-arrow-wrap" id="turn-arrow-upper">
@@ -1653,6 +1852,30 @@
             <span>Decline</span>
           </button>
         </div>
+      </div>
+
+      <!-- DRIVE MODE BAR -->
+      <div class="drive-mode-bar" id="drive-mode-bar">
+        <div class="dm-badge" id="dm-badge" style="color:#0A84FF;">
+          <span class="dm-icon" id="dm-icon">⚖️</span>
+          <span id="dm-label">STANDARD</span>
+        </div>
+        <div class="dm-bar-spacer"></div>
+        <div class="dm-bar-right">
+          <span id="dm-bar-temp">68°F</span>
+          <span id="dm-bar-compass" style="color:#8E8E93;font-size:11px;">N</span>
+        </div>
+      </div>
+
+      <!-- BRIGHTNESS OVERLAY -->
+      <div class="brightness-overlay" id="brightness-overlay-upper"></div>
+
+      <!-- DAY/NIGHT + BRIGHTNESS CONTROLS (shown on joystick push, auto-hides) -->
+      <div class="daynight-bar" id="daynight-bar">
+        <button class="dn-btn" onclick="app.adjBrightness(10)" title="Brighter">☀</button>
+        <span class="brightness-label" id="brightness-pct">100%</span>
+        <button class="dn-btn" onclick="app.adjBrightness(-10)" title="Dimmer">◗</button>
+        <button class="dn-btn mode-toggle" id="mode-toggle-btn" onclick="app.toggleDayNight()" title="Day/Night">🌙</button>
       </div>
 
     </div><!-- /screen-upper -->
@@ -2935,6 +3158,9 @@
         </button>
       </div>
 
+      <!-- BRIGHTNESS OVERLAY -->
+      <div class="brightness-overlay" id="brightness-overlay-lower"></div>
+
     </div><!-- /screen-lower -->
   </div>
 
@@ -3048,6 +3274,30 @@
 
     <!-- ── PROFILES SIMULATION ── -->
     <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.10);">
+      <div class="sim-lbl" style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#8E8E93;margin-bottom:6px;">Notifications</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">
+        <button onclick="app.showNotification('warn','⛽','Low Fuel — ~40 miles remaining')" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#FF9F0A;font-size:11px;padding:5px 10px;border-radius:8px;cursor:pointer;">⛽ Low Fuel</button>
+        <button onclick="app.showNotification('warn','🚪','Door Ajar — Rear Left')" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#FF9F0A;font-size:11px;padding:5px 10px;border-radius:8px;cursor:pointer;">🚪 Door Ajar</button>
+        <button onclick="app.showNotification('alert','🅿️','Parking Brake On')" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#FF453A;font-size:11px;padding:5px 10px;border-radius:8px;cursor:pointer;">🅿️ Parking Brake</button>
+        <button onclick="app.showNotification('alert','🔒','Seatbelt Not Fastened')" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#FF453A;font-size:11px;padding:5px 10px;border-radius:8px;cursor:pointer;">🔒 Seatbelt</button>
+        <button onclick="app.showNotification('warn','🛢️','Engine Oil Life: 8%')" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#FF9F0A;font-size:11px;padding:5px 10px;border-radius:8px;cursor:pointer;">🛢 Oil Life</button>
+        <button onclick="app.showNotification('info','❄️','Plasmacluster Active')" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#0A84FF;font-size:11px;padding:5px 10px;border-radius:8px;cursor:pointer;">❄ Plasma</button>
+        <button onclick="app.showNotification('ok','✅','All Doors Closed')" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#30D158;font-size:11px;padding:5px 10px;border-radius:8px;cursor:pointer;">✅ Doors OK</button>
+        <button onclick="app.showNotification('warn','🌡️','Tire Pressure Low — Front Left')" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#FF9F0A;font-size:11px;padding:5px 10px;border-radius:8px;cursor:pointer;">🌡 TPMS</button>
+      </div>
+      <div class="sim-lbl" style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#8E8E93;margin-bottom:6px;margin-top:10px;">Joystick</div>
+      <div style="display:grid;grid-template-columns:repeat(3,40px);grid-template-rows:repeat(3,40px);gap:4px;margin-bottom:14px;">
+        <div></div>
+        <button onclick="app.joystickAction('up')" style="background:#2C2C2E;border:1px solid #3A3A3C;color:#FFF;border-radius:8px;cursor:pointer;font-size:14px;">▲</button>
+        <div></div>
+        <button onclick="app.joystickAction('left')" style="background:#2C2C2E;border:1px solid #3A3A3C;color:#FFF;border-radius:8px;cursor:pointer;font-size:14px;">◀</button>
+        <button onclick="app.joystickAction('push')" style="background:#0A84FF;border:none;color:#FFF;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;">⏎</button>
+        <button onclick="app.joystickAction('right')" style="background:#2C2C2E;border:1px solid #3A3A3C;color:#FFF;border-radius:8px;cursor:pointer;font-size:14px;">▶</button>
+        <div></div>
+        <button onclick="app.joystickAction('down')" style="background:#2C2C2E;border:1px solid #3A3A3C;color:#FFF;border-radius:8px;cursor:pointer;font-size:14px;">▼</button>
+        <div></div>
+      </div>
+
       <div class="sim-lbl" style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#8E8E93;margin-bottom:10px;">Driver Profiles</div>
 
       <div class="sim-control">
@@ -3950,15 +4200,103 @@ const app = {
   },
 
   setDriveMode(mode) {
+    const dmColors = { standard:'#0A84FF', sport:'#FF9F0A', 'sport+':'#FF453A', eco:'#30D158', snow:'#64D2FF', personal:'#BF5AF2' };
+    const dmIcons  = { standard:'⚖️', sport:'🏎️', 'sport+':'⚡', eco:'🌱', snow:'❄️', personal:'⚙️' };
+    const dmLabels = { standard:'Standard', sport:'Sport', 'sport+':'Sport+', eco:'Eco', snow:'Snow', personal:'Personal' };
     const modes = ['standard','sport','sport+','eco','snow','personal'];
     modes.forEach(m => {
       const btn = document.getElementById('dm-' + m);
       if (!btn) return;
       const active = m === mode;
-      btn.style.background = active ? 'linear-gradient(135deg,#0A84FF22,#0A84FF44)' : '#1C1C1E';
-      btn.style.borderColor = active ? '#0A84FF' : '#3A3A3C';
-      btn.style.color = active ? '#0A84FF' : '#8E8E93';
+      btn.style.background = active ? `linear-gradient(135deg,${dmColors[m]}22,${dmColors[m]}44)` : '#1C1C1E';
+      btn.style.borderColor = active ? dmColors[m] : '#3A3A3C';
+      btn.style.color = active ? dmColors[m] : '#8E8E93';
     });
+    // Update drive mode bar badge
+    const badge = document.getElementById('dm-badge');
+    const icon  = document.getElementById('dm-icon');
+    const lbl   = document.getElementById('dm-label');
+    if (badge && icon && lbl) {
+      const c = dmColors[mode] || '#0A84FF';
+      badge.style.color = c;
+      icon.textContent = dmIcons[mode] || '⚖️';
+      lbl.textContent = (dmLabels[mode] || mode).toUpperCase();
+    }
+    this.ui.driveMode = mode;
+  },
+
+  // ─ NOTIFICATIONS ─
+  _notifQueue: [],
+  _notifTimer: null,
+  showNotification(type, icon, text) {
+    this._notifQueue.push({ type, icon, text });
+    if (!this._notifTimer) this._processNotifQueue();
+  },
+  _processNotifQueue() {
+    if (!this._notifQueue.length) { this._notifTimer = null; return; }
+    const { type, icon, text } = this._notifQueue.shift();
+    const el = document.getElementById('notif-banner');
+    const iEl = document.getElementById('notif-icon');
+    const tEl = document.getElementById('notif-text');
+    el.className = `notif-banner notif-${type}`;
+    iEl.textContent = icon;
+    tEl.textContent = text;
+    el.classList.add('visible');
+    this._notifTimer = setTimeout(() => {
+      el.classList.remove('visible');
+      setTimeout(() => this._processNotifQueue(), 300);
+    }, 4000);
+  },
+  dismissNotif() {
+    const el = document.getElementById('notif-banner');
+    el.classList.remove('visible');
+    if (this._notifTimer) { clearTimeout(this._notifTimer); this._notifTimer = null; }
+    setTimeout(() => this._processNotifQueue(), 300);
+  },
+
+  // ─ DAY/NIGHT + BRIGHTNESS ─
+  ui_brightness: 100,
+  ui_dayMode: false,
+  _dnHideTimer: null,
+
+  toggleDayNight() {
+    this.ui_dayMode = !this.ui_dayMode;
+    document.documentElement.classList.toggle('day-mode', this.ui_dayMode);
+    const btn = document.getElementById('mode-toggle-btn');
+    if (btn) btn.textContent = this.ui_dayMode ? '☀️' : '🌙';
+    this._applyBrightness();
+    this._showDNBar();
+  },
+
+  adjBrightness(delta) {
+    this.ui_brightness = Math.min(100, Math.max(20, this.ui_brightness + delta));
+    this._applyBrightness();
+    const lbl = document.getElementById('brightness-pct');
+    if (lbl) lbl.textContent = this.ui_brightness + '%';
+    this._showDNBar();
+  },
+
+  _applyBrightness() {
+    const dim = (1 - this.ui_brightness / 100) * 0.80;
+    const val = `rgba(0,0,0,${dim.toFixed(2)})`;
+    ['upper','lower'].forEach(s => {
+      const el = document.getElementById('brightness-overlay-' + s);
+      if (el) el.style.background = val;
+    });
+  },
+
+  _showDNBar() {
+    const bar = document.getElementById('daynight-bar');
+    if (!bar) return;
+    bar.classList.add('visible');
+    if (this._dnHideTimer) clearTimeout(this._dnHideTimer);
+    this._dnHideTimer = setTimeout(() => bar.classList.remove('visible'), 3000);
+  },
+
+  joystickAction(dir) {
+    if (dir === 'up')        this.adjBrightness(10);
+    else if (dir === 'down') this.adjBrightness(-10);
+    else if (dir === 'push') this.toggleDayNight();
   },
 
   toggleAdas(btn, feature) {
