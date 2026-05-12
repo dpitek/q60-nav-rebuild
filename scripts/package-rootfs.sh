@@ -53,6 +53,9 @@ check "$ROUTING_TILES/admins.db"        "routing tiles (run build-tiles.sh)"
 check "$ROOT/output/photon-data"                  "Photon geocoder data (run scripts/download-photon.sh)"
 check "$ROOTFS_DIR/usr/bin/java"                  "Java JRE in rootfs (run scripts/install-jre-rootfs.sh)"
 check "$ROOTFS_DIR/opt/nav/lib/dri/swrast_dri.so" "Mesa swrast DRI driver (run scripts/install-mesa-rootfs.sh)"
+check "$ROOTFS_DIR/opt/nav/style/sprites/sprite.json" "MapLibre sprites (run scripts/download-map-assets.sh)"
+check "$ROOTFS_DIR/opt/nav/style/fonts/Noto Sans Bold" "MapLibre glyphs Noto Sans Bold (run scripts/download-map-assets.sh)"
+check "$ROOTFS_DIR/opt/nav/style/fonts/Noto Sans Regular" "MapLibre glyphs Noto Sans Regular (run scripts/download-map-assets.sh)"
 
 if [ "$MISSING" -gt 0 ]; then
     echo ""
