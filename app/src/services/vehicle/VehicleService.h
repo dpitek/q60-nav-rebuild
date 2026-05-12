@@ -48,6 +48,44 @@ class VehicleService : public QObject {
     Q_PROPERTY(float cruiseSpeed   READ cruiseSpeed   NOTIFY cruiseSpeedChanged)
     // Wipers (0x35D / 0x625)
     Q_PROPERTY(int   wipersState   READ wipersState   NOTIFY wipersStateChanged)
+    // Climate shortcuts + steering wheel + plasmacluster + rain sensor
+    Q_PROPERTY(bool  autoClimateOn        READ autoClimateOn        NOTIFY autoClimateOnChanged)
+    Q_PROPERTY(bool  heatedSteeringWheel  READ heatedSteeringWheel  NOTIFY heatedSteeringWheelChanged)
+    Q_PROPERTY(int   plasmaclusterLevel   READ plasmaclusterLevel   NOTIFY plasmaclusterLevelChanged)  // 0=off 1=low 2=mid 3=high
+    Q_PROPERTY(bool  rainSensorEnabled    READ rainSensorEnabled    NOTIFY rainSensorEnabledChanged)
+    // TPMS — individual tire PSI (0x385 Q50_LIKELY)
+    Q_PROPERTY(float tirePSI_FL  READ tirePSI_FL  NOTIFY tirePSIsChanged)
+    Q_PROPERTY(float tirePSI_FR  READ tirePSI_FR  NOTIFY tirePSIsChanged)
+    Q_PROPERTY(float tirePSI_RL  READ tirePSI_RL  NOTIFY tirePSIsChanged)
+    Q_PROPERTY(float tirePSI_RR  READ tirePSI_RR  NOTIFY tirePSIsChanged)
+    // Oil life 0.0–100.0 (OBD2 PID 0x2F or proprietary Nissan CAN 0x54C Q50_LIKELY)
+    Q_PROPERTY(float oilLife     READ oilLife     NOTIFY oilLifeChanged)
+    // Fuel economy (OBD2 calculated or CAN 0x554 Q50_LIKELY)
+    Q_PROPERTY(float instantMPG  READ instantMPG  NOTIFY instantMPGChanged)
+    Q_PROPERTY(float avgMPG      READ avgMPG      NOTIFY avgMPGChanged)
+    // Trip computers A and B
+    Q_PROPERTY(float tripAMiles    READ tripAMiles    NOTIFY tripAChanged)
+    Q_PROPERTY(float tripAAvgMPG   READ tripAAvgMPG   NOTIFY tripAChanged)
+    Q_PROPERTY(int   tripASeconds  READ tripASeconds  NOTIFY tripAChanged)
+    Q_PROPERTY(float tripAAvgSpeed READ tripAAvgSpeed NOTIFY tripAChanged)
+    Q_PROPERTY(float tripBMiles    READ tripBMiles    NOTIFY tripBChanged)
+    Q_PROPERTY(float tripBAvgMPG   READ tripBAvgMPG   NOTIFY tripBChanged)
+    Q_PROPERTY(int   tripBSeconds  READ tripBSeconds  NOTIFY tripBChanged)
+    Q_PROPERTY(float tripBAvgSpeed READ tripBAvgSpeed NOTIFY tripBChanged)
+    // Drive mode (0=Std 1=Sport 2=Sport+ 3=Eco 4=Snow 5=Personal)
+    Q_PROPERTY(int  driveMode      READ driveMode      NOTIFY driveModeChanged)
+    // Driver aids
+    Q_PROPERTY(bool bswOn          READ bswOn          NOTIFY bswOnChanged)
+    Q_PROPERTY(bool bsiOn          READ bsiOn          NOTIFY bsiOnChanged)
+    Q_PROPERTY(bool ldwOn          READ ldwOn          NOTIFY ldwOnChanged)
+    Q_PROPERTY(bool ldpOn          READ ldpOn          NOTIFY ldpOnChanged)
+    Q_PROPERTY(bool febOn          READ febOn          NOTIFY febOnChanged)
+    Q_PROPERTY(bool bciOn          READ bciOn          NOTIFY bciOnChanged)
+    Q_PROPERTY(bool vdcOn          READ vdcOn          NOTIFY vdcOnChanged)
+    Q_PROPERTY(int  pfcwSensitivity READ pfcwSensitivity NOTIFY pfcwSensitivityChanged)  // 0=Off 1=Far 2=Normal 3=Near
+    // ATTESA AWD torque split
+    Q_PROPERTY(float atessaFront   READ atessaFront    NOTIFY atessaChanged)  // % front torque 0-100
+    Q_PROPERTY(float atessaRear    READ atessaRear     NOTIFY atessaChanged)  // % rear torque 0-100
 
 public:
     explicit VehicleService(QObject *parent = nullptr);
@@ -94,6 +132,44 @@ public:
     float cruiseSpeed()   const { return m_cruiseSpeed; }
     // Wipers (0=off, 1=slow, 2=fast, 3=one-shot)
     int   wipersState()   const { return m_wipersState; }
+    // Climate shortcuts
+    bool autoClimateOn()       const { return m_autoClimateOn; }
+    bool heatedSteeringWheel() const { return m_heatedSteeringWheel; }
+    int  plasmaclusterLevel()  const { return m_plasmaclusterLevel; }
+    bool rainSensorEnabled()   const { return m_rainSensorEnabled; }
+    // TPMS
+    float tirePSI_FL()    const { return m_tirePSI_FL; }
+    float tirePSI_FR()    const { return m_tirePSI_FR; }
+    float tirePSI_RL()    const { return m_tirePSI_RL; }
+    float tirePSI_RR()    const { return m_tirePSI_RR; }
+    // Oil / fuel economy
+    float oilLife()       const { return m_oilLife; }
+    float instantMPG()    const { return m_instantMPG; }
+    float avgMPG()        const { return m_avgMPG; }
+    // Trip A
+    float tripAMiles()    const { return m_tripAMiles; }
+    float tripAAvgMPG()   const { return m_tripAAvgMPG; }
+    int   tripASeconds()  const { return m_tripASeconds; }
+    float tripAAvgSpeed() const { return m_tripAAvgSpeed; }
+    // Trip B
+    float tripBMiles()    const { return m_tripBMiles; }
+    float tripBAvgMPG()   const { return m_tripBAvgMPG; }
+    int   tripBSeconds()  const { return m_tripBSeconds; }
+    float tripBAvgSpeed() const { return m_tripBAvgSpeed; }
+    // Drive mode
+    int  driveMode()      const { return m_driveMode; }
+    // Driver aids
+    bool bswOn()          const { return m_bswOn; }
+    bool bsiOn()          const { return m_bsiOn; }
+    bool ldwOn()          const { return m_ldwOn; }
+    bool ldpOn()          const { return m_ldpOn; }
+    bool febOn()          const { return m_febOn; }
+    bool bciOn()          const { return m_bciOn; }
+    bool vdcOn()          const { return m_vdcOn; }
+    int  pfcwSensitivity() const { return m_pfcwSensitivity; }
+    // ATTESA
+    float atessaFront()   const { return m_atessaFront; }
+    float atessaRear()    const { return m_atessaRear; }
 
 public slots:
     // Climate writes — CAUTION: Q50/Q60 HVAC write path not publicly documented.
@@ -110,6 +186,28 @@ public slots:
     void setRearDefrost(bool on);
     // Bose wake
     void wakeBosse();
+    // Climate shortcuts + steering wheel + plasmacluster + rain sensor
+    Q_INVOKABLE void setAutoClimate(bool on);    // AUTO mode: full-auto fan+AC+mode
+    Q_INVOKABLE void setMaxAC();                 // MAX AC: recirc + max fan + max cool
+    Q_INVOKABLE void setMaxDEF();                // MAX DEF: A/C + max fan + defrost mode
+    Q_INVOKABLE void syncZones();                // SYNC: set passenger = driver temp
+    Q_INVOKABLE void setHeatedSteeringWheel(bool on);
+    Q_INVOKABLE void setPlasmacluster(int level);  // 0=off 1-3=level
+    Q_INVOKABLE void setRainSensor(bool on);
+    // Trip computer resets
+    Q_INVOKABLE void resetTripA();
+    Q_INVOKABLE void resetTripB();
+    // Drive mode
+    Q_INVOKABLE void setDriveMode(int mode);
+    // Driver aids
+    Q_INVOKABLE void setBSW(bool on);
+    Q_INVOKABLE void setBSI(bool on);
+    Q_INVOKABLE void setLDW(bool on);
+    Q_INVOKABLE void setLDP(bool on);
+    Q_INVOKABLE void setFEB(bool on);
+    Q_INVOKABLE void setBCI(bool on);
+    Q_INVOKABLE void setVDC(bool on);
+    Q_INVOKABLE void setPFCWSensitivity(int level);  // 0=Off 1=Far 2=Normal 3=Near
     // Door lock/unlock via UDS Service 0x30 on BCM (0x745)
     // CAUTION: Data identifier 0xBF00 is Q50_LIKELY — verify via J2534 before use.
     // Single-frame UDS request; BCM must be on the active CAN bus (can0 HS-CAN).
@@ -149,6 +247,30 @@ signals:
     void cruiseActiveChanged(bool);
     void cruiseSpeedChanged(float);
     void wipersStateChanged(int);
+    // Climate shortcuts
+    void autoClimateOnChanged(bool);
+    void heatedSteeringWheelChanged(bool);
+    void plasmaclusterLevelChanged(int);
+    void rainSensorEnabledChanged(bool);
+    // TPMS / oil / fuel
+    void tirePSIsChanged();
+    void oilLifeChanged(float);
+    void instantMPGChanged(float);
+    void avgMPGChanged(float);
+    // Trip computers
+    void tripAChanged();
+    void tripBChanged();
+    // Drive mode + driver aids + ATTESA
+    void driveModeChanged(int);
+    void bswOnChanged(bool);
+    void bsiOnChanged(bool);
+    void ldwOnChanged(bool);
+    void ldpOnChanged(bool);
+    void febOnChanged(bool);
+    void bciOnChanged(bool);
+    void vdcOnChanged(bool);
+    void pfcwSensitivityChanged(int);
+    void atessaChanged();
     // Steering wheel button events (fired from AV-CAN 0x681)
     void volUp();
     void volDown();
@@ -165,6 +287,7 @@ private slots:
     void onVehicleCanData();
     void onAVCanData();
     void onCAN2Data();
+    void onTripTimerTick();  // 1Hz trip computer accumulator
 
 private:
     void openCAN(const char *iface, int &sock);
@@ -175,9 +298,11 @@ private:
     void hvacInit();           // send 0x540 init sequence on startup
     uint8_t hvacTempRaw(float tempF) const;  // °F → 0x540 byte encoding
     uint8_t hvacModeFlags() const;           // pack current state → byte 0 of 0x540
+    void sendADASFrame();     // rebuild and send CAN_ADAS_CTRL (0x47D) from current aid state
 
     ButtonLogger m_buttonLog;        // hardware button diagnostic logger
     bool m_ignitionOffSent = false;  // debounce: only emit ignitionOff() once per cycle
+    QTimer *m_tripTimer    = nullptr; // 1Hz tick for trip computer accumulators
 
     int m_vehicleCanSock = -1;  // can0 — HS-CAN 500kbps (powertrain, BCM, HVAC)
     int m_avCanSock      = -1;  // can1 — AV-CAN 500kbps isolated (Bose, SXM, SW buttons)
@@ -219,6 +344,35 @@ private:
     bool  m_cruiseActive  = false;
     float m_cruiseSpeed   = 0.0f;
     int   m_wipersState   = 0;
+    // Climate shortcuts
+    bool m_autoClimateOn       = false;
+    bool m_heatedSteeringWheel = false;
+    int  m_plasmaclusterLevel  = 0;
+    bool m_rainSensorEnabled   = true;
+    // TPMS
+    float m_tirePSI_FL = 0.0f, m_tirePSI_FR = 0.0f, m_tirePSI_RL = 0.0f, m_tirePSI_RR = 0.0f;
+    // Oil / fuel economy
+    float m_oilLife     = 100.0f;
+    float m_instantMPG  = 0.0f, m_avgMPG = 0.0f;
+    // Trip A
+    float m_tripAMiles    = 0.0f, m_tripAAvgMPG = 0.0f, m_tripAAvgSpeed = 0.0f;
+    int   m_tripASeconds  = 0;
+    // Trip B
+    float m_tripBMiles    = 0.0f, m_tripBAvgMPG = 0.0f, m_tripBAvgSpeed = 0.0f;
+    int   m_tripBSeconds  = 0;
+    // Drive mode + driver aids
+    int  m_driveMode      = 0;
+    bool m_bswOn          = true;
+    bool m_bsiOn          = true;
+    bool m_ldwOn          = true;
+    bool m_ldpOn          = true;
+    bool m_febOn          = true;
+    bool m_bciOn          = true;
+    bool m_vdcOn          = true;
+    int  m_pfcwSensitivity = 2;
+    // ATTESA (rear-biased default)
+    float m_atessaFront   = 50.0f;
+    float m_atessaRear    = 50.0f;
 
     // ─── CAN IDs ─────────────────────────────────────────────────────────────
     // Sources: opendbc nissan_common.dbc, opendbc X-Trail/Xterra, carhack 370Z,
@@ -386,6 +540,45 @@ private:
     static constexpr canid_t UDS_COMBINATION_METER = 0x743; // CONFIRMED cross-platform
     static constexpr canid_t UDS_BCM               = 0x745; // CONFIRMED cross-platform
     static constexpr canid_t UDS_BCM_RESPONSE       = 0x74D; // CONFIRMED (request+8)
+
+    // ── Climate shortcuts / steering wheel / plasmacluster / rain sensor ────
+    // Heated steering wheel — BCM command (Q50_LIKELY; verify via J2534)
+    static constexpr canid_t CAN_STEERING_HEAT = 0x35F;  // Q50_LIKELY
+
+    // Plasmacluster — HVAC module command (Q50_LIKELY)
+    static constexpr canid_t CAN_PLASMACLUSTER = 0x542;  // Q50_LIKELY
+
+    // Rain sensor enable/disable — ADAS/wiper module (Q50_LIKELY)
+    static constexpr canid_t CAN_RAIN_SENSOR   = 0x3C5;  // Q50_LIKELY
+
+    // ── TPMS / oil life / fuel economy ───────────────────────────────────────
+    // TPMS — 4 tire PSI broadcast (Q50_LIKELY)
+    // byte 0-1: FL big-endian uint16 × 0.25 = PSI
+    // byte 2-3: FR, byte 4-5: RL, byte 6-7: RR
+    static constexpr canid_t CAN_TPMS         = 0x385;  // Q50_LIKELY
+
+    // Oil life — Q50_LIKELY Nissan proprietary (OBD2 PID fallback at 0x21C Q50_LIKELY)
+    static constexpr canid_t CAN_OIL_LIFE     = 0x54C;  // Q50_LIKELY
+
+    // Fuel economy — instantaneous and trip average (Q50_LIKELY)
+    // byte 0-1: instant MPG (big-endian uint16, ×0.1 MPG/LSB)
+    // byte 2-3: average MPG (big-endian uint16, ×0.1 MPG/LSB)
+    static constexpr canid_t CAN_FUEL_ECONOMY = 0x554;  // Q50_LIKELY
+
+    // ── Drive mode / driver aids / ATTESA ────────────────────────────────────
+    // Drive mode selector — BCM/TCM command (Q50_LIKELY)
+    // byte 0: mode enum (0=Standard 1=Sport 2=Sport+ 3=Eco 4=Snow 5=Personal)
+    static constexpr canid_t CAN_DRIVE_MODE   = 0x2DC;  // Q50_LIKELY
+
+    // Driver aids enable/disable — ADAS control unit (Q50_LIKELY)
+    // byte 0: bit0=BSW bit1=BSI bit2=LDW bit3=LDP bit4=FEB bit5=BCI bit6=VDC
+    // byte 1: PFCW sensitivity (0=off 1=far 2=normal 3=near)
+    static constexpr canid_t CAN_ADAS_CTRL    = 0x47D;  // Q50_LIKELY
+
+    // ATTESA AWD torque split status (Q50_LIKELY; rear-biased default)
+    // byte 0: front torque % (0–100)
+    // byte 1: rear torque % (0–100)
+    static constexpr canid_t CAN_ATTESA       = 0x1CA;  // Q50_LIKELY
 
     // ── AV-CAN (can1, 500 kbps, isolated infotainment bus) ────────────────
     // Steering wheel + panel buttons — byte 0 = status, byte 4 = button code:

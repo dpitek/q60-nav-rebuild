@@ -70,6 +70,12 @@ void VehicleService::start()
 
     // Bose wake on startup — send on AV-CAN after bus settles
     QTimer::singleShot(500, this, &VehicleService::wakeBosse);
+
+    // Trip computer 1Hz tick — only accumulates when ignition is on
+    m_tripTimer = new QTimer(this);
+    m_tripTimer->setInterval(1000);
+    connect(m_tripTimer, &QTimer::timeout, this, &VehicleService::onTripTimerTick);
+    m_tripTimer->start();
 }
 
 void VehicleService::openCAN(const char *iface, int &sock)
@@ -161,6 +167,12 @@ void VehicleService::parseVehicleFrame(const struct can_frame &f)
         float kmh = raw * 0.01f;
         float mph = kmh * 0.621371f;
         if (mph != m_speed) { m_speed = mph; emit speedChanged(mph); }
+        // Accumulate distance for trip computers (~10Hz → divide by 10000)
+        if (m_ignitionOn && mph > 0.0f) {
+            float delta = mph / 10000.0f;
+            m_tripAMiles += delta;
+            m_tripBMiles += delta;
+        }
         break;
     }
 
@@ -400,6 +412,56 @@ void VehicleService::parseVehicleFrame(const struct can_frame &f)
         if (bv != m_batteryVolts && bv > 9.0f && bv < 17.0f) {
             m_batteryVolts = bv;
             emit batteryVoltsChanged(bv);
+        }
+        break;
+    }
+
+    // ── 0x385: TPMS — four tire PSI (Q50_LIKELY) ─────────────────────────────
+    // bytes 0-1: FL big-endian uint16 × 0.25 PSI; 2-3: FR; 4-5: RL; 6-7: RR
+    case CAN_TPMS: {
+        if (f.can_dlc < 8) break;
+        float fl = ((static_cast<uint16_t>(f.data[0])<<8)|f.data[1]) * 0.25f;
+        float fr = ((static_cast<uint16_t>(f.data[2])<<8)|f.data[3]) * 0.25f;
+        float rl = ((static_cast<uint16_t>(f.data[4])<<8)|f.data[5]) * 0.25f;
+        float rr = ((static_cast<uint16_t>(f.data[6])<<8)|f.data[7]) * 0.25f;
+        bool changed = false;
+        if (fl>5.0f && fl<60.0f && fl!=m_tirePSI_FL) { m_tirePSI_FL=fl; changed=true; }
+        if (fr>5.0f && fr<60.0f && fr!=m_tirePSI_FR) { m_tirePSI_FR=fr; changed=true; }
+        if (rl>5.0f && rl<60.0f && rl!=m_tirePSI_RL) { m_tirePSI_RL=rl; changed=true; }
+        if (rr>5.0f && rr<60.0f && rr!=m_tirePSI_RR) { m_tirePSI_RR=rr; changed=true; }
+        if (changed) emit tirePSIsChanged();
+        break;
+    }
+
+    // ── 0x54C: Oil life (Q50_LIKELY Nissan proprietary) ──────────────────────
+    // byte 0: 0–255 scaled linearly to 0–100%
+    case CAN_OIL_LIFE: {
+        if (f.can_dlc < 1) break;
+        float ol = f.data[0] * (100.0f / 255.0f);
+        if (ol != m_oilLife) { m_oilLife = ol; emit oilLifeChanged(ol); }
+        break;
+    }
+
+    // ── 0x554: Fuel economy — instant + average MPG (Q50_LIKELY) ─────────────
+    // bytes 0-1: instant MPG big-endian uint16 × 0.1; bytes 2-3: average MPG
+    case CAN_FUEL_ECONOMY: {
+        if (f.can_dlc < 4) break;
+        float inst = ((static_cast<uint16_t>(f.data[0])<<8)|f.data[1]) * 0.1f;
+        float avg  = ((static_cast<uint16_t>(f.data[2])<<8)|f.data[3]) * 0.1f;
+        if (inst>0.0f && inst<99.9f && inst!=m_instantMPG) { m_instantMPG=inst; emit instantMPGChanged(inst); }
+        if (avg>0.0f  && avg<99.9f  && avg!=m_avgMPG)      { m_avgMPG=avg;      emit avgMPGChanged(avg); }
+        break;
+    }
+
+    // ── 0x1CA: ATTESA AWD torque split status (Q50_LIKELY) ───────────────────
+    // byte 0: front torque % (0–100); byte 1: rear torque % (0–100)
+    case CAN_ATTESA: {
+        if (f.can_dlc < 2) break;
+        float front = f.data[0];
+        float rear  = f.data[1];
+        if (front != m_atessaFront || rear != m_atessaRear) {
+            m_atessaFront = front; m_atessaRear = rear;
+            emit atessaChanged();
         }
         break;
     }
@@ -688,6 +750,210 @@ void VehicleService::unlockDoors()
     qWarning() << "[VehicleService] unlockDoors: UDS 0x30 DID 0xBF00 — Q50_LIKELY, verify via J2534";
     uint8_t d[8] = { 0x05, 0x30, 0xBF, 0x00, 0x03, 0x02, 0x00, 0x00 };
     sendCANFrame(m_vehicleCanSock, UDS_BCM, d, 8);
+}
+
+// ─── Trip computer tick (1Hz) ─────────────────────────────────────────────
+void VehicleService::onTripTimerTick()
+{
+    if (!m_ignitionOn) return;
+
+    // Increment elapsed time
+    ++m_tripASeconds;
+    ++m_tripBSeconds;
+
+    // Recompute rolling averages
+    if (m_tripASeconds > 0) {
+        m_tripAAvgSpeed = m_tripAMiles / (m_tripASeconds / 3600.0f);
+        if (m_instantMPG > 0.0f)
+            m_tripAAvgMPG = (m_tripAAvgMPG * (m_tripASeconds - 1) + m_instantMPG) / m_tripASeconds;
+    }
+    if (m_tripBSeconds > 0) {
+        m_tripBAvgSpeed = m_tripBMiles / (m_tripBSeconds / 3600.0f);
+        if (m_instantMPG > 0.0f)
+            m_tripBAvgMPG = (m_tripBAvgMPG * (m_tripBSeconds - 1) + m_instantMPG) / m_tripBSeconds;
+    }
+
+    emit tripAChanged();
+    emit tripBChanged();
+}
+
+// ─── Trip computer resets ─────────────────────────────────────────────────
+void VehicleService::resetTripA()
+{
+    m_tripAMiles = 0.0f; m_tripAAvgMPG = 0.0f;
+    m_tripAAvgSpeed = 0.0f; m_tripASeconds = 0;
+    emit tripAChanged();
+}
+
+void VehicleService::resetTripB()
+{
+    m_tripBMiles = 0.0f; m_tripBAvgMPG = 0.0f;
+    m_tripBAvgSpeed = 0.0f; m_tripBSeconds = 0;
+    emit tripBChanged();
+}
+
+// ─── Climate shortcuts ─────────────────────────────────────────────────────
+
+void VehicleService::setAutoClimate(bool on)
+{
+    qWarning() << "[VehicleService] setAutoClimate: Q50_LIKELY — verify via J2534";
+    m_autoClimateOn = on;
+    emit autoClimateOnChanged(on);
+    if (on) {
+        m_fanSpeed   = 7;   emit fanSpeedChanged(m_fanSpeed);
+        m_acOn       = true; emit acOnChanged(m_acOn);
+        m_climateMode = 0;  emit climateModeChanged(m_climateMode);
+        uint8_t d[8] = { static_cast<uint8_t>(hvacModeFlags() | 0x20),  // bit 5 = auto
+                         hvacTempRaw(m_driverTemp),
+                         hvacTempRaw(m_passengerTemp),
+                         0x00, 0x00, 0x00, 0x00, 0x00 };
+        sendCANFrame(m_vehicleCanSock, CAN_HVAC_WRITE, d, 8);
+    } else {
+        uint8_t d[8] = { hvacModeFlags(),
+                         hvacTempRaw(m_driverTemp),
+                         hvacTempRaw(m_passengerTemp),
+                         0x00, 0x00, 0x00, 0x00, 0x00 };
+        sendCANFrame(m_vehicleCanSock, CAN_HVAC_WRITE, d, 8);
+    }
+}
+
+void VehicleService::setMaxAC()
+{
+    qWarning() << "[VehicleService] setMaxAC: Q50_LIKELY — verify via J2534";
+    m_recircOn = true; emit recircOnChanged(m_recircOn);
+    m_fanSpeed  = 7;   emit fanSpeedChanged(m_fanSpeed);
+    m_acOn      = true; emit acOnChanged(m_acOn);
+    uint8_t d[8] = { hvacModeFlags(),
+                     hvacTempRaw(m_driverTemp),
+                     hvacTempRaw(m_passengerTemp),
+                     0x00, 0x00, 0x00, 0x00, 0x00 };
+    sendCANFrame(m_vehicleCanSock, CAN_HVAC_WRITE, d, 8);
+}
+
+void VehicleService::setMaxDEF()
+{
+    qWarning() << "[VehicleService] setMaxDEF: Q50_LIKELY — verify via J2534";
+    m_climateMode = 3;  emit climateModeChanged(m_climateMode);
+    m_fanSpeed    = 7;  emit fanSpeedChanged(m_fanSpeed);
+    m_acOn        = true; emit acOnChanged(m_acOn);
+    uint8_t d[8] = { hvacModeFlags(),
+                     hvacTempRaw(m_driverTemp),
+                     hvacTempRaw(m_passengerTemp),
+                     0x00, 0x00, 0x00, 0x00, 0x00 };
+    sendCANFrame(m_vehicleCanSock, CAN_HVAC_WRITE, d, 8);
+}
+
+void VehicleService::syncZones()
+{
+    qWarning() << "[VehicleService] syncZones: Q50_LIKELY — verify via J2534";
+    m_passengerTemp = m_driverTemp;
+    emit passengerTempChanged(m_passengerTemp);
+    uint8_t d[8] = { hvacModeFlags(),
+                     hvacTempRaw(m_driverTemp),
+                     hvacTempRaw(m_passengerTemp),
+                     0x00, 0x00, 0x00, 0x00, 0x00 };
+    sendCANFrame(m_vehicleCanSock, CAN_HVAC_WRITE, d, 8);
+}
+
+void VehicleService::setHeatedSteeringWheel(bool on)
+{
+    qWarning() << "[VehicleService] setHeatedSteeringWheel: Q50_LIKELY — verify via J2534";
+    m_heatedSteeringWheel = on;
+    emit heatedSteeringWheelChanged(on);
+    uint8_t d[2] = { static_cast<uint8_t>(on ? 0x04 : 0x00), 0x00 };
+    sendCANFrame(m_vehicleCanSock, CAN_STEERING_HEAT, d, 2);
+}
+
+void VehicleService::setPlasmacluster(int level)
+{
+    qWarning() << "[VehicleService] setPlasmacluster: Q50_LIKELY — verify via J2534";
+    m_plasmaclusterLevel = qBound(0, level, 3);
+    emit plasmaclusterLevelChanged(m_plasmaclusterLevel);
+    uint8_t d[2] = { static_cast<uint8_t>(m_plasmaclusterLevel), 0x00 };
+    sendCANFrame(m_vehicleCanSock, CAN_PLASMACLUSTER, d, 2);
+}
+
+void VehicleService::setRainSensor(bool on)
+{
+    qWarning() << "[VehicleService] setRainSensor: Q50_LIKELY — verify via J2534";
+    m_rainSensorEnabled = on;
+    emit rainSensorEnabledChanged(on);
+    uint8_t d[1] = { static_cast<uint8_t>(on ? 0x01 : 0x00) };
+    sendCANFrame(m_vehicleCanSock, CAN_RAIN_SENSOR, d, 1);
+}
+
+// ─── Drive mode ────────────────────────────────────────────────────────────
+void VehicleService::setDriveMode(int mode)
+{
+    qWarning() << "[VehicleService] setDriveMode: Q50_LIKELY — verify via J2534";
+    m_driveMode = qBound(0, mode, 5);
+    emit driveModeChanged(m_driveMode);
+    uint8_t d[1] = { static_cast<uint8_t>(m_driveMode) };
+    sendCANFrame(m_vehicleCanSock, CAN_DRIVE_MODE, d, 1);
+}
+
+// ─── Driver aids helpers ───────────────────────────────────────────────────
+// Rebuild and send the ADAS control frame (0x47D) from current aid state.
+// byte 0: aid enable bitmask; byte 1: PFCW sensitivity
+static inline uint8_t adasFlags(bool bsw, bool bsi, bool ldw, bool ldp,
+                                 bool feb, bool bci, bool vdc)
+{
+    return static_cast<uint8_t>(
+        (bsw ? 0x01 : 0) | (bsi ? 0x02 : 0) | (ldw ? 0x04 : 0) |
+        (ldp ? 0x08 : 0) | (feb ? 0x10 : 0) | (bci ? 0x20 : 0) |
+        (vdc ? 0x40 : 0));
+}
+
+void VehicleService::sendADASFrame()
+{
+    uint8_t d[2] = {
+        adasFlags(m_bswOn, m_bsiOn, m_ldwOn, m_ldpOn, m_febOn, m_bciOn, m_vdcOn),
+        static_cast<uint8_t>(m_pfcwSensitivity)
+    };
+    sendCANFrame(m_vehicleCanSock, CAN_ADAS_CTRL, d, 2);
+}
+
+void VehicleService::setBSW(bool on)
+{
+    qWarning() << "[VehicleService] setBSW: Q50_LIKELY — verify via J2534";
+    m_bswOn = on; emit bswOnChanged(on); sendADASFrame();
+}
+void VehicleService::setBSI(bool on)
+{
+    qWarning() << "[VehicleService] setBSI: Q50_LIKELY — verify via J2534";
+    m_bsiOn = on; emit bsiOnChanged(on); sendADASFrame();
+}
+void VehicleService::setLDW(bool on)
+{
+    qWarning() << "[VehicleService] setLDW: Q50_LIKELY — verify via J2534";
+    m_ldwOn = on; emit ldwOnChanged(on); sendADASFrame();
+}
+void VehicleService::setLDP(bool on)
+{
+    qWarning() << "[VehicleService] setLDP: Q50_LIKELY — verify via J2534";
+    m_ldpOn = on; emit ldpOnChanged(on); sendADASFrame();
+}
+void VehicleService::setFEB(bool on)
+{
+    qWarning() << "[VehicleService] setFEB: Q50_LIKELY — verify via J2534";
+    m_febOn = on; emit febOnChanged(on); sendADASFrame();
+}
+void VehicleService::setBCI(bool on)
+{
+    qWarning() << "[VehicleService] setBCI: Q50_LIKELY — verify via J2534";
+    m_bciOn = on; emit bciOnChanged(on); sendADASFrame();
+}
+void VehicleService::setVDC(bool on)
+{
+    qWarning() << "[VehicleService] setVDC: Q50_LIKELY — verify via J2534";
+    m_vdcOn = on; emit vdcOnChanged(on); sendADASFrame();
+}
+void VehicleService::setPFCWSensitivity(int level)
+{
+    qWarning() << "[VehicleService] setPFCWSensitivity: Q50_LIKELY — verify via J2534";
+    m_pfcwSensitivity = qBound(0, level, 3);
+    emit pfcwSensitivityChanged(m_pfcwSensitivity);
+    sendADASFrame();
 }
 
 // ─── Bose wake ─────────────────────────────────────────────────────────────
