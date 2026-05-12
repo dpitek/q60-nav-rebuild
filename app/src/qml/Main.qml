@@ -30,6 +30,15 @@ QtObject {
                 anchors.fill: parent
             }
 
+            // ── Welcome overlay (profile greeting on startup) ───────────────
+            // Shown for ~3s when a key-fob profile is matched, or until the
+            // driver selects a profile when no key slot is recognised.
+            // Sits above the map (z:50) but below the call overlay (z:100).
+            WelcomeOverlay {
+                anchors.fill: parent
+                z: 50
+            }
+
             // ── Incoming call overlay (upper screen) ───────────────────────
             Loader {
                 id: incomingCallOverlayUpper

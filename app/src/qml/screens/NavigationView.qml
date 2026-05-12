@@ -343,13 +343,23 @@ Item {
 
         function onButtonPressed(button) {
             if (button === "back")
-                Qt.callLater(() => navigationStack.pop())
+                Qt.callLater(() => root.handleBack())
             else if (button === "home")
-                Qt.callLater(() => navigationStack.clear())
+                Qt.callLater(() => root.handleHome())
             else if (button === "map") {
                 // TODO: toggle map/turn-by-turn view when secondary view exists
             }
         }
+    }
+
+    // ── Commander back / home stubs ─────────────────────────────────────────
+    // Sub-view stack (destination search, route preview, etc.) is not yet
+    // implemented. Replace these with push/pop logic when those views land.
+    function handleBack() {
+        console.log("[NavView] Back — no sub-view to dismiss")
+    }
+    function handleHome() {
+        console.log("[NavView] Home — returning to idle map")
     }
 
     // ── Reverse overlay ─────────────────────────────────────────────────────
