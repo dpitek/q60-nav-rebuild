@@ -1,10 +1,11 @@
 // VehicleService.cpp — SocketCAN implementation
-// Vehicle CAN (can0, 500kbps): HVAC, speed, gear, temps, headlights
-// AVCAN (can1, 500kbps): Bose amp, SXM, radio
-// Steering (can2, 250kbps): wheel buttons
+// can0: HS-CAN 500kbps — powertrain, BCM, HVAC, ABS (Vehicle CAN)
+// can1: AV-CAN 500kbps isolated — Bose, SXM, steering wheel buttons
+// can2: TBD (possibly MS-CAN 125kbps body bus — probe needed)
 //
-// NOTE: CAN IDs are placeholder estimates for Infiniti Q60 2017.
-// Replace all CAN_* constants with values from J2534 capture (Phase 0).
+// CAN IDs are sourced from community research across Nissan/Infiniti platforms
+// (370Z, X-Trail, Leaf AZE0, Qashqai). See VehicleService.h for confidence levels.
+// HVAC write path and Bose wake ID require J2534 verification before relying on.
 
 #include "VehicleService.h"
 #include <QDebug>
@@ -39,24 +40,24 @@ void VehicleService::start()
                                                 QSocketNotifier::Read, this);
         connect(m_vehicleNotifier, &QSocketNotifier::activated,
                 this, &VehicleService::onVehicleCanData);
-        qDebug() << "[VehicleService] can0 ready";
+        qDebug() << "[VehicleService] can0 (HS-CAN) ready";
     }
     if (m_avCanSock >= 0) {
         m_avNotifier = new QSocketNotifier(m_avCanSock,
                                            QSocketNotifier::Read, this);
         connect(m_avNotifier, &QSocketNotifier::activated,
                 this, &VehicleService::onAVCanData);
-        qDebug() << "[VehicleService] can1 ready";
+        qDebug() << "[VehicleService] can1 (AV-CAN) ready";
     }
     if (m_can2Sock >= 0) {
         m_can2Notifier = new QSocketNotifier(m_can2Sock,
                                              QSocketNotifier::Read, this);
         connect(m_can2Notifier, &QSocketNotifier::activated,
                 this, &VehicleService::onCAN2Data);
-        qDebug() << "[VehicleService] can2 ready";
+        qDebug() << "[VehicleService] can2 (TBD) ready";
     }
 
-    // Bose wake on startup — AVCAN frame to wake the amp
+    // Bose wake on startup — send on AV-CAN after bus settles
     QTimer::singleShot(500, this, &VehicleService::wakeBosse);
 }
 
@@ -92,92 +93,201 @@ void VehicleService::openCAN(const char *iface, int &sock)
 void VehicleService::onVehicleCanData()
 {
     struct can_frame f;
-    ssize_t n = ::read(m_vehicleCanSock, &f, sizeof(f));
-    if (n == sizeof(f))
+    if (::read(m_vehicleCanSock, &f, sizeof(f)) == sizeof(f))
         parseVehicleFrame(f);
 }
 
 void VehicleService::onAVCanData()
 {
     struct can_frame f;
-    ssize_t n = ::read(m_avCanSock, &f, sizeof(f));
-    if (n == sizeof(f))
+    if (::read(m_avCanSock, &f, sizeof(f)) == sizeof(f))
         parseAVFrame(f);
 }
 
 void VehicleService::onCAN2Data()
 {
     struct can_frame f;
-    ssize_t n = ::read(m_can2Sock, &f, sizeof(f));
-    if (n == sizeof(f))
+    if (::read(m_can2Sock, &f, sizeof(f)) == sizeof(f))
         parseCAN2Frame(f);
 }
 
-// ─── Vehicle CAN parser ────────────────────────────────────────────────────
+// ─── HS-CAN parser (can0) ─────────────────────────────────────────────────
 void VehicleService::parseVehicleFrame(const struct can_frame &f)
 {
     switch (f.can_id & CAN_SFF_MASK) {
 
-    case CAN_HVAC_STATUS: {
-        // Byte 0: driver temp (raw, formula TBD post J2534)
-        // Byte 1: passenger temp
-        // Byte 2: fan speed [0–7]
-        // Byte 3 bit0: AC, bit1: recirc, bits[4:6]: mode
-        // Byte 4: seat heat driver, Byte 5: seat heat pass
-        if (f.can_dlc < 6) break;
-        float dt = static_cast<float>(f.data[0]) * 0.5f + 40.0f;
-        float pt = static_cast<float>(f.data[1]) * 0.5f + 40.0f;
-        int   fs = f.data[2] & 0x07;
-        bool  ac = (f.data[3] & 0x01) != 0;
-        bool  rc = (f.data[3] & 0x02) != 0;
-        int   cm = (f.data[3] >> 4) & 0x07;
-        int   ds = f.data[4] & 0x03;
-        int   ps = f.data[5] & 0x03;
-
-        if (dt != m_driverTemp)    { m_driverTemp = dt;    emit driverTempChanged(dt); }
-        if (pt != m_passengerTemp) { m_passengerTemp = pt; emit passengerTempChanged(pt); }
-        if (fs != m_fanSpeed)      { m_fanSpeed = fs;      emit fanSpeedChanged(fs); }
-        if (ac != m_acOn)          { m_acOn = ac;          emit acOnChanged(ac); }
-        if (rc != m_recircOn)      { m_recircOn = rc;      emit recircOnChanged(rc); }
-        if (cm != m_climateMode)   { m_climateMode = cm;   emit climateModeChanged(cm); }
-        if (ds != m_driverSeat)    { m_driverSeat = ds;    emit driverSeatChanged(ds); }
-        if (ps != m_passSeat)      { m_passSeat = ps;      emit passSeatChanged(ps); }
+    // ── 0x002: Steering angle ─────────────────────────────────────────────
+    // bytes 0-1: signed 16-bit little-endian, 0.1°/LSB
+    // Source: opendbc nissan_common.dbc, carhack 370Z
+    case CAN_STEER_ANGLE: {
+        if (f.can_dlc < 2) break;
+        int16_t raw = static_cast<int16_t>(
+            static_cast<uint16_t>(f.data[0]) |
+            (static_cast<uint16_t>(f.data[1]) << 8));
+        float deg = raw * 0.1f;
+        if (deg != m_steerAngle) { m_steerAngle = deg; emit steerAngleChanged(deg); }
         break;
     }
 
+    // ── 0x1F9: Engine RPM ─────────────────────────────────────────────────
+    // bytes 2-3: big-endian uint16, 0.125 RPM/LSB
+    // byte 0 bit 3: AC compressor request
+    // Source: opendbc nissan_xterra_2011.dbc, carhack 370Z
+    case CAN_RPM: {
+        if (f.can_dlc < 4) break;
+        uint16_t raw = (static_cast<uint16_t>(f.data[2]) << 8) | f.data[3];
+        int rpm = static_cast<int>(raw * 0.125f);
+        if (rpm != m_rpm) { m_rpm = rpm; emit rpmChanged(rpm); }
+        break;
+    }
+
+    // ── 0x280: Vehicle speed (cluster) ───────────────────────────────────
+    // bytes 4-5: big-endian uint16, 0.01 km/h/LSB
+    // Source: carhack 370Z ("E,F bytes"), Leaf AZE0 DBC, Qashqai README
     case CAN_SPEED: {
-        // Bytes 0–1: speed in 0.01 km/h units (big-endian)
-        if (f.can_dlc < 2) break;
-        uint16_t raw = (static_cast<uint16_t>(f.data[0]) << 8) | f.data[1];
+        if (f.can_dlc < 6) break;
+        uint16_t raw = (static_cast<uint16_t>(f.data[4]) << 8) | f.data[5];
         float kmh = raw * 0.01f;
         float mph = kmh * 0.621371f;
         if (mph != m_speed) { m_speed = mph; emit speedChanged(mph); }
         break;
     }
 
+    // ── 0x354: Brake / TCS ────────────────────────────────────────────────
+    // bit 52 (big-endian frame bit numbering) = brake light
+    // bit 23 = driver brake pressed (X-Trail DBC)
+    // bit 38 = TCS disabled
+    // DBC bit 52 = byte 6 bit 4 (little-endian byte, big-endian bit within)
+    // Simpler: byte 2 bit 7 per 370Z raw observation (use both, J2534 to confirm)
+    // Source: opendbc nissan_xterra_2011.dbc, nissan_x_trail_2017.dbc
+    case CAN_BRAKE: {
+        if (f.can_dlc < 7) break;
+        // DBC bit 52 in Motorola/big-endian = byte 6, bit 4 from MSB
+        bool brk = (f.data[6] & 0x10) != 0;
+        if (brk != m_brakePressed) { m_brakePressed = brk; emit brakePressedChanged(brk); }
+        break;
+    }
+
+    // ── 0x421: Gear selector ─────────────────────────────────────────────
+    // AT: P=1 R=2 N=3 D=4 (L/M sport modes > 4)
+    // 6MT: P/N=0 R=0x10 1st=0x80 2nd=0x88 3rd=0x90 4th=0x98 5th=0xA0 6th=0xA8
+    // Source: carhack 370Z, opendbc X-Trail (AT values), Leaf AZE0 DBC
     case CAN_GEAR: {
-        // Byte 0: gear selector (0=P 1=R 2=N 3=D 4-9=sport)
         if (f.can_dlc < 1) break;
-        int g = f.data[0] & 0x0F;
-        bool rev = (g == 1);
-        if (g != m_gear)     { m_gear = g;     emit gearChanged(g); }
-        if (rev != m_reverse){ m_reverse = rev; emit reverseChanged(rev); }
+        uint8_t raw = f.data[0];
+        int  g;
+        bool rev;
+        if (raw <= 10) {
+            // Automatic transmission (AT) interpretation
+            g   = static_cast<int>(raw);
+            rev = (raw == 2);
+        } else {
+            // Manual/other — map 6MT codes to display gear
+            rev = (raw == 0x10);
+            if      (raw == 0x80) g = 1;
+            else if (raw == 0x88) g = 2;
+            else if (raw == 0x90) g = 3;
+            else if (raw == 0x98) g = 4;
+            else if (raw == 0xA0) g = 5;
+            else if (raw == 0xA8) g = 6;
+            else                  g = 0;
+        }
+        if (g   != m_gear)    { m_gear    = g;   emit gearChanged(g); }
+        if (rev != m_reverse) { m_reverse = rev; emit reverseChanged(rev); }
         break;
     }
 
+    // ── 0x510: Outside ambient temperature (VCM relay) ───────────────────
+    // byte 7: 0.5°C/LSB, offset -40°C → temp_C = (raw * 0.5f) - 40.0f
+    // Source: Leaf AZE0 DBC VCM_HMI_GeneralData2 (OutsideAmbientTemperature)
     case CAN_OUTSIDE_TEMP: {
-        // Byte 0: temp raw (raw - 40 = °C)
-        if (f.can_dlc < 1) break;
-        float c = static_cast<float>(f.data[0]) - 40.0f;
-        float f_ = c * 9.0f / 5.0f + 32.0f;
-        if (f_ != m_outsideTemp) { m_outsideTemp = f_; emit outsideTempChanged(f_); }
+        if (f.can_dlc < 8) break;
+        float c = (f.data[7] * 0.5f) - 40.0f;
+        float fahr = c * 9.0f / 5.0f + 32.0f;
+        if (fahr != m_outsideTemp) { m_outsideTemp = fahr; emit outsideTempChanged(fahr); }
         break;
     }
 
-    case CAN_HEADLIGHTS: {
+    // ── 0x54A: HVAC status 1 (A/C Auto Amp → AV unit) ────────────────────
+    // byte 0:  CC status bitmask (0x12/0x3C=off; 0xA0/0xDA=on)
+    // byte 4:  driver zone setpoint (Leaf single-zone basis; Q50 dual-zone UNVERIFIED)
+    //          Formula: temp_F = (raw - 41) → temp_C = (raw - 73.0f) * 5.0f/9.0f
+    //          Verified: 0x83=90°F, 0x79≈79°F
+    // byte 5:  passenger zone setpoint (Q50 — UNVERIFIED, inferred from dual-zone arch)
+    // byte 7:  ambient temp (same formula as 0x510, used as fallback)
+    // Source: Leaf AZE0 DBC Aircon_GeneralStatus1_ITM
+    case CAN_HVAC_STATUS: {
+        if (f.can_dlc < 8) break;
+        // Driver temp setpoint
+        if (f.data[4] > 0) {
+            float dt = (static_cast<float>(f.data[4]) - 73.0f) * 5.0f / 9.0f;
+            dt = dt * 9.0f / 5.0f + 32.0f;  // convert to °F for display
+            if (dt != m_driverTemp && dt > 40.0f && dt < 110.0f) {
+                m_driverTemp = dt;
+                emit driverTempChanged(dt);
+            }
+        }
+        // Passenger temp setpoint (Q50 UNVERIFIED — may not be byte 5)
+        if (f.data[5] > 0) {
+            float pt = (static_cast<float>(f.data[5]) - 73.0f) * 5.0f / 9.0f;
+            pt = pt * 9.0f / 5.0f + 32.0f;
+            if (pt != m_passengerTemp && pt > 40.0f && pt < 110.0f) {
+                m_passengerTemp = pt;
+                emit passengerTempChanged(pt);
+            }
+        }
+        // Ambient temp fallback (byte 7, same VCM formula)
+        float amb_c = (f.data[7] * 0.5f) - 40.0f;
+        float amb_f = amb_c * 9.0f / 5.0f + 32.0f;
+        if (m_outsideTemp == 67.0f && amb_f > -40.0f && amb_f < 140.0f) {
+            // Only use as fallback if 0x510 hasn't populated yet
+            m_outsideTemp = amb_f;
+            emit outsideTempChanged(amb_f);
+        }
+        break;
+    }
+
+    // ── 0x54B: HVAC status 2 ─────────────────────────────────────────────
+    // byte 1: climate on = 0x78, off = 0x08
+    // byte 4 bits[3:7]: fan speed 1-7 = (byte4 >> 3) & 0x1F
+    // Source: Leaf AZE0 DBC Aircon_GeneralStatus2_ITM
+    case CAN_HVAC_STATUS2: {
+        if (f.can_dlc < 5) break;
+        bool ac = (f.data[1] == 0x78);
+        int  fs = (f.data[4] >> 3) & 0x1F;
+        fs = qBound(0, fs, 7);
+        if (ac != m_acOn)     { m_acOn = ac;    emit acOnChanged(ac); }
+        if (fs != m_fanSpeed) { m_fanSpeed = fs; emit fanSpeedChanged(fs); }
+        break;
+    }
+
+    // ── 0x5C5: Cluster (odometer, parking brake) ─────────────────────────
+    // byte 0 bit 2: parking brake active
+    // bytes 1-3:    odometer (24-bit, market-native units — not parsed for nav)
+    // Source: Leaf AZE0 DBC, Qashqai README
+    case CAN_CLUSTER: {
         if (f.can_dlc < 1) break;
-        int hl = f.data[0] & 0x03;
-        if (hl != m_headlights) { m_headlights = hl; emit headlightsChanged(hl); }
+        bool pb = (f.data[0] & 0x04) != 0;
+        if (pb != m_parkingBrake) { m_parkingBrake = pb; emit parkingBrakeChanged(pb); }
+        break;
+    }
+
+    // ── 0x60D: BCM — turn signals, headlights, doors ─────────────────────
+    // byte 0 bit 1: headlights on (1=on, 0=off)
+    // byte 0 bit 2: running lights / parking lights
+    // byte 1 bit 5: left turn signal active
+    // byte 1 bit 6: right turn signal active
+    // byte 0 bit 4: driver door open
+    // byte 0 bit 5: passenger door open
+    // Source: carhack 370Z mapping; cross-checked vs Leaf AZE0 DBC BCM_GeneralStatus7
+    case CAN_BODY_STATUS: {
+        if (f.can_dlc < 2) break;
+        int  hl  = (f.data[0] & 0x02) ? 2 : (f.data[0] & 0x04) ? 1 : 0;
+        bool lft = (f.data[1] & 0x20) != 0;
+        bool rgt = (f.data[1] & 0x40) != 0;
+        if (hl  != m_headlights) { m_headlights = hl;  emit headlightsChanged(hl); }
+        if (lft != m_leftTurn)   { m_leftTurn   = lft; emit leftTurnChanged(lft); }
+        if (rgt != m_rightTurn)  { m_rightTurn  = rgt; emit rightTurnChanged(rgt); }
         break;
     }
 
@@ -186,29 +296,38 @@ void VehicleService::parseVehicleFrame(const struct can_frame &f)
     }
 }
 
-// ─── AVCAN parser ──────────────────────────────────────────────────────────
+// ─── AV-CAN parser (can1) ─────────────────────────────────────────────────
+// Handles steering wheel / panel button presses via 0x681
+// Source: Leaf AV-CAN DBC; Q50_LIKELY same bus topology
 void VehicleService::parseAVFrame(const struct can_frame &f)
 {
-    // AVCAN frames are mostly Bose amp status / SXM responses
-    // Parsed by DENSO proxy daemons; we only watch for wake-ack here
-    (void)f;
+    if ((f.can_id & CAN_SFF_MASK) != CAN_AV_BTNS) return;
+    if (f.can_dlc < 5) return;
+
+    // byte 0 = frame status (0x0F=idle, 0x04=button, 0x03=power)
+    // byte 4 = button code
+    if (f.data[0] != 0x04 && f.data[0] != 0x03) return;  // only fire on real press
+
+    switch (f.data[4]) {
+    case 0xC9: emit volUp();        break;
+    case 0xCA: emit volDown();      break;
+    case 0x92: emit seekFwd();      break;
+    case 0x91: emit seekBack();     break;
+    case 0xC5: emit answerCall();   break;
+    case 0xC6: emit endCall();      break;
+    case 0xAD: /* mute — wire to AudioService if needed */ break;
+    default:   break;
+    }
 }
 
-// ─── Steering wheel CAN2 ───────────────────────────────────────────────────
+// ─── CAN2 parser (can2) ───────────────────────────────────────────────────
+// Bus topology on Q60 not confirmed. May be MS-CAN 125kbps for body controls,
+// or this interface may not exist. Log unknown frames for J2534 comparison.
 void VehicleService::parseCAN2Frame(const struct can_frame &f)
 {
-    if ((f.can_id & CAN_SFF_MASK) != CAN_WHEEL_BTNS) return;
-    if (f.can_dlc < 1) return;
-
-    // Button byte — placeholder bit assignments, replace post J2534
-    uint8_t btn = f.data[0];
-    if (btn & 0x01) emit volUp();
-    if (btn & 0x02) emit volDown();
-    if (btn & 0x04) emit seekFwd();
-    if (btn & 0x08) emit seekBack();
-    if (btn & 0x10) emit answerCall();
-    if (btn & 0x20) emit endCall();
-    if (btn & 0x40) emit voiceActivate();
+    qDebug() << "[VehicleService] can2 frame id=" << Qt::hex << (f.can_id & CAN_SFF_MASK)
+             << "dlc=" << f.can_dlc;
+    (void)f;
 }
 
 // ─── CAN write helpers ─────────────────────────────────────────────────────
@@ -225,106 +344,87 @@ void VehicleService::sendCANFrame(int sock, canid_t id,
 }
 
 // ─── Climate write slots ───────────────────────────────────────────────────
+// CAUTION: Q50/Q60 HVAC write path NOT publicly documented.
+// These build and send frames on CAN_HVAC_CTRL (0x54A) which is the best available
+// candidate, but the A/C Auto Amp's actual command interface is unverified.
+// Car behavior is undefined until confirmed via J2534 capture.
+// Local state is updated regardless so the UI reflects the requested change.
+
 void VehicleService::setDriverTemp(float temp)
 {
     m_driverTemp = temp;
     emit driverTempChanged(temp);
-    uint8_t raw = static_cast<uint8_t>((temp - 40.0f) / 0.5f);
-    // Full HVAC control frame — pack all current state
-    uint8_t d[6] = {
-        raw,
-        static_cast<uint8_t>((m_passengerTemp - 40.0f) / 0.5f),
-        static_cast<uint8_t>(m_fanSpeed & 0x07),
-        static_cast<uint8_t>((m_acOn ? 0x01 : 0) |
-                              (m_recircOn ? 0x02 : 0) |
-                              ((m_climateMode & 0x07) << 4)),
-        static_cast<uint8_t>(m_driverSeat & 0x03),
-        static_cast<uint8_t>(m_passSeat & 0x03)
-    };
-    sendCANFrame(m_vehicleCanSock, CAN_HVAC_CTRL, d, 6);
+    // Convert °F display temp back to 0x54A raw: raw = (F_to_C(temp) * 9/5) + 73
+    float c   = (temp - 32.0f) * 5.0f / 9.0f;
+    uint8_t dr = static_cast<uint8_t>(qBound(0.0f, c * 9.0f / 5.0f + 73.0f, 255.0f));
+    uint8_t pr = static_cast<uint8_t>(qBound(0.0f,
+        (m_passengerTemp - 32.0f) * 5.0f / 9.0f * 9.0f / 5.0f + 73.0f, 255.0f));
+    uint8_t d[8] = { 0xA0, 0x00, 0x00, 0x00, dr, pr,
+                     static_cast<uint8_t>(m_fanSpeed & 0x07), 0x00 };
+    sendCANFrame(m_vehicleCanSock, CAN_HVAC_CTRL, d, 8);
 }
 
 void VehicleService::setPassengerTemp(float temp)
 {
     m_passengerTemp = temp;
     emit passengerTempChanged(temp);
-    uint8_t d[6] = {
-        static_cast<uint8_t>((m_driverTemp - 40.0f) / 0.5f),
-        static_cast<uint8_t>((temp - 40.0f) / 0.5f),
-        static_cast<uint8_t>(m_fanSpeed & 0x07),
-        static_cast<uint8_t>((m_acOn ? 0x01 : 0) |
-                              (m_recircOn ? 0x02 : 0) |
-                              ((m_climateMode & 0x07) << 4)),
-        static_cast<uint8_t>(m_driverSeat & 0x03),
-        static_cast<uint8_t>(m_passSeat & 0x03)
-    };
-    sendCANFrame(m_vehicleCanSock, CAN_HVAC_CTRL, d, 6);
+    uint8_t dr = static_cast<uint8_t>(qBound(0.0f,
+        (m_driverTemp - 32.0f) * 5.0f / 9.0f * 9.0f / 5.0f + 73.0f, 255.0f));
+    float c    = (temp - 32.0f) * 5.0f / 9.0f;
+    uint8_t pr = static_cast<uint8_t>(qBound(0.0f, c * 9.0f / 5.0f + 73.0f, 255.0f));
+    uint8_t d[8] = { 0xA0, 0x00, 0x00, 0x00, dr, pr,
+                     static_cast<uint8_t>(m_fanSpeed & 0x07), 0x00 };
+    sendCANFrame(m_vehicleCanSock, CAN_HVAC_CTRL, d, 8);
 }
 
 void VehicleService::setFanSpeed(int level)
 {
     m_fanSpeed = qBound(0, level, 7);
     emit fanSpeedChanged(m_fanSpeed);
-    uint8_t d[6] = {
-        static_cast<uint8_t>((m_driverTemp - 40.0f) / 0.5f),
-        static_cast<uint8_t>((m_passengerTemp - 40.0f) / 0.5f),
-        static_cast<uint8_t>(m_fanSpeed),
-        static_cast<uint8_t>((m_acOn ? 0x01 : 0) | (m_recircOn ? 0x02 : 0) |
-                              ((m_climateMode & 0x07) << 4)),
-        static_cast<uint8_t>(m_driverSeat), static_cast<uint8_t>(m_passSeat)
-    };
-    sendCANFrame(m_vehicleCanSock, CAN_HVAC_CTRL, d, 6);
+    // 0x54B fan speed: (level << 3) into byte 4
+    uint8_t d[8] = { 0x78, 0x00, 0x00, 0x00,
+                     static_cast<uint8_t>(m_fanSpeed << 3),
+                     0x00, 0x00, 0x00 };
+    sendCANFrame(m_vehicleCanSock, CAN_HVAC_STATUS2, d, 8);
 }
 
 void VehicleService::setAcOn(bool on)
 {
     m_acOn = on;
     emit acOnChanged(on);
-    uint8_t d3 = (m_acOn ? 0x01 : 0) | (m_recircOn ? 0x02 : 0) |
-                 ((m_climateMode & 0x07) << 4);
-    uint8_t d[6] = {
-        static_cast<uint8_t>((m_driverTemp - 40.0f) / 0.5f),
-        static_cast<uint8_t>((m_passengerTemp - 40.0f) / 0.5f),
-        static_cast<uint8_t>(m_fanSpeed), d3,
-        static_cast<uint8_t>(m_driverSeat), static_cast<uint8_t>(m_passSeat)
-    };
-    sendCANFrame(m_vehicleCanSock, CAN_HVAC_CTRL, d, 6);
+    uint8_t d[8] = { on ? uint8_t(0x78) : uint8_t(0x08),
+                     on ? uint8_t(0x88) : uint8_t(0x80),
+                     0x00, 0x00, 0x00, 0x00, 0x00, 0x01 };
+    sendCANFrame(m_vehicleCanSock, CAN_HVAC_STATUS2, d, 8);
 }
 
 void VehicleService::setRecircOn(bool on)
 {
     m_recircOn = on;
     emit recircOnChanged(on);
-    uint8_t d3 = (m_acOn ? 0x01 : 0) | (m_recircOn ? 0x02 : 0) |
-                 ((m_climateMode & 0x07) << 4);
-    uint8_t d[6] = {
-        static_cast<uint8_t>((m_driverTemp - 40.0f) / 0.5f),
-        static_cast<uint8_t>((m_passengerTemp - 40.0f) / 0.5f),
-        static_cast<uint8_t>(m_fanSpeed), d3,
-        static_cast<uint8_t>(m_driverSeat), static_cast<uint8_t>(m_passSeat)
-    };
-    sendCANFrame(m_vehicleCanSock, CAN_HVAC_CTRL, d, 6);
+    // Recirc bit position unconfirmed — placeholder byte 3 bit 0
+    uint8_t d[8] = { 0xA0, 0x00, 0x00,
+                     static_cast<uint8_t>(on ? 0x01 : 0x00),
+                     0x00, 0x00, 0x00, 0x01 };
+    sendCANFrame(m_vehicleCanSock, CAN_HVAC_CTRL, d, 8);
 }
 
 void VehicleService::setClimateMode(int mode)
 {
     m_climateMode = qBound(0, mode, 3);
     emit climateModeChanged(m_climateMode);
-    uint8_t d3 = (m_acOn ? 0x01 : 0) | (m_recircOn ? 0x02 : 0) |
-                 ((m_climateMode & 0x07) << 4);
-    uint8_t d[6] = {
-        static_cast<uint8_t>((m_driverTemp - 40.0f) / 0.5f),
-        static_cast<uint8_t>((m_passengerTemp - 40.0f) / 0.5f),
-        static_cast<uint8_t>(m_fanSpeed), d3,
-        static_cast<uint8_t>(m_driverSeat), static_cast<uint8_t>(m_passSeat)
-    };
-    sendCANFrame(m_vehicleCanSock, CAN_HVAC_CTRL, d, 6);
+    // Mode byte position unconfirmed — placeholder byte 2 nibble
+    uint8_t d[8] = { 0xA0, 0x00,
+                     static_cast<uint8_t>(m_climateMode & 0x07),
+                     0x00, 0x00, 0x00, 0x00, 0x01 };
+    sendCANFrame(m_vehicleCanSock, CAN_HVAC_CTRL, d, 8);
 }
 
 void VehicleService::setDriverSeatHeat(int level)
 {
     m_driverSeat = qBound(0, level, 3);
     emit driverSeatChanged(m_driverSeat);
+    // Seat heat write ID unconfirmed (0x625 is read-only status)
     uint8_t d[2] = { static_cast<uint8_t>(m_driverSeat),
                      static_cast<uint8_t>(m_passSeat) };
     sendCANFrame(m_vehicleCanSock, CAN_SEAT_HEAT, d, 2);
@@ -341,16 +441,19 @@ void VehicleService::setPassSeatHeat(int level)
 
 void VehicleService::setRearDefrost(bool on)
 {
-    uint8_t d[1] = { static_cast<uint8_t>(on ? 0x01 : 0x00) };
-    sendCANFrame(m_vehicleCanSock, CAN_HVAC_CTRL, d, 1);
+    // Rear defrost: 0x5C5 byte A0 per 370Z observation (UNVERIFIED write path)
+    uint8_t d[1] = { static_cast<uint8_t>(on ? 0x44 : 0x40) };
+    sendCANFrame(m_vehicleCanSock, CAN_CLUSTER, d, 1);
 }
 
 // ─── Bose wake ─────────────────────────────────────────────────────────────
 void VehicleService::wakeBosse()
 {
-    // AVCAN wake frame — exact byte pattern TBD from J2534 sniff
-    // Pattern based on Infiniti AVCAN known docs (placeholder)
+    // Wake frame ID (0x3B3) is a placeholder — no confirmed public source for Q50/Q60.
+    // To find the real ID: tap the multi-pin connector on the Bose amp (trunk),
+    // attach a CAN sniffer to the AV-CAN lines, and capture frames sent on ignition ON.
+    // The amp typically responds within 200-500ms of receiving the wake frame.
+    qWarning() << "[VehicleService] Bose wake: CAN_BOSE_WAKE (0x3B3) is UNVERIFIED — sniff AV-CAN at amp connector to confirm";
     uint8_t d[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     sendCANFrame(m_avCanSock, CAN_BOSE_WAKE, d, 8);
-    qDebug() << "[VehicleService] Bose wake sent on AVCAN";
 }
