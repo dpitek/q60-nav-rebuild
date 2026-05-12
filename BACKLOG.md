@@ -4,6 +4,18 @@ Items not targeted for the initial DCU flash. Ordered roughly by priority.
 
 ---
 
+## Input / UX
+
+### QML On-Screen Keyboard
+- Qt VirtualKeyboard module was NOT built for the i386 target — not available
+- Need a custom `QmlKeyboard.qml` component (QWERTY + numeric layouts)
+- Wire into `NavCompanionView.qml` `TextInput` focus events
+- Wire into any other QML `TextInput` that appears (Settings search, etc.)
+- Design: slide-up overlay, matches Q60 dark theme, 44px+ key targets
+- Consider: key repeat on backspace hold, haptic feedback via CAN (if supported)
+
+---
+
 ## Map & POI Coverage Expansion
 
 ### SC — South Carolina
