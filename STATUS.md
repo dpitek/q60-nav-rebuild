@@ -20,7 +20,7 @@ Last updated: 2026-05-12
 - [x] Watchdog: `watchdog-pet.sh` pets iTCO every 20s, init.d as respawn
 
 ### C++ Services (all .h + .cpp complete)
-- [x] `VehicleService` — SocketCAN (can0/can1/can2), CAN frame parsing, HVAC write via r51-ecu confirmed path (0x540/0x541), Bose wake
+- [x] `VehicleService` — SocketCAN (can0/can1/can2), CAN frame parsing, HVAC write via r51-ecu confirmed path (0x540/0x541), Bose wake; 5 new IDs wired: ignition (0x292), doors/trunk (0x358), wipers (0x35D), cruise+coolant (0x551), BCM extended/battery (0x625); UDS door lock/unlock via 0x745; ButtonLogger on all 3 buses
 - [x] `NavigationService` — GPSD TCP socket, Valhalla HTTP client, route parsing, rerouting
 - [x] `AudioService` — BlueZ D-Bus AVRCP (guarded with `HAVE_QT_DBUS`), DENSO proxy IPC, ALSA volume
 - [x] `SearchService` — offline geocoding on port 4000 (Photon/Pelias-compatible, graceful if absent)
@@ -34,7 +34,10 @@ Last updated: 2026-05-12
 - [x] `AudioView` — BT/FM/AM/SXM/AUX, media controls, volume slider
 - [x] `NavCompanionView` — ft/mi countdown, ETA, remaining, speed vs limit, rerouting banner
 - [x] `PhoneView` — active call display, mute/end/keypad, DTMF overlay, call timer
-- [x] Components: `TurnArrow`, `SpeedWidget`, `FanControl`, `TempZone`, `TabBar`
+- [x] `IncomingCallView` — incoming call screen with answer/decline
+- [x] `VoiceCommandView` — voice activation overlay
+- [x] `VehicleStatusView` — door diagram (all 4 + trunk), fuel arc, coolant bar (°F live), RPM; all bound to real VehicleService properties
+- [x] Components: `TurnArrow`, `SpeedWidget`, `FanControl`, `TempZone`, `TabBar`, `StatusBar`
 
 ### Device Init System
 - [x] `inittab` — SysV runlevel 5, watchdog respawn
@@ -167,12 +170,19 @@ Read IDs confirmed via opendbc/carhack/Leaf AZE0 DBC cross-reference. **Write pa
 | Frame | ID | Status | Notes |
 |---|---|---|---|
 | Speed, RPM, brake, gear, cluster | 0x280, 0x1F9, 0x354, 0x421, 0x5C5 | CONFIRMED read | Cross-platform Nissan/Infiniti |
+| Ignition state | 0x292 | Q50_LIKELY | bit0=ACC bit1=IGN bit2=START |
+| Door / trunk open | 0x358 | Q50_LIKELY | byte 0 bits 0-4, all 5 states parsed |
+| Wiper state | 0x35D | Q50_LIKELY | byte 2: 0=off 1=slow 2=fast 3=one-shot |
+| Cruise + coolant temp | 0x551 | Q50_LIKELY | byte 0 cruise bits, byte 6 coolant (0.5°C/LSB -40°C) |
+| BCM extended (battery/defrost) | 0x625 | Q50_LIKELY READ ONLY | byte 1 defrost, byte 2 battery ×0.1V; was mislabeled CAN_SEAT_HEAT |
 | HVAC status read | 0x54A, 0x54B | CONFIRMED read | Leaf AZE0 DBC |
 | HVAC write (temp/mode) | 0x540 | Q50_LIKELY write | From r51-ecu (R51 Pathfinder, same Denso amp) |
 | HVAC write (fan) | 0x541 | Q50_LIKELY write | From r51-ecu |
 | Body / BCM | 0x60D | CONFIRMED read | carhack 370Z |
 | AV buttons | 0x681 | Q50_LIKELY | Leaf AV-CAN DBC |
+| BCM door lock (UDS) | 0x745 | Q50_LIKELY write | Service 0x30 DID 0xBF00; warns before sending |
 | Bose wake | 0x3B3 | UNVERIFIED | Sniff AV-CAN at amp connector |
+| Seat heat write | 0xFFFF | UNVERIFIED PLACEHOLDER | Blocked until J2534 capture |
 
 ---
 
