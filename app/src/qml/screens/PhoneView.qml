@@ -1,6 +1,6 @@
 // PhoneView — Bluetooth phone call UI
-// Active call: mute, end, hold, keypad
-// No call: contact search shortcut + recent calls placeholder
+// Apple CarPlay aesthetic redesign
+// All StatusBridge bindings preserved exactly.
 import QtQuick 6.6
 import QtQuick.Controls 6.6
 
@@ -8,174 +8,223 @@ Item {
     id: root
     anchors.fill: parent
 
-    Rectangle { anchors.fill: parent; color: "#080d12" }
+    Rectangle { anchors.fill: parent; color: "#000000" }
 
-    // ── No active call ────────────────────────────────────────────────────
+    // ── No active call ──────────────────────────────────────────────────────
     Column {
         anchors.centerIn: parent
         spacing: 20
         visible: !StatusBridge.callActive
 
-        // BT connection status
         Rectangle {
             anchors.horizontalCenter: parent.horizontalCenter
             width: 80; height: 80; radius: 40
-            color: StatusBridge.btConnected ? "#0d2040" : "#0e1520"
-            border { color: StatusBridge.btConnected ? "#00d4ff" : "#1e2a3a"; width: 2 }
+            color: StatusBridge.btConnected ? "rgba(10,132,255,0.15)" : "#1C1C1E"
+            border {
+                color: StatusBridge.btConnected ? "#0A84FF" : "rgba(255,255,255,0.1)"
+                width: 2
+            }
             Text {
                 anchors.centerIn: parent
                 text: "✆"
-                color: StatusBridge.btConnected ? "#00d4ff" : "#333"
-                font.pixelSize: 36
+                color: StatusBridge.btConnected ? "#0A84FF" : "#3A3A3C"
+                font { pixelSize: 32 }
             }
         }
 
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: StatusBridge.btConnected ? "Phone connected" : "No phone connected"
-            color: StatusBridge.btConnected ? "#888" : "#444"
-            font.pixelSize: 14
+            text: StatusBridge.btConnected ? "Phone Connected" : "No Phone Connected"
+            color: StatusBridge.btConnected ? "#FFFFFF" : "#8E8E93"
+            font { family: "Roboto"; pixelSize: 17; weight: Font.SemiBold }
         }
 
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: StatusBridge.btConnected ? "Calls will appear here" : "Pair via phone Bluetooth settings"
-            color: "#333"
-            font.pixelSize: 11
+            text: StatusBridge.btConnected
+                  ? "Incoming calls will appear here"
+                  : "Pair via phone Bluetooth settings"
+            color: "#8E8E93"
+            font { family: "Roboto"; pixelSize: 13 }
         }
     }
 
-    // ── Active call UI ────────────────────────────────────────────────────
+    // ── Active call UI ──────────────────────────────────────────────────────
     Column {
         anchors {
             horizontalCenter: parent.horizontalCenter
-            verticalCenter: parent.verticalCenter
+            top: parent.top
+            topMargin: 28
         }
-        spacing: 24
+        spacing: 20
         visible: StatusBridge.callActive
+
+        // Active call badge
+        Rectangle {
+            anchors.horizontalCenter: parent.horizontalCenter
+            height: 28; radius: 14
+            width: activeBadgeLabel.width + 28
+            color: "rgba(48,209,88,0.2)"
+            border { color: "#30D158"; width: 1 }
+
+            Text {
+                id: activeBadgeLabel
+                anchors.centerIn: parent
+                text: "Active Call"
+                color: "#30D158"
+                font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
+            }
+        }
 
         // Caller info
         Column {
             anchors.horizontalCenter: parent.horizontalCenter
-            spacing: 8
+            spacing: 6
 
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: "ACTIVE CALL"
-                color: "#3adf8a"
-                font { pixelSize: 10; capitalization: Font.AllUppercase; letterSpacing: 2 }
-            }
-
-            // Caller name placeholder — BlueZ PBAP would provide this
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: "Incoming"
-                color: "#f0f0f0"
-                font { pixelSize: 28; weight: Font.Light }
+                color: "#FFFFFF"
+                font { family: "Roboto"; pixelSize: 28; weight: Font.Bold }
             }
 
             // Call timer
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: callTimer.elapsed
-                color: "#888"
-                font.pixelSize: 14
+                color: "#8E8E93"
+                font { family: "Roboto"; pixelSize: 17; weight: Font.Light }
             }
         }
 
-        // Call controls
+        // Call controls: Mute | END | Speaker
         Row {
             anchors.horizontalCenter: parent.horizontalCenter
-            spacing: 24
+            spacing: 20
 
             // Mute
             Column {
                 spacing: 8
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    width: 64; height: 64; radius: 32
-                    color: muteArea.pressed ? "#1a3a5a" : "#0e1520"
-                    border { color: "#1e2a3a"; width: 2 }
+                    width: 68; height: 68; radius: 34
+                    color: muteArea.pressed ? "#2C2C2E" : "#1C1C1E"
+                    border { color: "rgba(255,255,255,0.15)"; width: 1.5 }
                     Text { anchors.centerIn: parent; text: "🎤"; font.pixelSize: 26 }
                     MouseArea { id: muteArea; anchors.fill: parent; onClicked: {} }
                 }
-                Text { anchors.horizontalCenter: parent.horizontalCenter; text: "MUTE"; color: "#444"; font { pixelSize: 10; capitalization: Font.AllUppercase } }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "Mute"
+                    color: "#8E8E93"
+                    font { family: "Roboto"; pixelSize: 11 }
+                }
             }
 
-            // End call
+            // End call — 68px red circle
             Column {
                 spacing: 8
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    width: 80; height: 80; radius: 40
-                    color: endArea.pressed ? "#5a1a1a" : "#2a0d0d"
-                    border { color: "#ff4444"; width: 2 }
-                    Text { anchors.centerIn: parent; text: "✆"; font.pixelSize: 34; color: "#ff4444"; rotation: 135 }
+                    width: 68; height: 68; radius: 34
+                    color: endArea.pressed ? "#CC1A1A" : "#FF453A"
+                    Behavior on color { ColorAnimation { duration: 100 } }
+
+                    Text {
+                        anchors.centerIn: parent; text: "✆"
+                        color: "#FFFFFF"; font { pixelSize: 28 }
+                        rotation: 135
+                    }
                     MouseArea {
                         id: endArea; anchors.fill: parent
-                        // BlueZ HFP hangup via D-Bus — wired in AudioService
                         onClicked: {}
                     }
                 }
-                Text { anchors.horizontalCenter: parent.horizontalCenter; text: "END"; color: "#ff4444"; font { pixelSize: 10; weight: Font.Bold; capitalization: Font.AllUppercase } }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "End"
+                    color: "#FF453A"
+                    font { family: "Roboto"; pixelSize: 11; weight: Font.SemiBold }
+                }
             }
 
-            // Keypad / hold
+            // Speaker
             Column {
                 spacing: 8
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    width: 64; height: 64; radius: 32
-                    color: kpArea.pressed ? "#1a3a5a" : "#0e1520"
-                    border { color: "#1e2a3a"; width: 2 }
-                    Text { anchors.centerIn: parent; text: "⌨"; font.pixelSize: 26; color: "#888" }
-                    MouseArea { id: kpArea; anchors.fill: parent; onClicked: keypadVisible = !keypadVisible }
+                    width: 68; height: 68; radius: 34
+                    color: spkArea.pressed ? "#2C2C2E" : "#1C1C1E"
+                    border { color: "rgba(255,255,255,0.15)"; width: 1.5 }
+                    Text { anchors.centerIn: parent; text: "🔊"; font.pixelSize: 26 }
+                    MouseArea { id: spkArea; anchors.fill: parent; onClicked: {} }
                 }
-                Text { anchors.horizontalCenter: parent.horizontalCenter; text: "KEYPAD"; color: "#444"; font { pixelSize: 10; capitalization: Font.AllUppercase } }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "Speaker"
+                    color: "#8E8E93"
+                    font { family: "Roboto"; pixelSize: 11 }
+                }
+            }
+        }
+
+        // Keypad toggle
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: keypadVisible ? "▲ Hide Keypad" : "▼ Keypad"
+            color: "#0A84FF"
+            font { family: "Roboto"; pixelSize: 13; weight: Font.Medium }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: keypadVisible = !keypadVisible
             }
         }
     }
 
-    // ── DTMF keypad overlay ───────────────────────────────────────────────
+    // ── DTMF keypad — bottom sheet ──────────────────────────────────────────
     property bool keypadVisible: false
 
     Rectangle {
-        anchors.fill: parent
-        color: "#e0080d12"
+        id: dtmfSheet
+        anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
+        height: keypadVisible ? 220 : 0
+        color: "#1C1C1E"
+        radius: 16
+        clip: true
         visible: keypadVisible
 
+        Behavior on height { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+
+        // Top border
+        Rectangle {
+            anchors { top: parent.top; left: parent.left; right: parent.right }
+            height: 1
+            color: "rgba(255,255,255,0.15)"
+        }
+
         Grid {
-            anchors.centerIn: parent
+            anchors { top: parent.top; horizontalCenter: parent.horizontalCenter; topMargin: 12 }
             columns: 3; rows: 4
-            spacing: 12
+            spacing: 10
 
             Repeater {
                 model: ["1","2","3","4","5","6","7","8","9","*","0","#"]
                 delegate: Rectangle {
-                    width: 70; height: 52; radius: 8
-                    color: kpBtn.pressed ? "#1a3a5a" : "#0e1520"
-                    border { color: "#1e2a3a"; width: 1 }
+                    width: 72; height: 44; radius: 10
+                    color: dtmfBtn.pressed ? "#2C2C2E" : "#3A3A3C"
                     Text {
-                        anchors.centerIn: parent
-                        text: modelData
-                        color: "#c0c0c0"
-                        font { pixelSize: 22; weight: Font.Light }
+                        anchors.centerIn: parent; text: modelData
+                        color: "#FFFFFF"
+                        font { family: "Roboto"; pixelSize: 20; weight: Font.Light }
                     }
-                    MouseArea { id: kpBtn; anchors.fill: parent; onClicked: {} }
+                    MouseArea { id: dtmfBtn; anchors.fill: parent; onClicked: {} }
                 }
             }
         }
-
-        Rectangle {
-            anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: 20 }
-            width: 120; height: 40; radius: 8
-            color: "#1a2535"
-            Text { anchors.centerIn: parent; text: "Close"; color: "#888"; font.pixelSize: 14 }
-            MouseArea { anchors.fill: parent; onClicked: keypadVisible = false }
-        }
     }
 
-    // ── Call timer ────────────────────────────────────────────────────────
+    // ── Call timer ──────────────────────────────────────────────────────────
     QtObject {
         id: callTimer
         property int seconds: 0
@@ -194,7 +243,10 @@ Item {
     Connections {
         target: StatusBridge
         function onCallActiveChanged(active) {
-            if (!active) callTimer.seconds = 0
+            if (!active) {
+                callTimer.seconds = 0
+                keypadVisible = false
+            }
         }
     }
 }

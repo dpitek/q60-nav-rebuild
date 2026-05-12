@@ -1,4 +1,6 @@
 // AudioView — Audio source selection and media control
+// Apple CarPlay aesthetic redesign
+// All AudioService bindings preserved exactly.
 import QtQuick 6.6
 import QtQuick.Controls 6.6
 
@@ -6,17 +8,17 @@ Item {
     id: root
     anchors.fill: parent
 
-    Rectangle { anchors.fill: parent; color: "#080d12" }
+    Rectangle { anchors.fill: parent; color: "#000000" }
 
-    // ── Source selector ──────────────────────────────────────────────────
+    // ── Source pills ────────────────────────────────────────────────────────
     Row {
         id: sourceRow
         anchors {
             top: parent.top
             horizontalCenter: parent.horizontalCenter
-            topMargin: 20
+            topMargin: 16
         }
-        spacing: 10
+        spacing: 8
 
         Repeater {
             model: [
@@ -26,19 +28,27 @@ Item {
                 { name: "SXM", src: 3 },
                 { name: "AUX", src: 4 }
             ]
+
             delegate: Rectangle {
-                width: 58; height: 38; radius: 8
-                color: AudioService.source === modelData.src ? "#0d2a4a" : "#0e1520"
+                height: 36; radius: 18
+                width: srcLabel.width + 32
+                color: AudioService.source === modelData.src ? "#0A84FF" : "#1C1C1E"
                 border {
-                    color: AudioService.source === modelData.src ? "#00d4ff" : "#1e2a3a"
+                    color: AudioService.source === modelData.src
+                           ? "#0A84FF" : "rgba(255,255,255,0.15)"
                     width: 1
                 }
+
+                Behavior on color { ColorAnimation { duration: 150 } }
+
                 Text {
+                    id: srcLabel
                     anchors.centerIn: parent
                     text: modelData.name
-                    color: AudioService.source === modelData.src ? "#00d4ff" : "#555"
-                    font { pixelSize: 13; weight: Font.Bold }
+                    color: AudioService.source === modelData.src ? "#FFFFFF" : "#8E8E93"
+                    font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
                 }
+
                 MouseArea {
                     anchors.fill: parent
                     onClicked: AudioService.setSource(modelData.src)
@@ -47,14 +57,14 @@ Item {
         }
     }
 
-    // ── Content area — changes based on source ───────────────────────────
+    // ── Content area ────────────────────────────────────────────────────────
     Loader {
         id: contentLoader
         anchors {
             top: sourceRow.bottom
             bottom: volumeRow.top
             left: parent.left; right: parent.right
-            margins: 20
+            topMargin: 12; bottomMargin: 12
         }
         sourceComponent: {
             switch (AudioService.source) {
@@ -67,43 +77,68 @@ Item {
         }
     }
 
-    // ── Volume bar ───────────────────────────────────────────────────────
+    // ── Volume row ──────────────────────────────────────────────────────────
     Row {
         id: volumeRow
         anchors {
             bottom: parent.bottom
             horizontalCenter: parent.horizontalCenter
-            bottomMargin: 20
+            bottomMargin: 16
         }
-        spacing: 16
+        spacing: 12
 
+        // Mute button
         Rectangle {
-            width: 48; height: 48; radius: 8
-            color: AudioService.muted ? "#2a0d0d" : "#0e1520"
-            border { color: AudioService.muted ? "#ff4444" : "#1e2a3a"; width: 1 }
+            width: 44; height: 44; radius: 22
+            color: AudioService.muted
+                   ? "rgba(255,69,58,0.2)" : "#1C1C1E"
+            border {
+                color: AudioService.muted ? "#FF453A" : "rgba(255,255,255,0.15)"
+                width: 1
+            }
+
             Text {
                 anchors.centerIn: parent
                 text: AudioService.muted ? "🔇" : "🔊"
-                font.pixelSize: 22
+                font.pixelSize: 18
             }
+
             MouseArea {
                 anchors.fill: parent
                 onClicked: AudioService.setMuted(!AudioService.muted)
             }
         }
 
+        // Slider track
         Item {
-            width: 200; height: 48
+            width: 220; height: 44
+            anchors.verticalCenter: parent.verticalCenter
+
+            // Track bg
             Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
-                width: parent.width; height: 6; radius: 3
-                color: "#1e2a3a"
-                Rectangle {
-                    width: parent.width * AudioService.volume / 100
-                    height: parent.height; radius: 3
-                    color: "#00d4ff"
-                }
+                width: parent.width; height: 4; radius: 2
+                color: "#2C2C2E"
             }
+
+            // Fill
+            Rectangle {
+                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width * AudioService.volume / 100
+                height: 4; radius: 2
+                color: "#0A84FF"
+                Behavior on width { NumberAnimation { duration: 80 } }
+            }
+
+            // Thumb
+            Rectangle {
+                x: (parent.width * AudioService.volume / 100) - 10
+                anchors.verticalCenter: parent.verticalCenter
+                width: 20; height: 20; radius: 10
+                color: "#FFFFFF"
+                Behavior on x { NumberAnimation { duration: 80 } }
+            }
+
             MouseArea {
                 anchors.fill: parent
                 onClicked: AudioService.setVolume(Math.round(mouseX / width * 100))
@@ -115,42 +150,67 @@ Item {
             }
         }
 
+        // Volume value
         Text {
             anchors.verticalCenter: parent.verticalCenter
             text: AudioService.volume + "%"
-            color: "#888"; font.pixelSize: 14; width: 40
+            color: "#8E8E93"
+            font { family: "Roboto"; pixelSize: 13 }
+            width: 44
+            horizontalAlignment: Text.AlignRight
         }
     }
 
-    // ── Source sub-components ────────────────────────────────────────────
+    // ── Source sub-components ────────────────────────────────────────────────
+
+    // BT component
     Component {
         id: btComponent
         Column {
             anchors.centerIn: parent
             spacing: 16
 
-            Text {
+            // Album art placeholder
+            Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: AudioService.btConnected ? "● CONNECTED" : "○ Not connected"
-                color: AudioService.btConnected ? "#00d4ff" : "#555"
-                font { pixelSize: 12; capitalization: Font.AllUppercase }
+                width: 120; height: 120; radius: 16
+                color: "#1C1C1E"
+                border { color: "rgba(255,255,255,0.1)"; width: 1 }
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "♪"
+                    color: "#3A3A3C"
+                    font { pixelSize: 52 }
+                }
             }
-            Text {
+
+            // Track / artist
+            Column {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: AudioService.trackTitle.length > 0 ? AudioService.trackTitle : "—"
-                color: "#f0f0f0"
-                font { pixelSize: 22; weight: Font.Light }
-                width: 280; elide: Text.ElideRight; horizontalAlignment: Text.AlignHCenter
+                spacing: 4
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: AudioService.trackTitle.length > 0 ? AudioService.trackTitle : "—"
+                    color: "#FFFFFF"
+                    font { family: "Roboto"; pixelSize: 22; weight: Font.SemiBold }
+                    width: 300; elide: Text.ElideRight; horizontalAlignment: Text.AlignHCenter
+                }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: AudioService.trackArtist.length > 0 ? AudioService.trackArtist : ""
+                    color: "#8E8E93"
+                    font { family: "Roboto"; pixelSize: 17 }
+                    width: 300; elide: Text.ElideRight; horizontalAlignment: Text.AlignHCenter
+                }
             }
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: AudioService.trackArtist
-                color: "#888"; font.pixelSize: 14
-                width: 280; elide: Text.ElideRight; horizontalAlignment: Text.AlignHCenter
-            }
+
+            // Transport controls
             Row {
                 anchors.horizontalCenter: parent.horizontalCenter
                 spacing: 20
+
                 Repeater {
                     model: [
                         { icon: "⏮", slot: "prev" },
@@ -159,11 +219,20 @@ Item {
                     ]
                     delegate: Rectangle {
                         width: 56; height: 56; radius: 28
-                        color: ma.pressed ? "#1a3a5a" : "#0e1520"
-                        border { color: "#00d4ff"; width: 1 }
-                        Text { anchors.centerIn: parent; text: modelData.icon; color: "#00d4ff"; font.pixelSize: 24 }
+                        color: tma.pressed ? "#2C2C2E" : "#1C1C1E"
+                        border { color: "rgba(255,255,255,0.15)"; width: 1 }
+
+                        Behavior on color { ColorAnimation { duration: 100 } }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: modelData.icon
+                            color: modelData.slot === "play" ? "#0A84FF" : "#FFFFFF"
+                            font { pixelSize: 24 }
+                        }
+
                         MouseArea {
-                            id: ma; anchors.fill: parent
+                            id: tma; anchors.fill: parent
                             onClicked: {
                                 if (modelData.slot === "prev")      AudioService.btPrev()
                                 else if (modelData.slot === "play") AudioService.btPlay()
@@ -173,57 +242,118 @@ Item {
                     }
                 }
             }
+
+            // BT device footer
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: AudioService.btConnected ? "● " + "Bluetooth" : "○  Not connected"
+                color: AudioService.btConnected ? "#8E8E93" : "#3A3A3C"
+                font { family: "Roboto"; pixelSize: 13 }
+            }
         }
     }
 
+    // FM / AM component
     Component {
         id: fmComponent
         Column {
-            anchors.centerIn: parent; spacing: 12
-            Text { anchors.horizontalCenter: parent.horizontalCenter
-                   text: AudioService.source === 1 ? "FM" : "AM"
-                   color: "#555"; font { pixelSize: 11; capitalization: Font.AllUppercase } }
-            Text { anchors.horizontalCenter: parent.horizontalCenter
-                   text: AudioService.fmFrequency.toFixed(1) + " MHz"
-                   color: "#f0f0f0"; font { pixelSize: 36; weight: Font.Light } }
-            Text { anchors.horizontalCenter: parent.horizontalCenter
-                   text: AudioService.fmStation; color: "#888"; font.pixelSize: 16 }
+            anchors.centerIn: parent
+            spacing: 14
+
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: AudioService.source === 1 ? "FM" : "AM"
+                color: "#8E8E93"
+                font { family: "Roboto"; pixelSize: 11; capitalization: Font.AllUppercase; letterSpacing: 2 }
+            }
+
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: AudioService.source === 1
+                      ? AudioService.fmFrequency.toFixed(1) + " MHz"
+                      : AudioService.fmFrequency.toFixed(0) + " kHz"
+                color: "#FFFFFF"
+                font { family: "Roboto"; pixelSize: 34; weight: Font.Bold }
+            }
+
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: AudioService.fmStation.length > 0 ? AudioService.fmStation : ""
+                color: "#8E8E93"
+                font { family: "Roboto"; pixelSize: 17 }
+            }
+
             Row {
-                anchors.horizontalCenter: parent.horizontalCenter; spacing: 24
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: 24
+
                 Repeater {
                     model: [{ icon: "◀◀", fwd: false }, { icon: "▶▶", fwd: true }]
                     delegate: Rectangle {
-                        width: 64; height: 44; radius: 8
-                        color: ma2.pressed ? "#1a3a5a" : "#0e1520"
-                        border { color: "#00d4ff"; width: 1 }
-                        Text { anchors.centerIn: parent; text: modelData.icon; color: "#00d4ff"; font.pixelSize: 20 }
-                        MouseArea { id: ma2; anchors.fill: parent
-                                    onClicked: AudioService.seekFM(modelData.fwd) }
+                        width: 80; height: 48; radius: 24
+                        color: fm2.pressed ? "#2C2C2E" : "#1C1C1E"
+                        border { color: "rgba(255,255,255,0.15)"; width: 1 }
+
+                        Text { anchors.centerIn: parent; text: modelData.icon; color: "#0A84FF"; font.pixelSize: 18 }
+                        MouseArea {
+                            id: fm2; anchors.fill: parent
+                            onClicked: AudioService.seekFM(modelData.fwd)
+                        }
                     }
                 }
             }
         }
     }
 
+    // SiriusXM component
     Component {
         id: sxmComponent
         Column {
-            anchors.centerIn: parent; spacing: 12
-            Text { anchors.horizontalCenter: parent.horizontalCenter
-                   text: "SiriusXM"; color: "#555"; font { pixelSize: 11; capitalization: Font.AllUppercase } }
-            Text { anchors.horizontalCenter: parent.horizontalCenter
-                   text: AudioService.sxmName.length > 0 ? AudioService.sxmName : "—"
-                   color: "#f0f0f0"; font { pixelSize: 24; weight: Font.Light } }
-            Text { anchors.horizontalCenter: parent.horizontalCenter
-                   text: AudioService.sxmChannel; color: "#888"; font.pixelSize: 14 }
+            anchors.centerIn: parent
+            spacing: 12
+
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "SiriusXM"
+                color: "#8E8E93"
+                font { family: "Roboto"; pixelSize: 11; capitalization: Font.AllUppercase; letterSpacing: 2 }
+            }
+
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: AudioService.sxmName.length > 0 ? AudioService.sxmName : "—"
+                color: "#FFFFFF"
+                font { family: "Roboto"; pixelSize: 28; weight: Font.SemiBold }
+            }
+
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: AudioService.sxmChannel.length > 0 ? "Ch. " + AudioService.sxmChannel : ""
+                color: "#8E8E93"
+                font { family: "Roboto"; pixelSize: 15 }
+            }
         }
     }
 
+    // AUX component
     Component {
         id: auxComponent
         Column {
             anchors.centerIn: parent
-            Text { text: "AUX Input"; color: "#888"; font.pixelSize: 22 }
+            spacing: 8
+
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "⇥"
+                color: "#3A3A3C"
+                font { pixelSize: 48 }
+            }
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "AUX Input"
+                color: "#8E8E93"
+                font { family: "Roboto"; pixelSize: 22 }
+            }
         }
     }
 }

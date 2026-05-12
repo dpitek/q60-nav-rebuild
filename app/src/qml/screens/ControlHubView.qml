@@ -1,6 +1,7 @@
 // ControlHubView — Lower 7" screen
-// Tabs: Climate | Audio | Nav | Phone
-// Auto-switches on call / reverse
+// Apple CarPlay aesthetic redesign
+// 5-tab bottom nav: Nav | Audio | Phone | Climate | Vehicle
+// Auto-switches on call / reverse — all StatusBridge signals preserved exactly.
 import QtQuick 6.6
 import QtQuick.Controls 6.6
 import "../components"
@@ -9,131 +10,159 @@ Item {
     id: root
     anchors.fill: parent
 
-    property int activeTab: 0   // 0=climate 1=audio 2=nav 3=phone
+    property int activeTab: 0   // 0=nav 1=audio 2=phone 3=climate 4=vehicle
+    property int previousTab: 0
 
-    Rectangle { anchors.fill: parent; color: "#080d12" }
+    Rectangle { anchors.fill: parent; color: "#000000" }
 
-    // ── Auto-switch triggers ─────────────────────────────────────────────
+    // ── Auto-switch triggers ────────────────────────────────────────────────
     Connections {
         target: StatusBridge
-        function onSwitchLowerToPhone()  { activeTab = 3 }
+        function onSwitchLowerToPhone()  { previousTab = activeTab; activeTab = 2 }
         function onRestoreLowerScreen()  { activeTab = previousTab }
     }
+
     Connections {
         target: StatusBridge
         function onReverseActiveChanged(rev) {
-            if (rev) { previousTab = activeTab; activeTab = 4 }
+            if (rev) { previousTab = activeTab; activeTab = 5 }
             else      { activeTab = previousTab }
         }
     }
 
-    property int previousTab: 0
-
-    // ── Content area ─────────────────────────────────────────────────────
+    // ── Content area ────────────────────────────────────────────────────────
     Item {
         id: contentArea
         anchors {
             top: parent.top
-            bottom: tabBar.top
+            bottom: bottomNav.top
             left: parent.left; right: parent.right
         }
 
-        ClimateView      { anchors.fill: parent; visible: activeTab === 0 }
-        AudioView        { anchors.fill: parent; visible: activeTab === 1 }
-        NavCompanionView { anchors.fill: parent; visible: activeTab === 2 }
-        PhoneView        { anchors.fill: parent; visible: activeTab === 3 }
+        NavCompanionView  { anchors.fill: parent; visible: activeTab === 0 }
+        AudioView         { anchors.fill: parent; visible: activeTab === 1 }
+        PhoneView         { anchors.fill: parent; visible: activeTab === 2 }
+        ClimateView       { anchors.fill: parent; visible: activeTab === 3 }
+        VehicleStatusView { anchors.fill: parent; visible: activeTab === 4 }
 
-        // Reverse / camera placeholder (tab 4 — auto only)
+        // Reverse / camera placeholder (tab 5 — auto only, not in nav bar)
         Rectangle {
             anchors.fill: parent
-            visible: activeTab === 4
-            color: "#000"
-            Text {
+            visible: activeTab === 5
+            color: "#000000"
+
+            Column {
                 anchors.centerIn: parent
-                text: "R"
-                color: "#ff4444"
-                font { pixelSize: 80; weight: Font.Black }
-                opacity: 0.15
+                spacing: 12
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "R"
+                    color: "#0A84FF"
+                    font { pixelSize: 80; weight: Font.Black }
+                    opacity: 0.9
+                }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "REVERSE"
+                    color: "#0A84FF"
+                    font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold; capitalization: Font.AllUppercase; letterSpacing: 5 }
+                }
             }
-            Text {
-                anchors { top: parent.top; horizontalCenter: parent.horizontalCenter; topMargin: 20 }
-                text: "REVERSE"
-                color: "#ff4444"
-                font { pixelSize: 13; weight: Font.Bold; capitalization: Font.AllUppercase }
+
+            Rectangle {
+                anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
+                height: 4
+                color: "#0A84FF"
+                opacity: 0.6
             }
         }
     }
 
-    // ── Tab bar ──────────────────────────────────────────────────────────
-    TabBar {
-        id: tabBar
-        anchors { bottom: statusBar.top; left: parent.left; right: parent.right }
-        tabs:  ["CLIMATE", "AUDIO", "NAV", "PHONE"]
-        icons: ["❄",       "♪",     "⬆",   "✆"]
-        currentTab: activeTab < 4 ? activeTab : -1
-        onTabSelected: function(i) { activeTab = i }
-    }
-
-    // ── Status bar ───────────────────────────────────────────────────────
+    // ── Bottom navigation bar — 60px ────────────────────────────────────────
     Rectangle {
-        id: statusBar
+        id: bottomNav
         anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
-        height: 26
-        color: "#050a0f"
-        border { color: "#0d1520"; width: 1 }
+        height: 60
+        color: "#0A0A0A"
 
-        Row {
-            anchors { left: parent.left; verticalCenter: parent.verticalCenter; leftMargin: 14 }
-            spacing: 12
-
-            Row {
-                spacing: 5
-                anchors.verticalCenter: parent.verticalCenter
-                Rectangle {
-                    width: 6; height: 6; radius: 3
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: StatusBridge.gpsLock ? "#3adf8a" : "#555"
-                }
-                Text { text: "GPS"; color: StatusBridge.gpsLock ? "#3adf8a" : "#444"; font.pixelSize: 10 }
-            }
-
-            Row {
-                spacing: 5
-                anchors.verticalCenter: parent.verticalCenter
-                Rectangle {
-                    width: 6; height: 6; radius: 3
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: StatusBridge.btConnected ? "#00d4ff" : "#555"
-                }
-                Text { text: "BT"; color: StatusBridge.btConnected ? "#00d4ff" : "#444"; font.pixelSize: 10 }
-            }
-
-            Row {
-                spacing: 5
-                anchors.verticalCenter: parent.verticalCenter
-                Rectangle {
-                    width: 6; height: 6; radius: 3
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: StatusBridge.sxmActive ? "#a855f7" : "#555"
-                }
-                Text { text: "SXM"; color: StatusBridge.sxmActive ? "#a855f7" : "#444"; font.pixelSize: 10 }
-            }
-        }
-
-        Text {
-            anchors.centerIn: parent
-            text: StatusBridge.navActive
-                  ? (StatusBridge.nextDistance.toFixed(1) + " mi · " + StatusBridge.eta)
-                  : ""
-            color: "#00d4ff"
-            font.pixelSize: 10
+        // Top separator
+        Rectangle {
+            anchors { top: parent.top; left: parent.left; right: parent.right }
+            height: 1
+            color: "rgba(255,255,255,0.12)"
         }
 
         Row {
-            anchors { right: parent.right; verticalCenter: parent.verticalCenter; rightMargin: 14 }
-            spacing: 12
-            Text { text: VehicleService.outsideTemp.toFixed(0) + "°F"; color: "#555"; font.pixelSize: 10 }
-            Text { text: StatusBridge.timeString; color: "#666"; font.pixelSize: 10 }
+            anchors.fill: parent
+
+            Repeater {
+                model: [
+                    { label: "Nav",     icon: "⬆",  tab: 0 },
+                    { label: "Audio",   icon: "♪",  tab: 1 },
+                    { label: "Phone",   icon: "✆",  tab: 2 },
+                    { label: "Climate", icon: "❄",  tab: 3 },
+                    { label: "Vehicle", icon: "◈",  tab: 4 }
+                ]
+
+                delegate: Item {
+                    width: bottomNav.width / 5
+                    height: bottomNav.height
+
+                    // Active indicator bar at top
+                    Rectangle {
+                        anchors { top: parent.top; left: parent.left; right: parent.right }
+                        height: 2; radius: 1
+                        color: activeTab === modelData.tab ? "#0A84FF" : "transparent"
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                    }
+
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: 3
+
+                        Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: modelData.icon
+                            color: activeTab === modelData.tab ? "#0A84FF" : "#8E8E93"
+                            font { pixelSize: 20 }
+
+                            Behavior on color { ColorAnimation { duration: 150 } }
+                        }
+                        Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: modelData.label
+                            color: activeTab === modelData.tab ? "#0A84FF" : "#8E8E93"
+                            font { family: "Roboto"; pixelSize: 11; weight: Font.Medium }
+
+                            Behavior on color { ColorAnimation { duration: 150 } }
+                        }
+                    }
+
+                    // Phone call pulse dot
+                    Rectangle {
+                        anchors { top: parent.top; right: parent.right; topMargin: 8; rightMargin: 12 }
+                        width: 6; height: 6; radius: 3
+                        color: "#30D158"
+                        visible: modelData.tab === 2 && StatusBridge.callActive
+
+                        SequentialAnimation on opacity {
+                            running: StatusBridge.callActive
+                            loops: Animation.Infinite
+                            NumberAnimation { to: 0.3; duration: 600 }
+                            NumberAnimation { to: 1.0; duration: 600 }
+                        }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            if (activeTab !== 5)  // Don't allow manual switch during reverse
+                                activeTab = modelData.tab
+                        }
+                    }
+                }
+            }
         }
     }
 }

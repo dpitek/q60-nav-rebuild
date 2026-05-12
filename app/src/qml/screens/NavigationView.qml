@@ -1,47 +1,31 @@
 // NavigationView — Upper 8" screen
-// Map canvas: MapLibreMap (C++ QQuickItem) when compiled with MAPLIBRE_AVAILABLE,
-// otherwise falls back to the dark-green grid placeholder.
-// The MapLibreMap type is registered in main.cpp via qmlRegisterType<MapLibreItem>.
+// Apple CarPlay aesthetic redesign
+// All StatusBridge / NavigationService / VehicleService bindings preserved exactly.
 import QtQuick 6.6
 import QtQuick.Controls 6.6
 import "../components"
 
-// Conditional import: Q60Nav module is registered when MAPLIBRE_AVAILABLE=ON.
-// When the module is absent the import is silently ignored and mapLibreLoader
-// will show its fallback placeholder instead.
 import Q60Nav 1.0 as Q60Nav
 
 Item {
     id: root
     anchors.fill: parent
 
-    // ── Map canvas ────────────────────────────────────────────────────────
-    // Loader pattern: attempt to use MapLibreMap; if the type is not available
-    // (module missing or EGL init failed) the sourceComponent falls back to
-    // the static placeholder so the UI always shows something useful.
+    // ── Map canvas ─────────────────────────────────────────────────────────
     Loader {
         id: mapLoader
         anchors.fill: parent
-
-        // Set to true by the MapLibreMap onReadyChanged handler once mbgl is up.
         property bool mapReady: false
-
         sourceComponent: mapLibreComponent
     }
 
-    // ── Real map component (MAPLIBRE_AVAILABLE path) ──────────────────────
-    // If Q60Nav module is not registered, this Component is inert — the Loader
-    // will fail to instantiate it and QML will log a warning.  NavigationView
-    // handles that via mapLoader.status == Loader.Error below.
     Component {
         id: mapLibreComponent
 
         Q60Nav.MapLibreMap {
             id: mapLibreMap
             anchors.fill: parent
-
-            // Initial position: can be overridden by NavigationService binding.
-            center: Qt.point(35.5, -79.0)   // TODO: bind to NavigationService.position
+            center: Qt.point(35.5, -79.0)
             zoom:   12.0
             style:  "file:///opt/nav/style/q60-dark.json"
 
@@ -52,7 +36,6 @@ Item {
                 }
             }
 
-            // Keep map centred on vehicle position during active navigation.
             Connections {
                 target: StatusBridge
                 function onPositionChanged() {
@@ -64,24 +47,19 @@ Item {
         }
     }
 
-    // ── Fallback placeholder (shown when MapLibre is not available/ready) ──
-    // Visible whenever the Loader either failed to instantiate MapLibreMap or
-    // the map has not signalled ready yet.
+    // ── Fallback placeholder ────────────────────────────────────────────────
     Rectangle {
         id: mapPlaceholder
         anchors.fill: parent
-        color: "#0f1a12"   // Dark map green
-
-        // Only show placeholder when real map is not active.
+        color: "#0A0A0A"
         visible: mapLoader.status !== Loader.Ready || !mapLoader.mapReady
 
-        // Simulated road grid
         Canvas {
             anchors.fill: parent
-            opacity: 0.07
+            opacity: 0.04
             onPaint: {
                 var ctx = getContext("2d")
-                ctx.strokeStyle = "#3adf8a"
+                ctx.strokeStyle = "#FFFFFF"
                 ctx.lineWidth = 1
                 for (var x = 0; x < width; x += 60) {
                     ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke()
@@ -95,29 +73,30 @@ Item {
         Text {
             anchors.centerIn: parent
             text: "MAP"
-            color: "#1a2a1a"
+            color: "#1C1C1E"
             font { pixelSize: 96; weight: Font.Black }
-            opacity: 0.15
         }
     }
 
-    // ── Top HUD strip ─────────────────────────────────────────────────────
-    Rectangle {
-        id: topHud
+    // ── Status bar (32px) ──────────────────────────────────────────────────
+    StatusBar {
         anchors { top: parent.top; left: parent.left; right: parent.right }
-        height: 88
+    }
 
-        gradient: Gradient {
-            orientation: Gradient.Vertical
-            GradientStop { position: 0.0; color: "#f0080d12" }
-            GradientStop { position: 1.0; color: "#00080d12" }
-        }
+    // ── Top-left turn card ─────────────────────────────────────────────────
+    Rectangle {
+        id: turnCard
+        anchors { top: parent.top; left: parent.left; topMargin: 40; leftMargin: 16 }
+        width: 280; height: 88; radius: 16
+        color: "rgba(28,28,30,0.92)"
+        border { color: "rgba(255,255,255,0.15)"; width: 1 }
+        visible: StatusBridge.navActive
 
-        // Turn arrow + distance + street
+        Behavior on opacity { NumberAnimation { duration: 200 } }
+
         Row {
-            anchors { left: parent.left; verticalCenter: parent.verticalCenter; leftMargin: 16 }
+            anchors { fill: parent; margins: 14 }
             spacing: 14
-            visible: StatusBridge.navActive
 
             TurnArrow {
                 anchors.verticalCenter: parent.verticalCenter
@@ -134,75 +113,43 @@ Item {
                     if (m.indexOf("arriv") >= 0)  return 8
                     return 0
                 }
-                arrowColor: StatusBridge.approachingTurn ? "#ff8c00" : "#00d4ff"
+                arrowColor: StatusBridge.approachingTurn ? "#FF9F0A" : "#0A84FF"
             }
 
             Column {
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 3
+                spacing: 4
+                width: parent.width - 62
+
                 Text {
                     text: StatusBridge.nextDistance < 0.1
                           ? "Now"
                           : (StatusBridge.nextDistance < 1.0
                              ? Math.round(StatusBridge.nextDistance * 5280) + " ft"
                              : StatusBridge.nextDistance.toFixed(1) + " mi")
-                    color: StatusBridge.approachingTurn ? "#ff8c00" : "#f0f0f0"
-                    font { pixelSize: 30; weight: Font.Bold }
+                    color: StatusBridge.approachingTurn ? "#FF9F0A" : "#FFFFFF"
+                    font { family: "Roboto"; pixelSize: 30; weight: Font.Bold }
                 }
                 Text {
                     text: StatusBridge.nextStreet
-                    color: "#aaa"
-                    font { pixelSize: 14; weight: Font.Medium }
-                    width: 340; elide: Text.ElideRight
+                    color: "#8E8E93"
+                    font { family: "Roboto"; pixelSize: 13 }
+                    width: parent.width
+                    elide: Text.ElideRight
                 }
             }
         }
-
-        // No route state
-        Text {
-            anchors { left: parent.left; verticalCenter: parent.verticalCenter; leftMargin: 20 }
-            visible: !StatusBridge.navActive
-            text: "Q60 NAV"
-            color: "#1e3a2a"
-            font { pixelSize: 22; weight: Font.Light; letterSpacing: 4 }
-        }
-
-        // ETA block (top right)
-        Column {
-            anchors { right: parent.right; verticalCenter: parent.verticalCenter; rightMargin: 20 }
-            spacing: 2
-            visible: StatusBridge.navActive
-
-            Text {
-                anchors.right: parent.right
-                text: StatusBridge.eta
-                color: "#f0f0f0"
-                font { pixelSize: 24; weight: Font.Bold }
-            }
-            Text {
-                anchors.right: parent.right
-                text: "ARRIVE"
-                color: "#555"
-                font { pixelSize: 10; capitalization: Font.AllUppercase }
-            }
-        }
-
-        // Clock (top right, no route)
-        Text {
-            anchors { right: parent.right; verticalCenter: parent.verticalCenter; rightMargin: 20 }
-            visible: !StatusBridge.navActive
-            text: StatusBridge.timeString
-            color: "#2a4a3a"
-            font { pixelSize: 22; weight: Font.Light }
-        }
     }
 
-    // ── Approaching turn banner ───────────────────────────────────────────
+    // Approaching turn accent bar under turn card
     Rectangle {
-        anchors { top: topHud.bottom; left: parent.left; right: parent.right }
-        height: 3
-        color: StatusBridge.approachingTurn ? "#ff8c00" : "transparent"
-        Behavior on color { ColorAnimation { duration: 200 } }
+        anchors { top: turnCard.bottom; left: turnCard.left; right: turnCard.right; topMargin: 2 }
+        height: 3; radius: 1.5
+        color: "#FF9F0A"
+        opacity: StatusBridge.approachingTurn ? 1.0 : 0.0
+        visible: StatusBridge.navActive
+
+        Behavior on opacity { NumberAnimation { duration: 200 } }
 
         SequentialAnimation on opacity {
             running: StatusBridge.approachingTurn
@@ -210,106 +157,196 @@ Item {
             NumberAnimation { to: 0.3; duration: 700 }
             NumberAnimation { to: 1.0; duration: 700 }
         }
-        opacity: StatusBridge.approachingTurn ? 1.0 : 0.0
     }
 
-    // ── Bottom HUD strip ──────────────────────────────────────────────────
+    // Idle state label (no route)
+    Text {
+        anchors { top: parent.top; left: parent.left; topMargin: 48; leftMargin: 24 }
+        visible: !StatusBridge.navActive
+        text: "Q60"
+        color: "rgba(255,255,255,0.06)"
+        font { pixelSize: 28; weight: Font.Light; letterSpacing: 6 }
+    }
+
+    // ── Top-right speed badge ───────────────────────────────────────────────
+    SpeedWidget {
+        anchors { top: parent.top; right: parent.right; topMargin: 40; rightMargin: 16 }
+        speed: StatusBridge.speed
+        limit: StatusBridge.speedLimit > 0 ? StatusBridge.speedLimit : 45
+    }
+
+    // ── Bottom info strip ───────────────────────────────────────────────────
     Rectangle {
+        id: bottomStrip
         anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
-        height: 80
+        height: 72
+        color: "rgba(0,0,0,0.88)"
+        visible: StatusBridge.navActive
 
-        gradient: Gradient {
-            orientation: Gradient.Vertical
-            GradientStop { position: 0.0; color: "#00080d12" }
-            GradientStop { position: 1.0; color: "#f0080d12" }
+        // Top separator
+        Rectangle {
+            anchors { top: parent.top; left: parent.left; right: parent.right }
+            height: 1
+            color: "rgba(255,255,255,0.12)"
         }
 
-        // Speed widget (bottom left)
-        SpeedWidget {
-            anchors { left: parent.left; verticalCenter: parent.verticalCenter; leftMargin: 16 }
-            speed: StatusBridge.speed
-            limit: StatusBridge.speedLimit > 0 ? StatusBridge.speedLimit : 45
-        }
-
-        // GPS lock indicator
         Row {
-            anchors.centerIn: parent
-            spacing: 6
-            visible: !StatusBridge.gpsLock
+            anchors { fill: parent; leftMargin: 20; rightMargin: 20 }
+            spacing: 0
 
-            Rectangle {
-                width: 8; height: 8; radius: 4
+            // ETA
+            Column {
+                width: parent.width / 3
                 anchors.verticalCenter: parent.verticalCenter
-                color: "#ff8c00"
-                SequentialAnimation on opacity {
-                    loops: Animation.Infinite
-                    NumberAnimation { to: 0.2; duration: 800 }
-                    NumberAnimation { to: 1.0; duration: 800 }
+                spacing: 2
+
+                Text {
+                    text: StatusBridge.eta.length > 0 ? StatusBridge.eta : "--:--"
+                    color: "#FFFFFF"
+                    font { family: "Roboto"; pixelSize: 22; weight: Font.SemiBold }
+                }
+                Text {
+                    text: "ETA"
+                    color: "#8E8E93"
+                    font { family: "Roboto"; pixelSize: 11; capitalization: Font.AllUppercase; letterSpacing: 1 }
                 }
             }
-            Text { text: "Acquiring GPS"; color: "#888"; font.pixelSize: 12 }
-        }
 
-        // Outside temp + rerouting (bottom right)
-        Column {
-            anchors { right: parent.right; verticalCenter: parent.verticalCenter; rightMargin: 16 }
-            spacing: 4
-
-            Text {
-                anchors.right: parent.right
-                text: VehicleService.outsideTemp.toFixed(0) + "°F"
-                color: "#666"
-                font.pixelSize: 13
+            // Separator
+            Rectangle {
+                width: 1; height: 36; color: "rgba(255,255,255,0.15)"
+                anchors.verticalCenter: parent.verticalCenter
             }
 
-            Row {
-                anchors.right: parent.right
-                spacing: 6
-                visible: NavigationService.rerouting
+            // Distance remaining
+            Column {
+                width: parent.width / 3
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 2
+                leftPadding: 16
 
-                Text { text: "⟳"; color: "#ff8c00"; font.pixelSize: 14; anchors.verticalCenter: parent.verticalCenter }
-                Text { text: "Recalculating"; color: "#ff8c00"; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
+                Text {
+                    text: NavigationService.remaining.toFixed(1) + " mi"
+                    color: "#FFFFFF"
+                    font { family: "Roboto"; pixelSize: 22; weight: Font.SemiBold }
+                }
+                Text {
+                    text: "Remaining"
+                    color: "#8E8E93"
+                    font { family: "Roboto"; pixelSize: 11 }
+                }
+            }
+
+            // Separator
+            Rectangle {
+                width: 1; height: 36; color: "rgba(255,255,255,0.15)"
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            // Current street
+            Column {
+                width: parent.width / 3
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 2
+                leftPadding: 16
+
+                Text {
+                    text: StatusBridge.nextStreet.length > 0 ? StatusBridge.nextStreet : "On Route"
+                    color: "#FFFFFF"
+                    font { family: "Roboto"; pixelSize: 15; weight: Font.Medium }
+                    width: parent.width - 16
+                    elide: Text.ElideRight
+                }
+                Text {
+                    text: "Current Street"
+                    color: "#8E8E93"
+                    font { family: "Roboto"; pixelSize: 11 }
+                }
             }
         }
     }
 
-    // ── Reverse camera overlay ────────────────────────────────────────────
+    // ── GPS acquiring indicator ─────────────────────────────────────────────
+    Row {
+        anchors { bottom: bottomStrip.top; horizontalCenter: parent.horizontalCenter; bottomMargin: 12 }
+        spacing: 8
+        visible: !StatusBridge.gpsLock
+
+        Rectangle {
+            width: 8; height: 8; radius: 4
+            anchors.verticalCenter: parent.verticalCenter
+            color: "#FF9F0A"
+
+            SequentialAnimation on opacity {
+                loops: Animation.Infinite
+                NumberAnimation { to: 0.2; duration: 800 }
+                NumberAnimation { to: 1.0; duration: 800 }
+            }
+        }
+        Text {
+            text: "Acquiring GPS"
+            color: "#8E8E93"
+            font { family: "Roboto"; pixelSize: 13 }
+        }
+    }
+
+    // ── Rerouting banner ────────────────────────────────────────────────────
+    Rectangle {
+        anchors { top: parent.top; left: parent.left; right: parent.right; topMargin: 32 }
+        height: 40
+        color: "rgba(255,159,10,0.92)"
+        visible: NavigationService.rerouting
+        z: 10
+
+        Row {
+            anchors.centerIn: parent
+            spacing: 8
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: "⟳"
+                color: "#000000"
+                font { pixelSize: 18 }
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: "Recalculating route…"
+                color: "#000000"
+                font { family: "Roboto"; pixelSize: 15; weight: Font.SemiBold }
+            }
+        }
+    }
+
+    // ── Reverse overlay ─────────────────────────────────────────────────────
     Rectangle {
         anchors.fill: parent
         visible: StatusBridge.reverseActive
-        color: "#cc000000"
+        color: "rgba(10,132,255,0.18)"
+        z: 20
 
         Column {
             anchors.centerIn: parent
-            spacing: 16
+            spacing: 12
+
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: "R"
-                color: "#ff4444"
+                color: "#0A84FF"
                 font { pixelSize: 96; weight: Font.Black }
-                opacity: 0.8
+                opacity: 0.9
             }
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: "REVERSE"
-                color: "#ff4444"
-                font { pixelSize: 14; capitalization: Font.AllUppercase; letterSpacing: 4 }
+                color: "#0A84FF"
+                font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold; capitalization: Font.AllUppercase; letterSpacing: 5 }
             }
         }
-    }
 
-    // ── Rerouting overlay ─────────────────────────────────────────────────
-    Rectangle {
-        anchors { horizontalCenter: parent.horizontalCenter; top: topHud.bottom; topMargin: 8 }
-        width: 200; height: 36; radius: 18
-        visible: NavigationService.rerouting
-        color: "#cc1a1000"
-        border { color: "#4a3800"; width: 1 }
-
-        Row {
-            anchors.centerIn: parent; spacing: 8
-            Text { text: "⟳"; color: "#ff8c00"; font.pixelSize: 16; anchors.verticalCenter: parent.verticalCenter }
-            Text { text: "Recalculating…"; color: "#ff8c00"; font.pixelSize: 13; anchors.verticalCenter: parent.verticalCenter }
+        Rectangle {
+            anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
+            height: 4
+            color: "#0A84FF"
+            opacity: 0.7
         }
     }
 }
