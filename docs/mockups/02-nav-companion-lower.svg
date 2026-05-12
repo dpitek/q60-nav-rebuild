@@ -71,7 +71,7 @@
   <text x="400" y="210" fill="#ffffff" font-family="sans-serif" font-size="58" font-weight="bold" text-anchor="middle">0.4 mi</text>
 
   <!-- Instruction text -->
-  <text x="400" y="248" fill="#aaccaa" font-family="sans-serif" font-size="18" text-anchor="middle">Turn right onto Avent Ferry Rd</text>
+  <text x="400" y="248" fill="#aaccaa" font-family="sans-serif" font-size="18" text-anchor="middle">Turn right onto Federal Blvd</text>
 
   <!-- Divider -->
   <line x1="60" y1="270" x2="740" y2="270" stroke="#1a3a1a" stroke-width="1"/>

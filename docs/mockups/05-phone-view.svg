@@ -44,7 +44,7 @@
   <text x="200" y="205" fill="#4a8a4a" font-family="sans-serif" font-size="32" text-anchor="middle">✆</text>
 
   <!-- Caller info -->
-  <text x="200" y="270" fill="#ffffff" font-family="sans-serif" font-size="22" font-weight="bold" text-anchor="middle">KellyAnne</text>
+  <text x="200" y="270" fill="#ffffff" font-family="sans-serif" font-size="22" font-weight="bold" text-anchor="middle">Alex</text>
   <text x="200" y="295" fill="#778877" font-family="sans-serif" font-size="14" text-anchor="middle">Mobile · 3:42</text>
 
   <!-- Divider -->

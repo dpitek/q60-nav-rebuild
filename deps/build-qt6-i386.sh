@@ -79,6 +79,12 @@ apt-get install -y --no-install-recommends "${PACKAGES[@]}" 2>&1 | \
 
 echo "--- i386 package setup done ---"
 
+# Point pkg-config at i386 libraries (cross-compile needs target arch paths)
+export PKG_CONFIG_LIBDIR=/usr/lib/i386-linux-gnu/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig/x86
+export PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig
+# Prevent pkg-config from falling back to amd64 system paths
+export PKG_CONFIG_SYSROOT_DIR=/
+
 # Wipe any stale build dir (CMake cache from a bad config is worse than a clean build)
 if [ -d "$BUILD_DIR" ]; then
     echo "Cleaning previous build dir: $BUILD_DIR"

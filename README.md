@@ -25,6 +25,7 @@ while preserving the original firmware as a permanent, non-destructive fallback.
 - [CAN Bus — Status & Warning](#can-bus--status--warning)
 - [Open Source Dependencies](#open-source-dependencies)
 - [Legal](#legal)
+- [Community](#community)
 - [License](#license)
 
 ---
@@ -363,7 +364,7 @@ a bug (corrected; `/data` uses mmcblk0p9).
 - Docker Desktop (Apple Silicon or amd64)
 - macOS or Linux host
 - ~20 GB free disk space
-- NC OSM PBF at `/tmp/north-carolina-latest.osm.pbf`
+- CO OSM PBF at `/tmp/colorado-latest.osm.pbf`
 
 ### Docker Toolchain Image
 
@@ -394,10 +395,10 @@ docker run --rm -v $(pwd):/build q60-toolchain \
 # 5. Application binary
 ./scripts/build-app.sh
 
-# 6. Valhalla routing tiles (~30-45 min, NC)
+# 6. Valhalla routing tiles (~30-45 min, CO)
 ./scripts/build-tiles.sh
 
-# 7. MapLibre vector tiles (~30-60 min, NC z0-z14)
+# 7. MapLibre vector tiles (~30-60 min, CO z0-z14)
 ./scripts/build-map-tiles.sh
 
 # 8. Rootfs image
@@ -524,20 +525,20 @@ Route overlay (`q60-route` source) rendered in cyan (#00d4ff) at 6px width.
 ```bash
 ./scripts/build-tiles.sh
 # Uses official Valhalla Docker image (ghcr.io/valhalla/valhalla:run-latest)
-# Input:  /tmp/north-carolina-latest.osm.pbf
+# Input:  /tmp/colorado-latest.osm.pbf
 # Output: output/valhalla-tiles/ → /opt/valhalla/tiles/ on device
 ```
 
 Config: `output/valhalla-config.json`. Max cache: 64 MB (RAM-constrained device).
 
-### MapLibre Vector Tiles (nc.mbtiles)
+### MapLibre Vector Tiles (co.mbtiles)
 
 ```bash
 ./scripts/build-map-tiles.sh
 # Uses tilemaker Docker image (ghcr.io/systemed/tilemaker)
-# Input:  /tmp/north-carolina-latest.osm.pbf
-# Output: output/vector-tiles/nc.mbtiles → /opt/nav/tiles/nc.mbtiles on device
-# Zoom:   z0-z14, ~400-700 MB for NC
+# Input:  /tmp/colorado-latest.osm.pbf
+# Output: output/vector-tiles/co.mbtiles → /opt/nav/tiles/co.mbtiles on device
+# Zoom:   z0-z14, ~400-700 MB for CO
 ```
 
 ### Valhalla HTTP Proxy
@@ -558,7 +559,7 @@ Build: `gcc -m32 -march=bonnell -O2 -o valhalla-httpd valhalla-httpd.c`
 
 > **⚠️ IMPORTANT:** All CAN frame IDs currently in `VehicleService.h` are
 > **community-sourced estimates** based on Infiniti/Nissan platform research.
-> They have **not been validated** on the JN1FV7EL platform (Q60 Red Sport).
+> They have **not been validated** on the [REDACTED] platform (Q60 Red Sport).
 >
 > **Do not send any CAN write frames to a running vehicle until every frame ID
 > has been verified via J2534 OBD-II capture.** Sending incorrect write frames
@@ -640,6 +641,17 @@ damage arising from use of this software or the information in this repository.
 
 ---
 
+## Community
+
+This project benefited from reverse-engineering knowledge shared by the community at
+**[Clarion/Infiniti DCU Research Discord](https://discord.com/channels/1342723144485441536/1342723400975650877)** —
+specifically the channel that provided the final critical information needed to unlock
+the eMMC partition layout and boot mechanism on the Clarion QY5092. That community's
+collective research saved weeks of blind probing. If you're working on similar hardware,
+that's the place to be.
+
+---
+
 ## License
 
 Original source code in this repository (excluding third-party dependencies) is
@@ -648,7 +660,7 @@ released under the **MIT License**.
 ```
 MIT License
 
-Copyright (c) 2026 Doug Pitek
+Copyright (c) 2026 q60-nav-rebuild contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

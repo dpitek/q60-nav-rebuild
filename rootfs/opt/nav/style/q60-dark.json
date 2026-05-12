@@ -2,14 +2,14 @@
   "version": 8,
   "name": "Q60 Dark Nav",
   "metadata": { "q60nav:version": "1.0" },
-  "center": [-78.6382, 35.7796],
+  "center": [-104.9903, 39.7392],
   "zoom": 12,
   "bearing": 0,
   "pitch": 0,
   "sources": {
     "openmaptiles": {
       "type": "vector",
-      "url": "mbtiles:///opt/nav/tiles/nc.mbtiles"
+      "url": "mbtiles:///opt/nav/tiles/co.mbtiles"
     }
   },
   "sprite": "file:///opt/nav/style/sprites",

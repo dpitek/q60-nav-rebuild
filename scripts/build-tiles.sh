@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# build-tiles.sh — Build Valhalla routing tiles from NC OSM PBF
+# build-tiles.sh — Build Valhalla routing tiles from CO OSM PBF
 # Uses the official Valhalla Docker image (no host-tool build required).
 # Output lands at /Users/dpitek/q60-rebuild/output/valhalla-tiles/
 #
@@ -11,7 +11,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-PBF_PATH="/tmp/north-carolina-latest.osm.pbf"
+PBF_PATH="/tmp/colorado-latest.osm.pbf"
 TILES_OUT="$PROJECT_ROOT/output/valhalla-tiles"
 CONFIG_TEMPLATE="$PROJECT_ROOT/output/valhalla-config.json"
 BUILD_CONFIG="/tmp/valhalla-build.json"
@@ -23,9 +23,9 @@ FRESH_PBF=false
 
 # ─── Prerequisites ────────────────────────────────────────────────────────────
 if $FRESH_PBF || [[ ! -f "$PBF_PATH" ]]; then
-    echo "Downloading NC OSM PBF (~400MB)..."
+    echo "Downloading CO OSM PBF (~400MB)..."
     curl -L --progress-bar -o "$PBF_PATH" \
-        "https://download.geofabrik.de/north-america/us/north-carolina-latest.osm.pbf"
+        "https://download.geofabrik.de/north-america/us/colorado-latest.osm.pbf"
 fi
 
 PBF_SIZE=$(stat -f%z "$PBF_PATH" 2>/dev/null || stat -c%s "$PBF_PATH")
@@ -70,12 +70,12 @@ docker run --rm --platform linux/arm64 \
     "$VALHALLA_IMAGE" \
     valhalla_build_admins \
         -c /conf/valhalla.json \
-        /pbf/north-carolina-latest.osm.pbf \
+        /pbf/colorado-latest.osm.pbf \
     2>&1 || echo "WARNING: Admin build failed or not available — continuing"
 
 # ─── Step 2: Build routing tiles ──────────────────────────────────────────────
 echo ""
-echo "--- Step 2/3: Building routing tiles (20-45 min for NC) ---"
+echo "--- Step 2/3: Building routing tiles (20-45 min for CO) ---"
 docker run --rm --platform linux/arm64 \
     -v "$TILES_OUT:/tiles" \
     -v "$(dirname "$PBF_PATH"):/pbf:ro" \
@@ -83,7 +83,7 @@ docker run --rm --platform linux/arm64 \
     "$VALHALLA_IMAGE" \
     valhalla_build_tiles \
         -c /conf/valhalla.json \
-        /pbf/north-carolina-latest.osm.pbf \
+        /pbf/colorado-latest.osm.pbf \
     2>&1
 
 echo ""

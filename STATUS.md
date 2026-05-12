@@ -46,7 +46,7 @@ Last updated: 2026-05-11
 - [x] `valhalla.json` — device config, tiles at /opt/valhalla/tiles
 
 ### Map Data Pipeline
-- [x] NC OSM PBF: `/tmp/north-carolina-latest.osm.pbf` (401MB, 2026-05-10, 55.3M nodes)
+- [x] CO OSM PBF: `/tmp/colorado-latest.osm.pbf` (401MB, 2026-05-10, 55.3M nodes)
 - [x] Valhalla config: `output/valhalla-config.json`
 - [x] Scripts: `build-tiles.sh`, `deploy-tiles.sh`, `build-valhalla-host.sh`
 
@@ -73,7 +73,7 @@ Last updated: 2026-05-11
 |---|---|
 | `q60nav` binary | Qt 6.6 i386 must complete first |
 | MapLibre Qt wrapper (`libqmaplibregl.so`) | Qt 6.6 i386 must complete first |
-| NC routing tiles | Valhalla host build must complete first |
+| CO routing tiles | Valhalla host build must complete first |
 | Valhalla i386 runtime | GEOS built + cmake re-run (script ready, needs container run) |
 | Phase 3: Full NavigationView map | MapLibre Qt wrapper + tiles |
 
@@ -82,7 +82,7 @@ Last updated: 2026-05-11
 ## 📋 Remaining Work
 
 - [ ] Valhalla i386 cross-compile (GEOS now in script as step 7a — re-run build)
-- [ ] Build NC Valhalla routing tiles (~20-40 min after host tools ready)
+- [ ] Build CO Valhalla routing tiles (~20-40 min after host tools ready)
 - [ ] Qt 6.6 i386 → MapLibre Qt wrapper (`libqmaplibregl.so`)
 - [ ] Phase 3: Replace NavigationView map placeholder with MapLibre QQuickItem
 - [ ] J2534 CAN sniff — replace all placeholder CAN IDs in VehicleService.h
@@ -109,7 +109,7 @@ the car until IDs are verified via J2534 capture.**
 | `output/maplibre-i386/lib/` | MapLibre core static lib (20MB) |
 | `output/qt6-i386/` | Qt 6.6 i386 (building…) |
 | `output/valhalla-i386/` | Valhalla i386 runtime (re-run needed) |
-| `output/valhalla-tiles/` | NC routing tiles (building…) |
+| `output/valhalla-tiles/` | CO routing tiles (building…) |
 | `rootfs/` | Slot B rootfs skeleton (ready to package) |
 | `/Volumes/boot 1/elilo.conf` | Live boot config — q60nav entry added |
-| `/tmp/north-carolina-latest.osm.pbf` | NC OSM source (401MB) |
+| `/tmp/colorado-latest.osm.pbf` | CO OSM source (401MB) |

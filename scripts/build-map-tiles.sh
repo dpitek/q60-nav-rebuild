@@ -1,24 +1,24 @@
 #!/usr/bin/env bash
-# build-map-tiles.sh — Build MapLibre vector tiles (nc.mbtiles) from NC OSM PBF
-# Uses tilemaker Docker image. Output: output/vector-tiles/nc.mbtiles
+# build-map-tiles.sh — Build MapLibre vector tiles (co.mbtiles) from CO OSM PBF
+# Uses tilemaker Docker image. Output: output/vector-tiles/co.mbtiles
 #
 # The style file (rootfs/opt/nav/style/q60-dark.json) references:
-#   "url": "mbtiles:///opt/nav/tiles/nc.mbtiles"
+#   "url": "mbtiles:///opt/nav/tiles/co.mbtiles"
 #
-# Zoom range: z0–z14 (sufficient for in-car navigation, ~350-600MB for NC)
+# Zoom range: z0–z14 (sufficient for in-car navigation, ~350-600MB for CO)
 # Format: OpenMapTiles-compatible vector tiles (MVT inside MBTiles SQLite)
 #
 # Usage:
 #   ./build-map-tiles.sh              # build from existing PBF
-#   ./build-map-tiles.sh --fresh-pbf  # re-download NC PBF first
+#   ./build-map-tiles.sh --fresh-pbf  # re-download CO PBF first
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-PBF_PATH="/tmp/north-carolina-latest.osm.pbf"
+PBF_PATH="/tmp/colorado-latest.osm.pbf"
 VECTOR_OUT="$PROJECT_ROOT/output/vector-tiles"
-MBTILES_OUT="$VECTOR_OUT/nc.mbtiles"
+MBTILES_OUT="$VECTOR_OUT/co.mbtiles"
 TILEMAKER_IMAGE="ghcr.io/systemed/tilemaker:master"
 
 FRESH_PBF=false
@@ -26,9 +26,9 @@ FRESH_PBF=false
 
 # ─── Prerequisites ────────────────────────────────────────────────────────────
 if $FRESH_PBF || [[ ! -f "$PBF_PATH" ]]; then
-    echo "Downloading NC OSM PBF (~400MB)..."
+    echo "Downloading CO OSM PBF (~400MB)..."
     curl -L --progress-bar -o "$PBF_PATH" \
-        "https://download.geofabrik.de/north-america/us/north-carolina-latest.osm.pbf"
+        "https://download.geofabrik.de/north-america/us/colorado-latest.osm.pbf"
 fi
 
 # Pull tilemaker image (multi-arch, works on arm64)
@@ -55,9 +55,9 @@ cat > "$TILEMAKER_CFG" << 'ENDCFG'
         "building":         { "minzoom": 14, "maxzoom": 14 }
     },
     "settings": {
-        "name": "Q60Nav NC",
+        "name": "Q60Nav CO",
         "version": "1.0",
-        "description": "North Carolina vector tiles for Q60 navigation",
+        "description": "Colorado vector tiles for Q60 navigation",
         "attribution": "OpenStreetMap contributors",
         "minzoom": 0,
         "maxzoom": 14,
@@ -228,8 +228,8 @@ docker run --rm \
     -v "$(dirname "$PBF_PATH"):/pbf:ro" \
     -v "$VECTOR_OUT:/out" \
     "$TILEMAKER_IMAGE" \
-    --input /pbf/north-carolina-latest.osm.pbf \
-    --output /out/nc.mbtiles \
+    --input /pbf/colorado-latest.osm.pbf \
+    --output /out/co.mbtiles \
     --config /out/tilemaker-config.json \
     --process /out/process.lua \
     --bbox "-84.3218,33.7529,-75.4601,36.5881" \
@@ -240,7 +240,7 @@ echo "=== Vector tile build complete: $(date) ==="
 if [[ -f "$MBTILES_OUT" ]]; then
     echo "  Output: $MBTILES_OUT ($(du -sh "$MBTILES_OUT" | cut -f1))"
     echo ""
-    echo "Next: copy nc.mbtiles to rootfs/opt/nav/tiles/ then run package-rootfs.sh"
+    echo "Next: copy co.mbtiles to rootfs/opt/nav/tiles/ then run package-rootfs.sh"
 else
     echo "ERROR: $MBTILES_OUT not created!"
     exit 1
