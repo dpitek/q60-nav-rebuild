@@ -48,14 +48,12 @@ Item {
                 }
             }
 
-            // Driver door (left-front) — Q60: door open = VehicleService missing this...
-            // CAN BCM exposes door state via CAN_BODY_STATUS. For now bind to parkingBrake
-            // as a placeholder; the real implementation binds to a door state property
-            // once it's exposed by VehicleService. Safe default: show closed.
-            property bool driverDoorOpen:    false
-            property bool passDoorOpen:      false
-            property bool driverRearOpen:    false
-            property bool passRearOpen:      false
+            // Door states — bound to VehicleService (parsed from CAN_DOOR_STATUS 0x358)
+            property bool driverDoorOpen:    VehicleService.doorDriver
+            property bool passDoorOpen:      VehicleService.doorPassenger
+            property bool driverRearOpen:    VehicleService.doorRearLeft
+            property bool passRearOpen:      VehicleService.doorRearRight
+            property bool trunkIsOpen:       VehicleService.trunkOpen
 
             // Left-front door
             Rectangle {
@@ -114,6 +112,21 @@ Item {
                     text: "RR"
                     color: doorDiagram.passRearOpen ? "#FFFFFF" : "#8E8E93"
                     font { pixelSize: 9; weight: Font.Bold }
+                }
+            }
+
+            // Trunk indicator (below rear of car)
+            Rectangle {
+                anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 16 }
+                width: 60; height: 14; radius: 3
+                color: doorDiagram.trunkIsOpen ? "#FF453A" : "#1C1C1E"
+                border { color: doorDiagram.trunkIsOpen ? "#FF453A" : "#2C2C2E"; width: 1 }
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "TRUNK"
+                    color: doorDiagram.trunkIsOpen ? "#FFFFFF" : "#3A3A3C"
+                    font { pixelSize: 8; weight: Font.Bold }
                 }
             }
 
@@ -268,11 +281,21 @@ Item {
         Column {
             spacing: 8
 
-            Text {
+            Row {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: "ENGINE TEMP"
-                color: "#8E8E93"
-                font { family: "Roboto"; pixelSize: 10; capitalization: Font.AllUppercase; letterSpacing: 1 }
+                spacing: 6
+                Text {
+                    text: "ENGINE TEMP"
+                    color: "#8E8E93"
+                    font { family: "Roboto"; pixelSize: 10; capitalization: Font.AllUppercase; letterSpacing: 1 }
+                }
+                Text {
+                    text: VehicleService.coolantTemp > 32 ? Math.round(VehicleService.coolantTemp) + "°F" : "—"
+                    color: VehicleService.coolantTemp > 230 ? "#FF453A"
+                          : VehicleService.coolantTemp > 210 ? "#FF9F0A"
+                                                             : "#8E8E93"
+                    font { family: "Roboto"; pixelSize: 10; weight: Font.SemiBold }
+                }
             }
 
             Item {
@@ -283,9 +306,9 @@ Item {
                     color: "#2C2C2E"
                 }
 
-                // Coolant temp derived from RPM as proxy (no coolant property exposed yet).
-                // Treat 0 RPM = cold (0.0), normal operating = 0.7, overheating = 1.0.
-                property real coolantNorm: Math.min(1.0, Math.max(0.0, VehicleService.rpm / 6000.0))
+                // Coolant temp from VehicleService.coolantTemp (°F, parsed from CAN 0x551)
+                // Scale: 100°F = cold (0.0), 210°F = normal (0.69), 260°F = danger (1.0)
+                property real coolantNorm: Math.min(1.0, Math.max(0.0, (VehicleService.coolantTemp - 100.0) / 160.0))
 
                 Rectangle {
                     width: parent.parent.children[1].coolantNorm * 180

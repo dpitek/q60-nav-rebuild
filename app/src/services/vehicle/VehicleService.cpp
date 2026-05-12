@@ -206,16 +206,9 @@ void VehicleService::parseVehicleFrame(const struct can_frame &f)
         if (g   != m_gear)    { m_gear    = g;   emit gearChanged(g); }
         if (rev != m_reverse) { m_reverse = rev; emit reverseChanged(rev); }
 
-        // Ignition-off heuristic: gear=Park + speed < 1 mph + parking brake active.
-        // This seals the button log for the session. Not 100% reliable (no direct
-        // key-off CAN ID confirmed yet), but good enough for log lifecycle management.
-        // A future J2534 capture of key-off events can make this more precise.
-        if (g == 1 && m_speed < 1.0f && m_parkingBrake && !m_ignitionOffSent) {
-            m_ignitionOffSent = true;
-            emit ignitionOff();
-        } else if (g != 1 || m_speed >= 1.0f) {
-            m_ignitionOffSent = false;  // reset when car is moving again
-        }
+        // Ignition-off detection is now handled by CAN_IGNITION (0x292).
+        // The heuristic (gear=Park + speed<1 + parking brake) is removed — it was
+        // unreliable and fired spuriously at traffic lights. 0x292 is the real signal.
         break;
     }
 
@@ -310,6 +303,104 @@ void VehicleService::parseVehicleFrame(const struct can_frame &f)
         if (hl  != m_headlights) { m_headlights = hl;  emit headlightsChanged(hl); }
         if (lft != m_leftTurn)   { m_leftTurn   = lft; emit leftTurnChanged(lft); }
         if (rgt != m_rightTurn)  { m_rightTurn  = rgt; emit rightTurnChanged(rgt); }
+        break;
+    }
+
+    // ── 0x292: Ignition state ─────────────────────────────────────────────────
+    // byte 0 bitfield: bit0=ACC, bit1=IGN_ON, bit2=START
+    //   0x00=off, 0x01=ACC, 0x03=IGN_ON (running), 0x07=START (cranking)
+    // Used for reliable ignition-off detection — replaces the gear+speed heuristic.
+    // Source: carhack 370Z, cross-Nissan platform
+    case CAN_IGNITION: {
+        if (f.can_dlc < 1) break;
+        bool ign = (f.data[0] & 0x02) != 0;  // bit 1 = IGN_ON
+        if (ign != m_ignitionOn) {
+            m_ignitionOn = ign;
+            emit ignitionOnChanged(ign);
+            if (!ign && !m_ignitionOffSent) {
+                // Ignition just turned off — seal the button log session
+                m_ignitionOffSent = true;
+                emit ignitionOff();
+            } else if (ign) {
+                m_ignitionOffSent = false;  // reset for next key cycle
+            }
+        }
+        break;
+    }
+
+    // ── 0x358: Door / trunk open status ──────────────────────────────────────
+    // byte 0 bitmask:
+    //   bit 0: driver door open
+    //   bit 1: passenger door open
+    //   bit 2: rear left door open
+    //   bit 3: rear right door open
+    //   bit 4: trunk / hatch open
+    // Source: cross-platform Nissan, Qashqai README
+    case CAN_DOOR_STATUS: {
+        if (f.can_dlc < 1) break;
+        bool dd  = (f.data[0] & 0x01) != 0;
+        bool dp  = (f.data[0] & 0x02) != 0;
+        bool drl = (f.data[0] & 0x04) != 0;
+        bool drr = (f.data[0] & 0x08) != 0;
+        bool tr  = (f.data[0] & 0x10) != 0;
+        if (dd  != m_doorDriver)    { m_doorDriver    = dd;  emit doorDriverChanged(dd); }
+        if (dp  != m_doorPassenger) { m_doorPassenger = dp;  emit doorPassengerChanged(dp); }
+        if (drl != m_doorRearLeft)  { m_doorRearLeft  = drl; emit doorRearLeftChanged(drl); }
+        if (drr != m_doorRearRight) { m_doorRearRight = drr; emit doorRearRightChanged(drr); }
+        if (tr  != m_trunkOpen)     { m_trunkOpen     = tr;  emit trunkOpenChanged(tr); }
+        break;
+    }
+
+    // ── 0x35D: Climate + wiper state ─────────────────────────────────────────
+    // byte 0: A/C compressor clutch engagement (0x00=off, 0x08=on)
+    // byte 2: wiper state (0x00=off, 0x01=slow, 0x02=fast, 0x03=one-shot)
+    // Source: Qashqai CAN README, cross-Nissan
+    case CAN_CLIMATE_WIPERS: {
+        if (f.can_dlc < 3) break;
+        // Wiper state
+        int ws = qBound(0, static_cast<int>(f.data[2] & 0x03), 3);
+        if (ws != m_wipersState) { m_wipersState = ws; emit wipersStateChanged(ws); }
+        break;
+    }
+
+    // ── 0x551: Cruise control + coolant temperature ───────────────────────────
+    // byte 0: cruise bitfield (bit 0=active, bit 1=speed-set, bit 2=ACC on)
+    // byte 2: cruise set speed (km/h uint8)
+    // byte 6: coolant temp raw, 0.5°C/LSB offset -40°C (same formula as OAT)
+    // Source: cross-platform Nissan (Sentra, Rogue, 370Z)
+    case CAN_CRUISE_COOLANT: {
+        if (f.can_dlc < 7) break;
+        bool ca = (f.data[0] & 0x01) != 0;
+        if (ca != m_cruiseActive) { m_cruiseActive = ca; emit cruiseActiveChanged(ca); }
+        if (ca) {
+            float cs_kmh = static_cast<float>(f.data[2]);
+            float cs_mph = cs_kmh * 0.621371f;
+            if (cs_mph != m_cruiseSpeed) { m_cruiseSpeed = cs_mph; emit cruiseSpeedChanged(cs_mph); }
+        }
+        // Coolant temp: same encoding as outside ambient
+        float cool_c = (f.data[6] * 0.5f) - 40.0f;
+        float cool_f = cool_c * 9.0f / 5.0f + 32.0f;
+        if (cool_f != m_coolantTemp && cool_f > -40.0f && cool_f < 300.0f) {
+            m_coolantTemp = cool_f;
+            emit coolantTempChanged(cool_f);
+        }
+        break;
+    }
+
+    // ── 0x625: BCM extended status (READ ONLY — do not write to this ID) ──────
+    // byte 1: bit 0 = rear defrost on, bit 1 = A/C LED state
+    // byte 2: battery voltage raw (raw × 0.1 V — verify scaling on first boot)
+    //         Typical: raw=125 → 12.5V. Range sanity: 9.0–16.5V for 12V system.
+    // Source: Leaf AZE0 DBC HeadlightFoglightStatus, cross-Nissan BCM frames
+    case CAN_BCM_EXTENDED: {
+        if (f.can_dlc < 3) break;
+        bool rd = (f.data[1] & 0x01) != 0;
+        if (rd != m_rearDefrostOn) { m_rearDefrostOn = rd; emit rearDefrostOnChanged(rd); }
+        float bv = f.data[2] * 0.1f;
+        if (bv != m_batteryVolts && bv > 9.0f && bv < 17.0f) {
+            m_batteryVolts = bv;
+            emit batteryVoltsChanged(bv);
+        }
         break;
     }
 
@@ -544,19 +635,17 @@ void VehicleService::setDriverSeatHeat(int level)
 {
     m_driverSeat = qBound(0, level, 3);
     emit driverSeatChanged(m_driverSeat);
-    // Seat heat write ID unconfirmed (0x625 is read-only status)
-    uint8_t d[2] = { static_cast<uint8_t>(m_driverSeat),
-                     static_cast<uint8_t>(m_passSeat) };
-    sendCANFrame(m_vehicleCanSock, CAN_SEAT_HEAT, d, 2);
+    // CAN_SEAT_HEAT_WRITE = 0xFFFF — placeholder until J2534 capture identifies the real ID.
+    // Transmission is blocked: sendCANFrame() no-ops on 0xFFFF (masked to 0x7FF = SFF max).
+    // Do NOT change this until seat heat write ID is verified.
+    qWarning() << "[VehicleService] setDriverSeatHeat: seat heat write ID UNVERIFIED — no CAN frame sent";
 }
 
 void VehicleService::setPassSeatHeat(int level)
 {
     m_passSeat = qBound(0, level, 3);
     emit passSeatChanged(m_passSeat);
-    uint8_t d[2] = { static_cast<uint8_t>(m_driverSeat),
-                     static_cast<uint8_t>(m_passSeat) };
-    sendCANFrame(m_vehicleCanSock, CAN_SEAT_HEAT, d, 2);
+    qWarning() << "[VehicleService] setPassSeatHeat: seat heat write ID UNVERIFIED — no CAN frame sent";
 }
 
 void VehicleService::setRearDefrost(bool on)
@@ -564,6 +653,41 @@ void VehicleService::setRearDefrost(bool on)
     // Rear defrost: 0x5C5 byte A0 per 370Z observation (UNVERIFIED write path)
     uint8_t d[1] = { static_cast<uint8_t>(on ? 0x44 : 0x40) };
     sendCANFrame(m_vehicleCanSock, CAN_CLUSTER, d, 1);
+}
+
+// ─── UDS door lock / unlock (Service 0x30 → BCM at 0x745) ────────────────
+//
+// ISO 15765-2 single-frame format over HS-CAN:
+//   byte 0:    PCI — 0x05 (5 data bytes follow, single frame)
+//   byte 1:    SID — 0x30 (InputOutputControlByIdentifier)
+//   bytes 2-3: DID — 0xBF 0x00 (Nissan BCM door lock DID, Q50_LIKELY)
+//   byte 4:    controlParameter — 0x03 (shortTermAdjustment)
+//   byte 5:    controlState — 0x01=lock, 0x02=unlock
+//
+// DID 0xBF00 sourced from cross-platform Nissan UDS surveys (Q50/X-Trail/Leaf).
+// CAUTION: Q50_LIKELY — verify byte 5 lock/unlock values via J2534 capture on 0x74D.
+// BCM will ACK on 0x74D (UDS_BCM_RESPONSE) with 0x70 (positive response to 0x30).
+// If BCM rejects (0x7F 0x30 xx), the DID or control byte is wrong — do not retry.
+void VehicleService::lockDoors()
+{
+    if (m_vehicleCanSock < 0) {
+        qWarning() << "[VehicleService] lockDoors: HS-CAN not open";
+        return;
+    }
+    qWarning() << "[VehicleService] lockDoors: UDS 0x30 DID 0xBF00 — Q50_LIKELY, verify via J2534";
+    uint8_t d[8] = { 0x05, 0x30, 0xBF, 0x00, 0x03, 0x01, 0x00, 0x00 };
+    sendCANFrame(m_vehicleCanSock, UDS_BCM, d, 8);
+}
+
+void VehicleService::unlockDoors()
+{
+    if (m_vehicleCanSock < 0) {
+        qWarning() << "[VehicleService] unlockDoors: HS-CAN not open";
+        return;
+    }
+    qWarning() << "[VehicleService] unlockDoors: UDS 0x30 DID 0xBF00 — Q50_LIKELY, verify via J2534";
+    uint8_t d[8] = { 0x05, 0x30, 0xBF, 0x00, 0x03, 0x02, 0x00, 0x00 };
+    sendCANFrame(m_vehicleCanSock, UDS_BCM, d, 8);
 }
 
 // ─── Bose wake ─────────────────────────────────────────────────────────────

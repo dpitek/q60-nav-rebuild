@@ -170,6 +170,23 @@ docker run --rm --privileged \
             echo '  Qt6 libs + plugins copied'
         fi
 
+        # ── libsqlite3 for geocoder-server (dynamically linked) ───────────────
+        # geocoder-server links against libsqlite3.so.0 at runtime.
+        # Pull from the container's i386 multilib install if not already in rootfs.
+        SQLITE_SO=\$(find /usr/lib/i386-linux-gnu /lib/i386-linux-gnu \
+            -name 'libsqlite3.so.0*' -not -name '*.debug' 2>/dev/null | head -1)
+        if [ -n "\$SQLITE_SO" ]; then
+            mkdir -p \$MOUNT/usr/lib/i386-linux-gnu
+            cp -n "\$SQLITE_SO" \$MOUNT/usr/lib/i386-linux-gnu/
+            # Ensure the unversioned symlink exists for ld.so
+            SQLITE_BASE=\$(basename "\$SQLITE_SO")
+            ln -sf "\$SQLITE_BASE" \$MOUNT/usr/lib/i386-linux-gnu/libsqlite3.so.0 2>/dev/null || true
+            echo '  libsqlite3.so.0 copied for geocoder-server'
+        else
+            echo '  WARNING: libsqlite3.so.0 not found in container — geocoder may fail at runtime'
+            echo '           Run: apt-get install libsqlite3-0:i386 in the toolchain container'
+        fi
+
         # ── Essential device nodes ─────────────────────────────────────────
         mkdir -p \$MOUNT/dev
         mknod \$MOUNT/dev/console c 5 1 2>/dev/null || true

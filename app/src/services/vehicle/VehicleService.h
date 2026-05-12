@@ -31,6 +31,23 @@ class VehicleService : public QObject {
     Q_PROPERTY(bool  leftTurn      READ leftTurn      NOTIFY leftTurnChanged)
     Q_PROPERTY(bool  rightTurn     READ rightTurn     NOTIFY rightTurnChanged)
     Q_PROPERTY(bool  parkingBrake  READ parkingBrake  NOTIFY parkingBrakeChanged)
+    // Ignition / power state (0x292)
+    Q_PROPERTY(bool  ignitionOn    READ ignitionOn    NOTIFY ignitionOnChanged)
+    // Doors / trunk (0x358)
+    Q_PROPERTY(bool  doorDriver    READ doorDriver    NOTIFY doorDriverChanged)
+    Q_PROPERTY(bool  doorPassenger READ doorPassenger NOTIFY doorPassengerChanged)
+    Q_PROPERTY(bool  doorRearLeft  READ doorRearLeft  NOTIFY doorRearLeftChanged)
+    Q_PROPERTY(bool  doorRearRight READ doorRearRight NOTIFY doorRearRightChanged)
+    Q_PROPERTY(bool  trunkOpen     READ trunkOpen     NOTIFY trunkOpenChanged)
+    // Powertrain / climate extended (0x551 + 0x625)
+    Q_PROPERTY(float coolantTemp   READ coolantTemp   NOTIFY coolantTempChanged)
+    Q_PROPERTY(float batteryVolts  READ batteryVolts  NOTIFY batteryVoltsChanged)
+    Q_PROPERTY(bool  rearDefrostOn READ rearDefrostOn NOTIFY rearDefrostOnChanged)
+    // Cruise control (0x551)
+    Q_PROPERTY(bool  cruiseActive  READ cruiseActive  NOTIFY cruiseActiveChanged)
+    Q_PROPERTY(float cruiseSpeed   READ cruiseSpeed   NOTIFY cruiseSpeedChanged)
+    // Wipers (0x35D / 0x625)
+    Q_PROPERTY(int   wipersState   READ wipersState   NOTIFY wipersStateChanged)
 
 public:
     explicit VehicleService(QObject *parent = nullptr);
@@ -60,6 +77,23 @@ public:
     bool  leftTurn()      const { return m_leftTurn; }
     bool  rightTurn()     const { return m_rightTurn; }
     bool  parkingBrake()  const { return m_parkingBrake; }
+    // Ignition / power
+    bool  ignitionOn()    const { return m_ignitionOn; }
+    // Doors / trunk
+    bool  doorDriver()    const { return m_doorDriver; }
+    bool  doorPassenger() const { return m_doorPassenger; }
+    bool  doorRearLeft()  const { return m_doorRearLeft; }
+    bool  doorRearRight() const { return m_doorRearRight; }
+    bool  trunkOpen()     const { return m_trunkOpen; }
+    // Powertrain extended
+    float coolantTemp()   const { return m_coolantTemp; }
+    float batteryVolts()  const { return m_batteryVolts; }
+    bool  rearDefrostOn() const { return m_rearDefrostOn; }
+    // Cruise
+    bool  cruiseActive()  const { return m_cruiseActive; }
+    float cruiseSpeed()   const { return m_cruiseSpeed; }
+    // Wipers (0=off, 1=slow, 2=fast, 3=one-shot)
+    int   wipersState()   const { return m_wipersState; }
 
 public slots:
     // Climate writes — CAUTION: Q50/Q60 HVAC write path not publicly documented.
@@ -76,6 +110,11 @@ public slots:
     void setRearDefrost(bool on);
     // Bose wake
     void wakeBosse();
+    // Door lock/unlock via UDS Service 0x30 on BCM (0x745)
+    // CAUTION: Data identifier 0xBF00 is Q50_LIKELY — verify via J2534 before use.
+    // Single-frame UDS request; BCM must be on the active CAN bus (can0 HS-CAN).
+    Q_INVOKABLE void lockDoors();
+    Q_INVOKABLE void unlockDoors();
 
 signals:
     void driverTempChanged(float);
@@ -98,6 +137,18 @@ signals:
     void leftTurnChanged(bool);
     void rightTurnChanged(bool);
     void parkingBrakeChanged(bool);
+    void ignitionOnChanged(bool);
+    void doorDriverChanged(bool);
+    void doorPassengerChanged(bool);
+    void doorRearLeftChanged(bool);
+    void doorRearRightChanged(bool);
+    void trunkOpenChanged(bool);
+    void coolantTempChanged(float);
+    void batteryVoltsChanged(float);
+    void rearDefrostOnChanged(bool);
+    void cruiseActiveChanged(bool);
+    void cruiseSpeedChanged(float);
+    void wipersStateChanged(int);
     // Steering wheel button events (fired from AV-CAN 0x681)
     void volUp();
     void volDown();
@@ -156,6 +207,18 @@ private:
     bool  m_leftTurn      = false;
     bool  m_rightTurn     = false;
     bool  m_parkingBrake  = false;
+    bool  m_ignitionOn    = false;
+    bool  m_doorDriver    = false;
+    bool  m_doorPassenger = false;
+    bool  m_doorRearLeft  = false;
+    bool  m_doorRearRight = false;
+    bool  m_trunkOpen     = false;
+    float m_coolantTemp   = 0.0f;
+    float m_batteryVolts  = 0.0f;
+    bool  m_rearDefrostOn = false;
+    bool  m_cruiseActive  = false;
+    float m_cruiseSpeed   = 0.0f;
+    int   m_wipersState   = 0;
 
     // ─── CAN IDs ─────────────────────────────────────────────────────────────
     // Sources: opendbc nissan_common.dbc, opendbc X-Trail/Xterra, carhack 370Z,
@@ -268,9 +331,61 @@ private:
     // Remove once all write methods are migrated to 0x540/0x541.
     static constexpr canid_t CAN_HVAC_CTRL       = CAN_HVAC_WRITE;
 
-    // Seat heat — 0x625 is USM_GeneralStatus (read). Write target UNVERIFIED.
-    // Source: Leaf AZE0 DBC (HeadlightFoglightStatus also on this ID)
-    static constexpr canid_t CAN_SEAT_HEAT       = 0x625;  // UNVERIFIED WRITE PATH
+    // ── Newly confirmed IDs (2026-05 CAN research) ───────────────────────────
+    // Source: balrog-kun Qashqai CAN README, carhack 370Z/Sentra, cross-Nissan platform
+    //         opendbc nissan_common.dbc, InfinitiQ50Forum CAN thread
+
+    // Ignition state bitfield — byte 0: bit0=ACC, bit1=IGN_ON, bit2=START
+    //   0x00=off, 0x01=ACC, 0x03=IGN_ON(run), 0x07=START(cranking)
+    //   Used for reliable ignition-off detection (replaces gear+speed heuristic).
+    // Source: carhack 370Z, cross-Nissan platform
+    static constexpr canid_t CAN_IGNITION        = 0x292;  // Q50_LIKELY
+
+    // Door status + blower fan request
+    //   byte 0: door open bitmask
+    //     bit 0: driver door open
+    //     bit 1: passenger door open
+    //     bit 2: rear left door open
+    //     bit 3: rear right door open
+    //     bit 4: trunk/hatch open
+    //   byte 2: blower fan request level (0=off, 1-7=speed)
+    // Source: cross-platform Nissan, Qashqai README
+    static constexpr canid_t CAN_DOOR_STATUS     = 0x358;  // Q50_LIKELY
+
+    // Climate operational state + wipers
+    //   byte 0: A/C compressor clutch engagement (0x00=off, 0x08=on)
+    //   byte 2: wiper state (0x00=off, 0x01=slow, 0x02=fast, 0x03=one-shot)
+    // Source: Qashqai CAN README, cross-Nissan
+    static constexpr canid_t CAN_CLIMATE_WIPERS  = 0x35D;  // Q50_LIKELY
+
+    // Cruise control + coolant temperature
+    //   byte 0: cruise bitfield (bit 0=active, bit 1=set, bit 2=acc_on)
+    //   byte 2: cruise set speed (km/h, uint8 — display in mph)
+    //   byte 6: coolant temp raw, 0.5°C/LSB, offset -40°C (same formula as OAT)
+    // Source: cross-platform Nissan (Sentra, Rogue, 370Z patterns)
+    static constexpr canid_t CAN_CRUISE_COOLANT  = 0x551;  // Q50_LIKELY
+
+    // BCM extended status (light feedback, battery, defrost)
+    //   byte 0: headlight/foglight bitmask (bit 0=fog, bit 1=high-beam)
+    //   byte 1: rear defrost on (bit 0), A/C LED (bit 1)
+    //   byte 2: battery voltage raw (raw × 0.1 + 0.0 → check scaling on first boot)
+    //   byte 4: wiper high-speed state
+    // Source: Leaf AZE0 DBC HeadlightFoglightStatus + cross-Nissan BCM frames
+    // NOTE: Previously mislabeled CAN_SEAT_HEAT — 0x625 is a STATUS read frame.
+    //       Seat heat WRITE path remains UNVERIFIED. Do not write to 0x625.
+    static constexpr canid_t CAN_BCM_EXTENDED    = 0x625;  // Q50_LIKELY (READ ONLY)
+
+    // Seat heat write — no confirmed public ID for Q50/Q60.
+    // BLOCKED until J2534 capture. Do not transmit.
+    static constexpr canid_t CAN_SEAT_HEAT_WRITE = 0xFFFF; // UNVERIFIED PLACEHOLDER
+
+    // ── UDS diagnostic addresses (HS-CAN) ────────────────────────────────────
+    // Standard Nissan/Infiniti UDS addressing pattern — confirmed cross-platform.
+    // Service 0x30 (InputOutputControlByID) enables BCM I/O commands.
+    // Data identifiers for door lock (0xBF00) are Q50_LIKELY — verify via J2534.
+    static constexpr canid_t UDS_COMBINATION_METER = 0x743; // CONFIRMED cross-platform
+    static constexpr canid_t UDS_BCM               = 0x745; // CONFIRMED cross-platform
+    static constexpr canid_t UDS_BCM_RESPONSE       = 0x74D; // CONFIRMED (request+8)
 
     // ── AV-CAN (can1, 500 kbps, isolated infotainment bus) ────────────────
     // Steering wheel + panel buttons — byte 0 = status, byte 4 = button code:
