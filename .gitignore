@@ -75,3 +75,10 @@ build.ninja
 .ninja_deps
 .ninja_log
 install_manifest.txt
+
+# JRE extracted by install-jre-rootfs.sh — large binary tree, rebuilt by script
+rootfs/usr/
+rootfs/etc/java-11-openjdk/
+
+# Mesa EGL/swrast extracted by install-mesa-rootfs.sh — large binaries, rebuilt by script
+rootfs/opt/nav/lib/

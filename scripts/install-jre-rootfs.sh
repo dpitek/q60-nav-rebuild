@@ -41,8 +41,9 @@ JRE_PKG="openjdk-11-jre-headless"
 JRE_ARCH="i386"
 
 # Dependency packages (runtime shared libs required by the JVM)
-# libz1 provides libz.so.1; libstdc++6 provides libstdc++.so.6
-DEP_PKGS="libz1 libstdc++6"
+# zlib1g provides libz.so.1; libstdc++6 provides libstdc++.so.6
+# NOTE: Debian Bullseye uses zlib1g (not libz1 which was removed after Buster)
+DEP_PKGS="zlib1g libstdc++6"
 
 JVM_DIR="$ROOTFS/usr/lib/jvm/java-11-openjdk-i386"
 JAVA_LINK="$ROOTFS/usr/bin/java"
@@ -61,7 +62,7 @@ die() {
     echo "     and download the file matching:"
     echo "       openjdk-11-jre-headless_11.*_i386.deb"
     echo "  2. Also download (i386 versions):"
-    echo "       libz1       from https://ftp.debian.org/debian/pool/main/z/zlib/"
+    echo "       zlib1g      from https://ftp.debian.org/debian/pool/main/z/zlib/"
     echo "       libstdc++6  from https://ftp.debian.org/debian/pool/main/g/gcc-10/"
     echo "  3. Place them in /tmp/ as:"
     echo "       /tmp/jre-i386.deb"
@@ -152,14 +153,15 @@ docker run --rm \
                 || { echo 'ERROR: Download failed. See manual instructions above.'; exit 1; }
         fi
 
-        # ── Download libz1 ────────────────────────────────────────────────────
+        # ── Download zlib1g (provides libz.so.1) ─────────────────────────────
+        # Debian Bullseye replaced libz1 with zlib1g
         if [ -f \"\$LIBZ_DEB\" ]; then
-            echo '[install-jre] Using pre-downloaded libz1 .deb'
+            echo '[install-jre] Using pre-downloaded zlib1g .deb'
         else
-            LIBZ_URL=\$(resolve_deb_url 'libz1')
+            LIBZ_URL=\$(resolve_deb_url 'zlib1g')
             echo '[install-jre] Downloading: '\$LIBZ_URL
             curl -fsSL --progress-bar -o \"\$LIBZ_DEB\" \"\$LIBZ_URL\" \
-                || echo '[install-jre] WARNING: libz1 download failed — check manually'
+                || echo '[install-jre] WARNING: zlib1g download failed — check manually'
         fi
 
         # ── Download libstdc++6 ───────────────────────────────────────────────
@@ -180,7 +182,7 @@ docker run --rm \
             echo '[install-jre] Extracting libz1 into rootfs...'
             dpkg-deb --extract \"\$LIBZ_DEB\" \"\$ROOTFS\"
         else
-            echo '[install-jre] WARNING: libz1 not available — JVM may fail to start'
+            echo '[install-jre] WARNING: zlib1g not available — JVM may fail to start'
             echo '             Expected at: rootfs/lib/i386-linux-gnu/libz.so.1'
         fi
 
@@ -221,7 +223,7 @@ log ""
 log "Verification:"
 log "  JVM dir:    $JVM_DIR"
 log "  Symlink:    $JAVA_LINK -> /usr/lib/jvm/java-11-openjdk-i386/bin/java"
-log "  libz:       $ROOTFS/lib/i386-linux-gnu/libz.so.1"
+log "  libz:       $ROOTFS/lib/i386-linux-gnu/libz.so.1  (from zlib1g)"
 log "  libstdc++:  $ROOTFS/usr/lib/i386-linux-gnu/libstdc++.so.6"
 log ""
 log "Run scripts/package-rootfs.sh to include it in the rootfs image."

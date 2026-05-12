@@ -76,10 +76,10 @@ start)
         exit 0
     fi
 
-    "$JAVA" -Xms128m -Xmx512m -jar "$JAR" \
-        --listen-ip "$LISTEN_IP" \
-        --listen-port "$LISTEN_PORT" \
-        --data-dir "$DATA_DIR" \
+    # Photon v1.1: requires 'serve' subcommand; single-dash flags; no -listen-ip (binds 0.0.0.0)
+    "$JAVA" -Xms128m -Xmx512m -jar "$JAR" serve \
+        -listen-port "$LISTEN_PORT" \
+        -data-dir "$DATA_DIR" \
         >> "$LOG" 2>&1 &
 
     echo $! > "$PIDFILE"

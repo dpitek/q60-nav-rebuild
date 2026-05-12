@@ -5,14 +5,20 @@
 # Without these, MapLibreItem falls back to placeholder grid at runtime.
 #
 # Packages extracted:
-#   libegl-mesa0:i386      — libEGL.so.1 (Mesa EGL implementation)
+#   libegl-mesa0:i386      — libEGL_mesa.so.0 (Mesa EGL backend; GLVND split naming)
 #   libgl1-mesa-dri:i386   — swrast_dri.so (software rasterizer DRI driver)
 #   libgbm1:i386           — GBM (Generic Buffer Manager, needed by EGL)
 #   libglapi-mesa:i386     — Mesa GL dispatch table
 #
 # On device, these land at:
-#   /opt/nav/lib/libEGL.so.1         → symlinked as libEGL.so
-#   /opt/nav/lib/dri/swrast_dri.so  — loaded via LIBGL_DRIVERS_PATH
+#   /opt/nav/lib/libEGL_mesa.so.0.0.0  — real library
+#   /opt/nav/lib/libEGL.so.1           → libEGL_mesa.so.0.0.0 (bypass GLVND on embedded)
+#   /opt/nav/lib/libEGL.so             → libEGL.so.1
+#   /opt/nav/lib/dri/swrast_dri.so     — loaded via LIBGL_DRIVERS_PATH
+#
+# NOTE: Ubuntu/Debian Bullseye+ uses GLVND split: libegl-mesa0 ships libEGL_mesa.so.0
+#       (not libEGL.so.1). On a minimal embedded system without the GLVND loader,
+#       we symlink libEGL.so.1 → libEGL_mesa.so.0.0.0 directly.
 #
 # Usage: ./scripts/install-mesa-rootfs.sh
 # Idempotent — skips if swrast_dri.so already present.
@@ -78,7 +84,16 @@ docker run --rm \
         # (avoids polluting system lib paths on the device)
         RLIB=/build/rootfs/usr/lib/i386-linux-gnu
 
-        if [ -f \"\$RLIB/libEGL.so.1\" ]; then
+        # GLVND split: libegl-mesa0 ships libEGL_mesa.so.0.0.0, not libEGL.so.1
+        # On embedded (no GLVND loader), symlink directly: libEGL.so.1 → libEGL_mesa.so.0.0.0
+        REGL=\$(find /build/rootfs/usr -name 'libEGL_mesa.so.0.0.0' -type f 2>/dev/null | head -1)
+        if [ -n \"\$REGL\" ]; then
+            cp \"\$REGL\" /build/rootfs/opt/nav/lib/libEGL_mesa.so.0.0.0
+            ln -sf libEGL_mesa.so.0.0.0 /build/rootfs/opt/nav/lib/libEGL_mesa.so.0
+            ln -sf libEGL_mesa.so.0.0.0 /build/rootfs/opt/nav/lib/libEGL.so.1
+            ln -sf libEGL.so.1          /build/rootfs/opt/nav/lib/libEGL.so
+            echo '  libEGL_mesa.so.0.0.0 + symlinks -> /opt/nav/lib/'
+        elif [ -f \"\$RLIB/libEGL.so.1\" ]; then
             cp \"\$RLIB/libEGL.so.1\" /build/rootfs/opt/nav/lib/
             ln -sf libEGL.so.1 /build/rootfs/opt/nav/lib/libEGL.so
             echo '  libEGL.so.1 -> /opt/nav/lib/'

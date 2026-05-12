@@ -89,15 +89,58 @@ Last updated: 2026-05-12
 
 ### Software
 1. **Phase 3 — EGL wiring**: Implement `OffscreenBackend::activate()` in `MapLibreItem.cpp` — create EGL pbuffer backed by Mesa swrast, wire `readPixels()` into frame callback. Rebuild with `-DWITH_MAPLIBRE=ON`.
-2. **Photon data**: Run `scripts/download-photon.sh` on Mac to index NC OSM → `output/photon-data/`. Repackage rootfs.
-3. **Java runtime**: Install `openjdk-11-jre-headless:i386` into rootfs for Photon. See `rootfs/etc/profile.d/java-todo.txt`.
-4. **Bose wake frame**: Sniff AV-CAN at Bose amp connector (trunk). `CAN_BOSE_WAKE = 0x3B3` is a placeholder — see wakeBosse() in VehicleService.cpp.
+2. **Geocoder (Photon i386 blocker)**: Photon v1.1 requires Java 21+. Java 21+ has **no i386/Linux builds** — OpenJDK dropped 32-bit x86 after Java 8. Photon will fail silently; SearchService handles gracefully. Two options:
+   - **Option A**: Download Photon 0.4.x JAR (Java 11 compatible, Elasticsearch 7) + rebuild DB with old import format
+   - **Option B**: Replace with lightweight C++ SQLite geocoder (custom, ~500MB NC data as FTS5 table) — eliminates JVM entirely; 10-50ms queries; fits the embedded profile far better
+   - **Recommendation**: Option B — JVM on a 32-bit Atom for OpenSearch is a bad fit regardless of version
+3. **Bose wake frame**: Sniff AV-CAN at Bose amp connector (trunk). `CAN_BOSE_WAKE = 0x3B3` is a placeholder — see wakeBosse() in VehicleService.cpp.
 
 ### Hardware (boot test prerequisites)
 5. **[hardware]** Physical boot test — `deploy-to-image.sh --test` (write kernel + rootfs, flip elilo.conf)
 6. **[hardware]** J2534 CAN sniff — verify all `CAN_*` IDs, especially HVAC write (0x540/0x541) and body status (0x60D)
 7. **[hardware]** GPS UART probe — confirm ttyS device for GPSD
 8. **[hardware]** Weston LVDS — dynamic detection will run at boot; verify connector names in `gen-weston-ini.sh` output vs actual DRM driver names
+
+---
+
+## 🗂️ Backlog — Future Features
+
+Features staged for post-v1.0, ordered by impact. Surface these once hardware tests pass and the core nav loop is stable.
+
+### 🔌 Apple CarPlay Integration *(high value — revisit after v1.0)*
+
+**Why it's viable here:**
+- DCU has two USB host ports (now configured with getty + FTDI/CP210x drivers)
+- Display, audio (Bose), and steering wheel buttons are already wired
+- Qt6 on Wayland is a supported CarPlay host environment
+
+**Technical path (open-source, no MFi required):**
+- [**aasdk**](https://github.com/f1xpl/aasdk) — reverse-engineered Android Auto / CarPlay protocol library (C++17, Qt6-compatible)
+- [**OpenAuto**](https://github.com/f1xpl/openauto) — Qt6 head unit implementation built on aasdk; supports USB + wireless
+- Protocol: Apple CarPlay over USB uses the NCM (Network Control Model) protocol; aasdk handles the full stack
+- The DCU USB ports are host-mode; phone plugs into DCU, DCU presents as CarPlay head unit
+
+**Integration points in this project:**
+- `AudioService` — CarPlay audio routed through existing ALSA/Bose pipeline
+- `NavigationView` / `ControlHubView` — CarPlay renders to a Wayland surface on the upper screen
+- Steering wheel buttons (0x681 AV-CAN) → mapped to CarPlay media/call controls via existing `VehicleService` signals
+- `start.sh` — add `usbmuxd` (Apple USB multiplexer daemon) before q60nav launch
+
+**Estimated effort:** 2-3 weeks. Build aasdk + OpenAuto for i386, wire Wayland surface, integrate audio routing.
+
+**Flag:** Raise this when: (a) boot test confirms USB enumeration works, and (b) Bose wake frame is confirmed.
+
+---
+
+### Other Backlog Items
+| Feature | Notes |
+|---|---|
+| OTA update mechanism | USB drive or phone hotspot → pull new rootfs image, write to slot B |
+| Android Auto | Same aasdk path as CarPlay — nearly free once CarPlay is done |
+| Rear camera integration | Reverse signal (CAN 0x421 gear=R) → switch display to camera feed; needs video capture path |
+| SiriusXM passthrough | `sxmcgs.out` / `sxmfc.out` DENSO proxies already started in start.sh — wire to AudioView |
+| Speed-limit data | OSM speed limit tags are in Valhalla tiles — expose via NavigationService |
+| Multi-region maps | Extend NC tiles to include VA/SC/TN for out-of-area coverage |
 
 ---
 

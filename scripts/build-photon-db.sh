@@ -56,7 +56,8 @@ docker run -d \
     -e REPLICATION_URL="" \
     -e NOMINATIM_PASSWORD=photon \
     -p 18080:8080 \
-    -v "$PBF:/nominatim/data/region.osm.pbf:ro" \
+    -p 15432:5432 \
+    -v "$PBF:/nominatim/data/region.osm.pbf" \
     -v "$NOM_VOLUME:/var/lib/postgresql/14/main" \
     mediagis/nominatim:4.4
 
@@ -89,24 +90,15 @@ echo "[build-photon-db] Step 2: Dumping Photon JSON from Nominatim..."
 DUMP_FILE="$PHOTON_DATA/nc-photon-dump.jsonl"
 
 cd "$PHOTON_DATA"
+# NOTE: correct flag is -export-file (not -output-file); password is 'photon' (NOMINATIM_PASSWORD)
+# PostgreSQL port 15432 is mapped via -p 15432:5432 in docker run above
 $JAVA -jar photon.jar dump-nominatim-db \
     -host 127.0.0.1 \
     -port 15432 \
     -user nominatim \
     -password photon \
-    -database nominatim \
-    -output-file "$DUMP_FILE" 2>&1 | tee "$PHOTON_DATA/dump.log" || {
-
-    # Try the container's internal PostgreSQL port via docker exec
-    echo "  Direct connect failed — trying via docker exec..."
-    docker exec "$NOM_CONTAINER" \
-        java -jar /photon/photon.jar dump-nominatim-db \
-            -host 127.0.0.1 -port 5432 \
-            -user nominatim -password nominatim \
-            -database nominatim \
-            -output-file /tmp/nc-photon-dump.jsonl
-    docker cp "$NOM_CONTAINER:/tmp/nc-photon-dump.jsonl" "$DUMP_FILE"
-}
+    -export-file "$DUMP_FILE" \
+    -j 2 2>&1 | tee "$PHOTON_DATA/dump.log"
 
 echo "[build-photon-db] Dump complete: $(ls -lh "$DUMP_FILE" | awk '{print $5}')"
 

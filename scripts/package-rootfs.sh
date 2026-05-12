@@ -38,7 +38,8 @@ echo "[package-rootfs] Building ${SIZE_MB}MiB ext4 rootfs image..."
 # ── Verify required build artifacts ────────────────────────────────────────
 MISSING=0
 check() {
-    if [ ! -e "$1" ]; then
+    # Use -L to detect symlinks (e.g. rootfs/usr/bin/java → Linux path, dangling on Mac)
+    if [ ! -e "$1" ] && [ ! -L "$1" ]; then
         echo "  WARNING: $2 not found ($1)"
         MISSING=$((MISSING+1))
     else
@@ -50,7 +51,7 @@ check "$VALHALLA_BIN/valhalla_service"  "valhalla_service (run Valhalla i386 bui
 check "$QT6_LIBS/libQt6Core.so.6"       "Qt6 i386 libs (run deps/build-qt6-i386.sh)"
 check "$VECTOR_TILES"                   "vector tiles nc.mbtiles (run build-map-tiles.sh)"
 check "$ROUTING_TILES/admins.db"        "routing tiles (run build-tiles.sh)"
-check "$ROOT/output/photon-data"                  "Photon geocoder data (run scripts/download-photon.sh)"
+check "$ROOT/output/photon-data/photon_data"       "Photon geocoder data (run scripts/build-photon-db.sh)"
 check "$ROOTFS_DIR/usr/bin/java"                  "Java JRE in rootfs (run scripts/install-jre-rootfs.sh)"
 check "$ROOTFS_DIR/opt/nav/lib/dri/swrast_dri.so" "Mesa swrast DRI driver (run scripts/install-mesa-rootfs.sh)"
 check "$ROOTFS_DIR/opt/nav/style/sprites/sprite.json" "MapLibre sprites (run scripts/download-map-assets.sh)"
