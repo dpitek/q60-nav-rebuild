@@ -20,9 +20,17 @@ l6:6:wait:/etc/init.d/rc 6
 # Emergency shell (ctrl+alt+del → reboot)
 ca::ctrlaltdel:/sbin/reboot -f
 
-# Serial console for debugging (tty1 via kernel cmdline androidboot.console=tty1)
-# Uncomment below for development builds only
-# T0:5:respawn:/sbin/getty -L tty1 115200 vt100
+# ── Serial / USB console access ──────────────────────────────────────────────
+# USB-to-UART adapters plugged into either DCU USB port (FTDI, CP2102, CH341, etc.)
+# Plug adapter into DCU USB → connect UART to laptop → open at 115200 8N1
+# ttyUSB0 = first adapter detected, ttyUSB1 = second
+U0:5:respawn:/sbin/getty -L ttyUSB0 115200 vt100
+U1:5:respawn:/sbin/getty -L ttyUSB1 115200 vt100
+
+# UART fallback — ttyS1 (second UART on Atom E6xx; ttyS0 is claimed by GPSD)
+# Wire: DCU board UART1 header → USB-to-3.3V-UART dongle → laptop
+# Baud may need adjustment depending on BIOS/UEFI default; 115200 typical
+S1:5:respawn:/sbin/getty -L ttyS1 115200 vt100
 
 # Watchdog keepalive (runs as separate process, pets /dev/watchdog every 20s)
 wd:5:respawn:/opt/nav/watchdog-pet.sh
