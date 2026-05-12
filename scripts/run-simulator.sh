@@ -54,6 +54,15 @@ fi
 # ── Kill any previous sim container ──────────────────────────────────────────
 docker rm -f q60-sim 2>/dev/null || true
 
+# ── Network isolation note ────────────────────────────────────────────────────
+# The real DCU is air-gapped because it has no modem/NIC — not via iptables.
+# Docker --internal networks and -p port mapping are mutually exclusive (both
+# depend on the same NAT rules). We use the default bridge so VNC port mapping
+# works, but the app is offline by design: all data is local (MBTiles, Valhalla,
+# Nominatim).  DNS is disabled so no hostname resolution is possible even if the
+# binary tried to reach out.  This matches DCU behavior at the application layer.
+SIM_NET="bridge"  # default Docker bridge — required for -p port mapping
+
 # ── Optional mounts (skip gracefully if artifacts not present) ────────────────
 TILE_MOUNT=""
 if [ -f "$ROOT/output/vector-tiles/nc.mbtiles" ]; then
@@ -77,6 +86,8 @@ echo ""
 docker run --rm \
     --platform linux/amd64 \
     --name q60-sim \
+    --network "$SIM_NET" \
+    --dns 0.0.0.0 \
     -p ${VNC_PORT}:${VNC_PORT} \
     \
     -v "$BINARY:/opt/nav/bin/q60nav:ro" \
