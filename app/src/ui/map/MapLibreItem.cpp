@@ -35,6 +35,7 @@
 #ifdef MAPLIBRE_AVAILABLE
 #include <mbgl/util/geo.hpp>
 #include <mbgl/util/image.hpp>
+#include <mbgl/style/style.hpp>         // mbgl::style::Style — needed for Map::getStyle() calls
 
 #if __has_include(<mbgl/style/sources/geojson_source.hpp>)
 #  include <mbgl/style/sources/geojson_source.hpp>

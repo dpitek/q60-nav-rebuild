@@ -43,14 +43,39 @@ option(WITH_MAPLIBRE "Enable MapLibre GL Native map rendering (Phase 3)" OFF)
 if(WITH_MAPLIBRE AND EXISTS "${CMAKE_SOURCE_DIR}/../output/maplibre-i386/lib/libmbgl-core.a")
     set(MAPLIBRE_FOUND TRUE)
     set(MAPLIBRE_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/../output/maplibre-i386/include")
+    set(MAPLIBRE_LIB_DIR     "${CMAKE_SOURCE_DIR}/../output/maplibre-i386/lib")
+    set(SYSROOT_LIB_DIR      "${CMAKE_SOURCE_DIR}/../deps/sysroot-i386/lib")
+
+    # mapbox-base vendor sub-deps — installed headers reference these but the
+    # mbgl install does not bundle them. Point at the source-tree vendor dirs.
+    set(MAPLIBRE_VENDOR_BASE "${CMAKE_SOURCE_DIR}/../deps/maplibre-gl-native/vendor/mapbox-base")
+    set(MAPLIBRE_VENDOR_INCLUDES
+        "${MAPLIBRE_VENDOR_BASE}/include"
+        "${MAPLIBRE_VENDOR_BASE}/deps/geometry.hpp/include"
+        "${MAPLIBRE_VENDOR_BASE}/deps/variant/include"
+        "${MAPLIBRE_VENDOR_BASE}/deps/geojson.hpp/include"
+        "${MAPLIBRE_VENDOR_BASE}/deps/cheap-ruler-cpp/include"
+    )
+
+    # Import mbgl-core and vendor support libs as STATIC IMPORTED targets
     add_library(mbgl-core STATIC IMPORTED)
     set_target_properties(mbgl-core PROPERTIES
-        IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/../output/maplibre-i386/lib/libmbgl-core.a"
-        # Do NOT set INTERFACE_INCLUDE_DIRECTORIES here — it cascades mbgl headers
-        # to every source file, triggering the mbgl/util/optional.hpp → optional.hpp
-        # missing-file chain in files that don't even use MapLibre.
-        # Include path is scoped to MapLibreItem.cpp only (see below).
-    )
+        IMPORTED_LOCATION "${MAPLIBRE_LIB_DIR}/libmbgl-core.a")
+
+    foreach(_vlib csscolorparser nunicode parsedate sqlite)
+        add_library(mbgl-vendor-${_vlib} STATIC IMPORTED)
+        set_target_properties(mbgl-vendor-${_vlib} PROPERTIES
+            IMPORTED_LOCATION "${MAPLIBRE_LIB_DIR}/libmbgl-vendor-${_vlib}.a")
+    endforeach()
+
+    # Sysroot static libs: curl, sqlite3, zlib — built i686 alongside Valhalla
+    add_library(sysroot-curl   STATIC IMPORTED)
+    set_target_properties(sysroot-curl   PROPERTIES IMPORTED_LOCATION "${SYSROOT_LIB_DIR}/libcurl.a")
+    add_library(sysroot-sqlite STATIC IMPORTED)
+    set_target_properties(sysroot-sqlite PROPERTIES IMPORTED_LOCATION "${SYSROOT_LIB_DIR}/libsqlite3.a")
+    add_library(sysroot-z      STATIC IMPORTED)
+    set_target_properties(sysroot-z      PROPERTIES IMPORTED_LOCATION "${SYSROOT_LIB_DIR}/libz.a")
+
     message(STATUS "MapLibre enabled — Phase 3 map rendering active")
 else()
     message(STATUS "MapLibre not enabled — nav map will use placeholder view (pass -DWITH_MAPLIBRE=ON to enable)")
@@ -99,6 +124,7 @@ target_include_directories(q60nav PRIVATE
     src/
     src/services/
     src/ui/
+    src/ui/map/         # Qt QML type registration generates '#include <MapLibreItem.h>' — bare filename
 )
 
 target_link_libraries(q60nav PRIVATE
@@ -119,14 +145,36 @@ endif()
 
 if(MAPLIBRE_FOUND)
     # Phase 3 prerequisite: mbgl/util/optional.hpp uses the mapbox-base legacy header
-    # <optional.hpp>. Copy the C++17 compat shim before building:
-    #   cp deps/maplibre-compat/optional.hpp output/maplibre-i386/include/optional.hpp
+    # <optional.hpp>. The C++17 compat shim must be present at:
+    #   output/maplibre-i386/include/optional.hpp
+    # (cp deps/maplibre-compat/optional.hpp output/maplibre-i386/include/optional.hpp)
     #
-    # Scope mbgl include path ONLY to MapLibreItem.cpp — prevents the
-    # mbgl/util/optional.hpp → optional.hpp cascade from breaking all other TUs.
-    set_source_files_properties(src/ui/map/MapLibreItem.cpp PROPERTIES
-        COMPILE_FLAGS "-I${MAPLIBRE_INCLUDE_DIR}")
-    target_link_libraries(q60nav PRIVATE mbgl-core)
+    # NOTE: MAPLIBRE_INCLUDE_DIR is added to target_include_directories (not just
+    # COMPILE_FLAGS on MapLibreItem.cpp) because:
+    #   1. AUTOMOC processes MapLibreItem.h and needs the mbgl include path
+    #   2. Any TU that includes MapLibreItem.h (e.g. main.cpp via moc_*) must resolve
+    #      mbgl/util/optional.hpp — scoping the flag to the .cpp file alone is not
+    #      sufficient when the header is transitively included.
+    # The optional.hpp shim (confirmed present) prevents the optional.hpp cascade from
+    # breaking TUs that don't use MapLibre — so global include is safe here.
+    target_include_directories(q60nav PRIVATE "${MAPLIBRE_INCLUDE_DIR}" ${MAPLIBRE_VENDOR_INCLUDES})
+    target_link_libraries(q60nav PRIVATE
+        # MapLibre core + its bundled vendor libs (order matters for static linking)
+        mbgl-core
+        mbgl-vendor-csscolorparser
+        mbgl-vendor-nunicode
+        mbgl-vendor-parsedate
+        mbgl-vendor-sqlite       # mbgl's own sqlite3 bundled copy — satisfies sqlite3_* symbols
+        # Sysroot-built static libs (i686 cross-compiled alongside Valhalla)
+        sysroot-curl
+        sysroot-z                # zlib: deflate/inflate
+        # System i386 shared libs (installed in container via apt)
+        EGL                      # egl* — Mesa swrast headless backend
+        png                      # png_* — PNG image reader
+        jpeg                     # jpeg_* — JPEG image reader
+        uv                       # uv_* — libuv async I/O for mbgl RunLoop
+        icuuc icudata icui18n    # ubidi_*, u_*, icu_70::number — Unicode BiDi/shaping/number formatting
+    )
     target_compile_definitions(q60nav PRIVATE MAPLIBRE_AVAILABLE)
 endif()
 
