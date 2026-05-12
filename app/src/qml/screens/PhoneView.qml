@@ -60,6 +60,7 @@ Item {
 
         // ── DIAL TAB ─────────────────────────────────────────────────────────
         Item {
+            id: dialPanel
             anchors.fill: parent
             visible: root.activeTab === 0
 
@@ -183,9 +184,9 @@ Item {
                 // Keypad toggle
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: keypadVisible ? "▲ Hide Keypad" : "▼ Keypad"
+                    text: dialPanel.keypadVisible ? "▲ Hide Keypad" : "▼ Keypad"
                     color: "#0A84FF"; font { family: "Roboto"; pixelSize: 13; weight: Font.Medium }
-                    MouseArea { anchors.fill: parent; onClicked: keypadVisible = !keypadVisible }
+                    MouseArea { anchors.fill: parent; onClicked: dialPanel.keypadVisible = !dialPanel.keypadVisible }
                 }
             }
 

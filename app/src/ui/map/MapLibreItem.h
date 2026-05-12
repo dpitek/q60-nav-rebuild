@@ -106,8 +106,9 @@ private:
     QString m_style   = QStringLiteral("file:///opt/nav/style/q60-dark.json");
     bool    m_ready   = false;
 
-    QImage     m_rendered;      // Latest rendered frame (updated from scheduleRender)
+    QImage      m_rendered;      // Latest rendered frame (updated from scheduleRender)
     QStringList m_markerIds;    // Track active marker layer IDs for removeMarker()
+    int         m_renderRetries = 0; // Retry counter for silent render exceptions
 
 #ifdef MAPLIBRE_AVAILABLE
     std::unique_ptr<mbgl::util::RunLoop>    m_runLoop;

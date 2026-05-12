@@ -41,7 +41,6 @@ Item {
 
                         Row {
                             spacing: 8
-                            anchors.verticalCenter: parent.verticalCenter
 
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter

@@ -92,10 +92,10 @@ QImage MapLibreItem::makePlaceholderImage(int w, int h) const
     f2.setPixelSize(11);
     p.setFont(f2);
     p.drawText(8, h - 8,
-               QString("%.5f, %.5f  z%.1f")
-                   .arg(m_center.latitude())
-                   .arg(m_center.longitude())
-                   .arg(m_zoom));
+               QString("%1, %2  z%3")
+                   .arg(m_center.latitude(), 0, 'f', 5)
+                   .arg(m_center.longitude(), 0, 'f', 5)
+                   .arg(m_zoom, 0, 'f', 1));
     p.end();
     return img;
 }
@@ -238,12 +238,30 @@ void MapLibreItem::scheduleRender()
         m_rendered = frame.copy();
 
     } catch (const std::exception &e) {
-        qWarning() << "[MapLibre] render() threw:" << e.what()
-                   << "— showing placeholder";
+        const char *what = e.what();
+        const bool silent = (!what || what[0] == '\0');
+        if (silent) {
+            // Empty what() — style likely still loading; retry up to 10×
+            if (m_renderRetries < 10) {
+                ++m_renderRetries;
+                if (m_rendered.isNull())
+                    m_rendered = makePlaceholderImage(
+                        qMax(static_cast<int>(width()),  32),
+                        qMax(static_cast<int>(height()), 32));
+                update();
+                QTimer::singleShot(300, this, &MapLibreItem::scheduleRender);
+                return;
+            }
+            qWarning() << "[MapLibre] render() failed after" << m_renderRetries
+                       << "retries — using placeholder";
+        } else {
+            qWarning() << "[MapLibre] render() threw:" << what << "— using placeholder";
+        }
         m_rendered = makePlaceholderImage(
             qMax(static_cast<int>(width()),  32),
             qMax(static_cast<int>(height()), 32));
     }
+    m_renderRetries = 0;
 
     update(); // triggers updatePaintNode() on the render thread
 #endif

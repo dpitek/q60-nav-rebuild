@@ -1068,9 +1068,19 @@ Item {
                         var bodyX = cx - bodyW / 2
                         var bodyY = (height - bodyH) / 2
 
-                        // Car body
+                        // Car body (manual rounded rect — roundRect not available in software renderer)
+                        var r = 10
                         ctx.beginPath()
-                        ctx.roundRect(bodyX, bodyY, bodyW, bodyH, 10)
+                        ctx.moveTo(bodyX + r, bodyY)
+                        ctx.lineTo(bodyX + bodyW - r, bodyY)
+                        ctx.arcTo(bodyX + bodyW, bodyY, bodyX + bodyW, bodyY + r, r)
+                        ctx.lineTo(bodyX + bodyW, bodyY + bodyH - r)
+                        ctx.arcTo(bodyX + bodyW, bodyY + bodyH, bodyX + bodyW - r, bodyY + bodyH, r)
+                        ctx.lineTo(bodyX + r, bodyY + bodyH)
+                        ctx.arcTo(bodyX, bodyY + bodyH, bodyX, bodyY + bodyH - r, r)
+                        ctx.lineTo(bodyX, bodyY + r)
+                        ctx.arcTo(bodyX, bodyY, bodyX + r, bodyY, r)
+                        ctx.closePath()
                         ctx.strokeStyle = Qt.rgba(1, 1, 1, 0.25)
                         ctx.lineWidth = 1.5
                         ctx.stroke()
@@ -1275,9 +1285,9 @@ Item {
                             anchors { fill: parent; leftMargin: 10 }
                             spacing: 20
 
-                            DiagCell { label: "Speed"; value: VehicleService.speed.toFixed(1) + " mph" }
-                            DiagCell { label: "RPM";   value: VehicleService.rpm.toString() }
-                            DiagCell { label: "Steer"; value: (VehicleService.steeringAngle >= 0 ? "+" : "") + VehicleService.steeringAngle.toFixed(1) + "°" }
+                            DiagCell { label: "Speed"; value: ((VehicleService.speed || 0).toFixed(1)) + " mph" }
+                            DiagCell { label: "RPM";   value: (VehicleService.rpm || 0).toString() }
+                            DiagCell { label: "Steer"; value: ((VehicleService.steeringAngle || 0) >= 0 ? "+" : "") + (VehicleService.steeringAngle || 0).toFixed(1) + "°" }
                         }
                     }
 

@@ -97,7 +97,6 @@ docker run --rm \
     ${STYLE_MOUNT} \
     ${TILE_MOUNT} \
     \
-    -e QT_QPA_PLATFORM="vnc:size=${VNC_WIDTH}x${VNC_HEIGHT}:port=${VNC_PORT}" \
     -e QT_QUICK_BACKEND=software \
     -e QSG_RENDER_LOOP=basic \
     -e QT_QUICK_CONTROLS_STYLE=Basic \
@@ -105,7 +104,7 @@ docker run --rm \
     -e QML_IMPORT_PATH=/opt/nav/qml \
     -e QML2_IMPORT_PATH=/opt/nav/qml \
     -e LD_LIBRARY_PATH=/opt/nav/lib:/usr/lib/i386-linux-gnu \
-    -e LIBGL_DRIVERS_PATH=/opt/nav/lib/dri \
+    -e LIBGL_DRIVERS_PATH=/usr/lib/i386-linux-gnu/dri \
     -e EGL_PLATFORM=surfaceless \
     -e MESA_GL_VERSION_OVERRIDE=3.3 \
     -e MESA_GLSL_VERSION_OVERRIDE=330 \
@@ -115,7 +114,16 @@ docker run --rm \
     -e QT_DEBUG_PLUGINS=0 \
     \
     "$SIM_IMAGE" \
-    /opt/nav/bin/q60nav &
+    bash -c "
+        # Qt VNC plugin links libX11/libxcb for font+input init — needs a DISPLAY
+        # even though it serves its own TCP VNC server. Start a throwaway Xvfb.
+        Xvfb :99 -screen 0 ${VNC_WIDTH}x${VNC_HEIGHT}x24 -nolisten tcp &
+        sleep 0.5
+
+        DISPLAY=:99 \
+        QT_QPA_PLATFORM='vnc:size=${VNC_WIDTH}x${VNC_HEIGHT}:port=${VNC_PORT}' \
+        exec /opt/nav/bin/q60nav
+    " &
 
 CONTAINER_PID=$!
 

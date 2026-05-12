@@ -37,4 +37,12 @@ RUN dpkg --add-architecture i386 2>/dev/null || true && \
         libfontconfig1:i386 \
         # GLib (Qt6Core dependency on Ubuntu)
         libglib2.0-0:i386 \
+        # X11 amd64 libs — Qt VNC plugin links libX11/libxcb for font/input init
+        # even though it serves its own TCP VNC server.  Without a DISPLAY the
+        # QVncServer constructor never calls listen().
+        libx11-6 \
+        libxext6 \
+        libxau6 \
+        # Xvfb — provides the virtual DISPLAY so VNC init succeeds
+        xvfb \
     && rm -rf /var/lib/apt/lists/*
