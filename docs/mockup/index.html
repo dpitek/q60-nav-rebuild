@@ -341,9 +341,11 @@
   .rerouting-banner.visible { transform: translateY(0); }
 
   /* ── DRIVE MODE BAR ── */
+  /* NOTE: drive-mode-bar and nav-bottom-strip are both in screen-upper.
+     drive-mode-bar moved to bottom:72px to avoid overlapping the 72px nav-bottom-strip. */
   .drive-mode-bar {
     position: absolute;
-    bottom: 0; left: 0; right: 0;
+    bottom: 72px; left: 0; right: 0;
     height: 36px;
     background: rgba(0,0,0,0.80);
     border-top: 1px solid rgba(255,255,255,0.07);
@@ -1111,11 +1113,12 @@
   }
 
   .seat-dot {
-    width: 12px; height: 12px;
+    width: 28px; height: 28px;
     border-radius: 50%;
     background: #3A3A3C;
     cursor: pointer;
     transition: background 150ms ease;
+    flex-shrink: 0;
   }
 
   .seat-dot.active { background: #FF9F0A; box-shadow: 0 0 6px rgba(255,159,10,0.5); }
@@ -1188,6 +1191,7 @@
 
   .fan-bar {
     width: 20px;
+    min-width: 36px;
     border-radius: 3px;
     background: #2C2C2E;
     cursor: pointer;
@@ -1606,7 +1610,7 @@
   .cog-btn {
     position: absolute;
     top: 12px; right: 12px;
-    width: 36px; height: 36px;
+    width: 44px; height: 44px;
     border-radius: 50%;
     background: #1C1C1E;
     border: 1px solid rgba(255,255,255,0.15);
@@ -1655,7 +1659,7 @@
   }
   .settings-overlay-header .close-btn {
     background: transparent; border: none; color: #8E8E93;
-    font-size: 20px; cursor: pointer; width: 36px; height: 36px;
+    font-size: 20px; cursor: pointer; min-width: 44px; min-height: 44px; width: 44px; height: 44px;
     display: flex; align-items: center; justify-content: center;
     border-radius: 50%;
   }
@@ -1699,11 +1703,129 @@
   #sig-b2 { height: 7px; }
   #sig-b3 { height: 10px; }
   #sig-b4 { height: 13px; }
+
+  /* ── ON-SCREEN KEYBOARD ── */
+  #osk-overlay {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(18,18,20,0.97);
+    backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(255,255,255,0.10);
+    padding: 8px 6px 14px;
+    z-index: 9999;
+    transform: translateY(100%);
+    transition: transform 280ms cubic-bezier(0.32,0.72,0,1);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  #osk-overlay.visible { transform: translateY(0); }
+  .osk-row { display: flex; justify-content: center; gap: 5px; margin-bottom: 5px; }
+  .osk-key {
+    min-width: 44px; height: 48px;
+    background: #3A3A3C; border: none; border-radius: 8px;
+    color: #FFFFFF; font-size: 17px; font-weight: 500;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    flex: 1; max-width: 60px;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 80ms;
+  }
+  .osk-key:active, .osk-key.pressed { background: #636366; }
+  .osk-key.wide { max-width: 100px; font-size: 13px; }
+  .osk-key.space { max-width: 260px; }
+  .osk-key.action { background: #0A84FF; max-width: 100px; font-size: 13px; }
+  .osk-key.action:active { background: #0066CC; }
+  .osk-key.delete { background: #2C2C2E; font-size: 20px; }
+  .osk-field-preview {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 12px 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: 6px;
+  }
+  .osk-field-preview span {
+    flex: 1; font-size: 16px; color: #FFFFFF;
+    min-height: 24px; letter-spacing: 0.02em;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .osk-field-preview span:empty::before { content: attr(data-placeholder); color: #636366; }
+  .osk-close-btn {
+    background: transparent; border: none; color: #636366;
+    font-size: 22px; cursor: pointer; padding: 4px 8px; flex-shrink: 0;
+  }
+
+  /* ── TOAST / ACTION SHEET ── */
+  #toast-container {
+    position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+    z-index: 9998; display: flex; flex-direction: column; align-items: center; gap: 8px;
+    pointer-events: none;
+  }
+  .toast {
+    background: rgba(44,44,46,0.96); backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 14px;
+    color: #FFFFFF; font-size: 14px; font-weight: 500;
+    padding: 12px 20px; min-width: 240px; max-width: 480px; text-align: center;
+    pointer-events: all;
+    animation: toastIn 250ms cubic-bezier(0.34,1.56,0.64,1) forwards;
+  }
+  .toast.success { border-color: rgba(48,209,88,0.4); }
+  .toast.warn    { border-color: rgba(255,159,10,0.4); }
+  .toast.error   { border-color: rgba(255,69,58,0.4); }
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateY(12px) scale(0.95); }
+    to   { opacity: 1; transform: translateY(0)    scale(1); }
+  }
+  #action-sheet-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 9997;
+    display: none; align-items: flex-end; justify-content: center;
+  }
+  #action-sheet-overlay.visible { display: flex; }
+  #action-sheet {
+    background: #1C1C1E; border-radius: 16px 16px 0 0;
+    width: 100%; max-width: 600px; padding: 16px 16px 28px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .as-title { font-size: 13px; color: #8E8E93; text-align: center; padding-bottom: 8px; }
+  .as-btn {
+    width: 100%; min-height: 56px; border: none; border-radius: 12px;
+    font-size: 16px; font-weight: 500; cursor: pointer;
+    background: #2C2C2E; color: #FFFFFF;
+  }
+  .as-btn.destructive { color: #FF453A; }
+  .as-btn.confirm-ok  { background: #0A84FF; color: #FFFFFF; }
+  .as-btn.cancel      { background: #1C1C1E; color: #8E8E93; border: 1px solid #3A3A3C; }
+
+  /* ── ACTIVE CALL BADGE ── */
+  #call-badge {
+    position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+    background: #30D158; border-radius: 20px; color: #000000;
+    font-size: 13px; font-weight: 700; padding: 8px 18px 8px 12px;
+    display: none; align-items: center; gap: 8px; z-index: 8000;
+    cursor: pointer; box-shadow: 0 4px 16px rgba(48,209,88,0.35);
+    animation: callBadgePop 300ms cubic-bezier(0.34,1.56,0.64,1) forwards;
+  }
+  #call-badge.active { display: flex; }
+  @keyframes callBadgePop {
+    from { transform: translateX(-50%) scale(0.8); opacity: 0; }
+    to   { transform: translateX(-50%) scale(1);   opacity: 1; }
+  }
+  #call-badge-timer { font-size: 12px; font-weight: 500; opacity: 0.8; }
+
+  /* ── SCROLLABLE PANEL INDICATORS ── */
+  .scrollable { scroll-behavior: smooth; }
+  .scrollable::-webkit-scrollbar { width: 3px; }
+  .scrollable::-webkit-scrollbar-track { background: transparent; }
+  .scrollable::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
 </style>
 <link href='https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.css' rel='stylesheet' />
 <script src='https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.js'></script>
 </head>
 <body>
+
+<!-- ── PERSISTENT ACTIVE CALL BADGE ── -->
+<div id="call-badge" onclick="app.returnToCall()">
+  <span style="font-size:16px;">📞</span>
+  <span id="call-badge-name">Unknown</span>
+  <span id="call-badge-timer">0:00</span>
+</div>
 
 <h1 class="page-title">Q60 Nav — Interactive Mockup</h1>
 
@@ -1792,8 +1914,9 @@
         </div>
       </div>
 
+      <!-- Speed badge: always visible, shows current speed and limit -->
       <!-- SPEED BADGE -->
-      <div class="speed-badge">
+      <div class="speed-badge" id="speed-badge-container-upper">
         <div class="speed-current" id="speed-badge-upper">35</div>
         <div class="speed-unit">mph</div>
         <div class="speed-limit-badge">45</div>
@@ -1901,19 +2024,20 @@
               <div style="display:flex;align-items:center;gap:8px;background:#1C1C1E;border-radius:14px;padding:0 14px;min-height:52px;">
                 <span style="color:#8E8E93;font-size:16px;">🔍</span>
                 <input type="text" id="nav-search-input" placeholder="Search destination…"
+                  readonly onclick="osk.open(this)"
                   oninput="app.navSearch(this.value)"
-                  style="flex:1;background:transparent;border:none;color:#FFF;font-size:15px;padding:14px 0;outline:none;">
+                  style="flex:1;background:transparent;border:none;color:#FFF;font-size:15px;padding:14px 0;outline:none;cursor:pointer;">
                 <button onclick="app.navClearSearch()" style="background:transparent;border:none;color:#8E8E93;font-size:18px;cursor:pointer;padding:0;">✕</button>
               </div>
             </div>
 
             <!-- Search results (hidden until typing) -->
-            <div id="nav-search-results" style="display:none;flex:1;overflow-y:auto;padding:4px 0;">
+            <div id="nav-search-results" class="scrollable" style="display:none;flex:1;overflow-y:auto;padding:4px 0;">
               <!-- populated by JS -->
             </div>
 
             <!-- Idle content (recents + shortcuts) -->
-            <div id="nav-idle-content" style="flex:1;overflow-y:auto;">
+            <div id="nav-idle-content" class="scrollable" style="flex:1;overflow-y:auto;">
 
               <!-- Home / Work shortcuts -->
               <div style="display:flex;gap:8px;padding:6px 12px 4px;">
@@ -1941,13 +2065,13 @@
 
               <!-- Recent destinations list -->
               <div id="nav-recents-list">
-                <!-- populated by JS init -->
+                <div style="color:#636366;font-size:13px;text-align:center;padding:20px 0;">No recent destinations</div>
               </div>
 
               <!-- Favorites header -->
               <div style="padding:8px 12px 4px;color:#8E8E93;font-size:10px;font-weight:600;letter-spacing:.06em;">FAVORITES</div>
               <div id="nav-favorites-list">
-                <!-- populated by JS init -->
+                <div style="color:#636366;font-size:13px;text-align:center;padding:20px 0;">No saved places</div>
               </div>
 
             </div><!-- /nav-idle-content -->
@@ -2018,7 +2142,7 @@
             </div>
 
             <!-- Turn list panel (hidden by default) -->
-            <div id="turn-list-panel" style="display:none;overflow-y:auto;border-top:1px solid #1C1C1E;flex:1;">
+            <div id="turn-list-panel" class="scrollable" style="display:none;overflow-y:auto;max-height:240px;border-top:1px solid #1C1C1E;flex:1;">
               <div style="padding:6px 0;" id="turn-list-content">
                 <!-- populated by JS -->
               </div>
@@ -2070,14 +2194,14 @@
                 <button onclick="app.seekFM(0.2)" style="background:#1C1C1E;border:1.5px solid #3A3A3C;color:#FFF;font-size:15px;padding:0;width:120px;height:52px;border-radius:12px;cursor:pointer;font-weight:600;">Seek ▶▶</button>
               </div>
               <div style="margin-top:4px;width:100%;">
-                <div style="color:#8E8E93;font-size:10px;margin-bottom:4px;text-align:left;padding-left:2px;">PRESETS — right-click to save</div>
+                <div style="color:#8E8E93;font-size:10px;margin-bottom:4px;text-align:left;padding-left:2px;">PRESETS — hold to save</div>
                 <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:5px;">
-                  <button onclick="app.recallFMPreset(0)" oncontextmenu="app.saveFMPreset(0,event)" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:40px;border-radius:8px;cursor:pointer;" id="fm-p0">87.9</button>
-                  <button onclick="app.recallFMPreset(1)" oncontextmenu="app.saveFMPreset(1,event)" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:40px;border-radius:8px;cursor:pointer;" id="fm-p1">97.5</button>
-                  <button onclick="app.recallFMPreset(2)" oncontextmenu="app.saveFMPreset(2,event)" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:40px;border-radius:8px;cursor:pointer;" id="fm-p2">99.9</button>
-                  <button onclick="app.recallFMPreset(3)" oncontextmenu="app.saveFMPreset(3,event)" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:40px;border-radius:8px;cursor:pointer;" id="fm-p3">101.5</button>
-                  <button onclick="app.recallFMPreset(4)" oncontextmenu="app.saveFMPreset(4,event)" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:40px;border-radius:8px;cursor:pointer;" id="fm-p4">103.5</button>
-                  <button onclick="app.recallFMPreset(5)" oncontextmenu="app.saveFMPreset(5,event)" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:40px;border-radius:8px;cursor:pointer;" id="fm-p5">107.9</button>
+                  <button onclick="app.recallFMPreset(0)" ontouchstart="app._presetLongStart(event,this)" ontouchend="app._presetLongEnd(event)" onmousedown="app._presetLongStart(event,this)" onmouseup="app._presetLongEnd(event)" data-preset-idx="0" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:48px;border-radius:8px;cursor:pointer;" id="fm-p0">87.9</button>
+                  <button onclick="app.recallFMPreset(1)" ontouchstart="app._presetLongStart(event,this)" ontouchend="app._presetLongEnd(event)" onmousedown="app._presetLongStart(event,this)" onmouseup="app._presetLongEnd(event)" data-preset-idx="1" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:48px;border-radius:8px;cursor:pointer;" id="fm-p1">97.5</button>
+                  <button onclick="app.recallFMPreset(2)" ontouchstart="app._presetLongStart(event,this)" ontouchend="app._presetLongEnd(event)" onmousedown="app._presetLongStart(event,this)" onmouseup="app._presetLongEnd(event)" data-preset-idx="2" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:48px;border-radius:8px;cursor:pointer;" id="fm-p2">99.9</button>
+                  <button onclick="app.recallFMPreset(3)" ontouchstart="app._presetLongStart(event,this)" ontouchend="app._presetLongEnd(event)" onmousedown="app._presetLongStart(event,this)" onmouseup="app._presetLongEnd(event)" data-preset-idx="3" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:48px;border-radius:8px;cursor:pointer;" id="fm-p3">101.5</button>
+                  <button onclick="app.recallFMPreset(4)" ontouchstart="app._presetLongStart(event,this)" ontouchend="app._presetLongEnd(event)" onmousedown="app._presetLongStart(event,this)" onmouseup="app._presetLongEnd(event)" data-preset-idx="4" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:48px;border-radius:8px;cursor:pointer;" id="fm-p4">103.5</button>
+                  <button onclick="app.recallFMPreset(5)" ontouchstart="app._presetLongStart(event,this)" ontouchend="app._presetLongEnd(event)" onmousedown="app._presetLongStart(event,this)" onmouseup="app._presetLongEnd(event)" data-preset-idx="5" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:48px;border-radius:8px;cursor:pointer;" id="fm-p5">107.9</button>
                 </div>
               </div>
             </div>
@@ -2123,31 +2247,31 @@
                 </div>
               </div>
               <!-- Channel list -->
-              <div style="overflow-y:auto;flex:1;">
+              <div class="scrollable" style="overflow-y:auto;flex:1;">
                 <div style="color:#8E8E93;font-size:10px;padding:6px 12px 2px;font-weight:600;letter-spacing:.06em;">MUSIC</div>
-                <div onclick="app.sxmTune(20,'The Highway','Country')" style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #111;cursor:pointer;background:#0A84FF11;">
+                <div onclick="app.sxmTune(20,'The Highway','Country')" style="display:flex;align-items:center;gap:8px;padding:7px 12px;min-height:52px;border-bottom:1px solid #111;cursor:pointer;background:#0A84FF11;">
                   <span style="color:#0A84FF;font-size:12px;font-weight:600;width:28px;">20</span>
                   <div><div style="color:#FFF;font-size:13px;">The Highway</div><div style="color:#8E8E93;font-size:10px;">Country</div></div>
                   <span style="margin-left:auto;color:#0A84FF;font-size:11px;">▶ NOW</span>
                 </div>
-                <div onclick="app.sxmTune(22,'Hair Nation','Classic Rock')" style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #111;cursor:pointer;">
+                <div onclick="app.sxmTune(22,'Hair Nation','Classic Rock')" style="display:flex;align-items:center;gap:8px;padding:7px 12px;min-height:52px;border-bottom:1px solid #111;cursor:pointer;">
                   <span style="color:#8E8E93;font-size:12px;font-weight:600;width:28px;">22</span>
                   <div><div style="color:#FFF;font-size:13px;">Hair Nation</div><div style="color:#8E8E93;font-size:10px;">Classic Rock</div></div>
                 </div>
-                <div onclick="app.sxmTune(40,'40s Junction','Big Band')" style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #111;cursor:pointer;">
+                <div onclick="app.sxmTune(40,'40s Junction','Big Band')" style="display:flex;align-items:center;gap:8px;padding:7px 12px;min-height:52px;border-bottom:1px solid #111;cursor:pointer;">
                   <span style="color:#8E8E93;font-size:12px;font-weight:600;width:28px;">40</span>
                   <div><div style="color:#FFF;font-size:13px;">40s Junction</div><div style="color:#8E8E93;font-size:10px;">Big Band / Swing</div></div>
                 </div>
-                <div onclick="app.sxmTune(78,'BPM','EDM')" style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #111;cursor:pointer;">
+                <div onclick="app.sxmTune(78,'BPM','EDM')" style="display:flex;align-items:center;gap:8px;padding:7px 12px;min-height:52px;border-bottom:1px solid #111;cursor:pointer;">
                   <span style="color:#8E8E93;font-size:12px;font-weight:600;width:28px;">78</span>
                   <div><div style="color:#FFF;font-size:13px;">BPM</div><div style="color:#8E8E93;font-size:10px;">Electronic / EDM</div></div>
                 </div>
                 <div style="color:#8E8E93;font-size:10px;padding:6px 12px 2px;font-weight:600;letter-spacing:.06em;">NEWS / TALK</div>
-                <div onclick="app.sxmTune(454,'CNN','News')" style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #111;cursor:pointer;">
+                <div onclick="app.sxmTune(454,'CNN','News')" style="display:flex;align-items:center;gap:8px;padding:7px 12px;min-height:52px;border-bottom:1px solid #111;cursor:pointer;">
                   <span style="color:#8E8E93;font-size:12px;font-weight:600;width:28px;">454</span>
                   <div><div style="color:#FFF;font-size:13px;">CNN</div><div style="color:#8E8E93;font-size:10px;">News</div></div>
                 </div>
-                <div onclick="app.sxmTune(105,'ESPN Radio','Sports')" style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #111;cursor:pointer;">
+                <div onclick="app.sxmTune(105,'ESPN Radio','Sports')" style="display:flex;align-items:center;gap:8px;padding:7px 12px;min-height:52px;border-bottom:1px solid #111;cursor:pointer;">
                   <span style="color:#8E8E93;font-size:12px;font-weight:600;width:28px;">105</span>
                   <div><div style="color:#FFF;font-size:13px;">ESPN Radio</div><div style="color:#8E8E93;font-size:10px;">Sports</div></div>
                 </div>
@@ -2317,15 +2441,15 @@
 </div>
 
           <!-- Contacts -->
-          <div id="phone-contacts" style="display:none;flex:1;overflow-y:auto;padding:8px;">
-            <input type="text" placeholder="Search contacts..." oninput="app.filterContacts(this.value)" style="width:100%;box-sizing:border-box;background:#1C1C1E;border:1px solid #3A3A3C;border-radius:10px;color:#FFF;font-size:15px;padding:12px 16px;margin-bottom:8px;min-height:52px;">
+          <div id="phone-contacts" class="scrollable" style="display:none;flex:1;overflow-y:auto;padding:8px;">
+            <input type="text" id="phone-contacts-search" placeholder="Search contacts..." readonly onclick="osk.open(this)" oninput="app.filterContacts(this.value)" style="width:100%;box-sizing:border-box;background:#1C1C1E;border:1px solid #3A3A3C;border-radius:10px;color:#FFF;font-size:15px;padding:12px 16px;margin-bottom:8px;min-height:52px;cursor:pointer;">
             <div id="contacts-list">
               <!-- rendered by JS -->
             </div>
           </div>
 
           <!-- Recent -->
-          <div id="phone-recent" style="display:none;flex:1;overflow-y:auto;padding:8px;">
+          <div id="phone-recent" class="scrollable" style="display:none;flex:1;overflow-y:auto;padding:8px;">
             <div style="display:flex;gap:6px;margin-bottom:8px;">
               <button onclick="app.recentFilter('all')" id="rfil-all" style="background:#0A84FF22;border:1px solid #0A84FF;color:#0A84FF;font-size:13px;height:44px;padding:0 18px;border-radius:22px;cursor:pointer;">All</button>
               <button onclick="app.recentFilter('dialed')" id="rfil-dialed" style="background:transparent;border:1px solid #3A3A3C;color:#8E8E93;font-size:13px;height:44px;padding:0 18px;border-radius:22px;cursor:pointer;">Dialed</button>
@@ -2346,6 +2470,7 @@
               <div style="color:#8E8E93;font-size:11px;">DO NOT DISTURB WHILE DRIVING</div>
               <button onclick="app.toggleSetting(this,'dnd')" class="settings-toggle" style="background:#3A3A3C;border:none;color:#8E8E93;font-size:11px;font-weight:600;padding:5px 14px;border-radius:20px;cursor:pointer;min-width:48px;">OFF</button>
             </div>
+            <div style="color:#636366;font-size:11px;text-align:center;padding:4px 0 8px;letter-spacing:0.04em;">READ ONLY — Replies not available</div>
             <div style="color:#8E8E93;font-size:10px;font-weight:600;letter-spacing:.06em;margin-bottom:6px;">UNREAD MESSAGES</div>
             <div id="sms-list">
               <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #111;">
@@ -2537,7 +2662,7 @@
         </div><!-- /tab-climate -->
 
         <!-- TAB 4: VEHICLE -->
-        <div class="tab-panel" id="tab-vehicle" style="padding:0;overflow-y:auto;">
+        <div class="tab-panel scrollable" id="tab-vehicle" style="padding:0;overflow-y:auto;">
 
           <!-- Vehicle Sub-tab Bar -->
           <div style="display:flex;border-bottom:1px solid #1C1C1E;">
@@ -2720,8 +2845,8 @@
                 <button onclick="app.toggleVehicle('cruise')" id="cruise-btn" style="background:transparent;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;padding:6px 14px;border-radius:8px;cursor:pointer;">OFF</button>
                 <div style="color:#FFF;font-size:14px;font-weight:600;">SET: 70 mph</div>
                 <div style="display:flex;gap:4px;">
-                  <button style="background:#1C1C1E;border:1px solid #3A3A3C;color:#FFF;font-size:14px;width:32px;height:32px;border-radius:8px;cursor:pointer;">−</button>
-                  <button style="background:#1C1C1E;border:1px solid #3A3A3C;color:#FFF;font-size:14px;width:32px;height:32px;border-radius:8px;cursor:pointer;">+</button>
+                  <button style="background:#1C1C1E;border:1px solid #3A3A3C;color:#FFF;font-size:14px;width:44px;height:44px;border-radius:8px;cursor:pointer;">−</button>
+                  <button style="background:#1C1C1E;border:1px solid #3A3A3C;color:#FFF;font-size:14px;width:44px;height:44px;border-radius:8px;cursor:pointer;">+</button>
                 </div>
               </div>
             </div>
@@ -2729,313 +2854,7 @@
 
         </div><!-- /tab-vehicle -->
 
-        <!-- ── SETTINGS TAB ── -->
-        <div class="tab-panel" id="tab-settings" style="display:none;overflow-y:auto;padding:0;">
 
-          <!-- LIGHTS -->
-          <div class="settings-section-hdr">LIGHTS</div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Auto Light Shutoff</div>
-            <select class="settings-select" onchange="app.setSetting('lightShutoff',this.value)">
-              <option value="0">Off</option>
-              <option value="30">30 sec</option>
-              <option value="45" selected>45 sec</option>
-              <option value="60">60 sec</option>
-              <option value="90">90 sec</option>
-              <option value="120">2 min</option>
-              <option value="180">3 min</option>
-            </select>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Auto Headlight Sensitivity</div>
-            <select class="settings-select" onchange="app.setSetting('headlightSens',this.value)">
-              <option value="low">Low</option>
-              <option value="med" selected>Medium</option>
-              <option value="high">High</option>
-            </select>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Daytime Running Lights</div>
-            <button class="settings-toggle active" onclick="app.toggleSetting(this,'drl')">ON</button>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Approach Lighting</div>
-            <button class="settings-toggle active" onclick="app.toggleSetting(this,'approachLight')">ON</button>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Approach Light Duration</div>
-            <select class="settings-select" onchange="app.setSetting('approachDuration',this.value)">
-              <option value="30">30 sec</option>
-              <option value="60" selected>60 sec</option>
-              <option value="90">90 sec</option>
-            </select>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Welcome Lighting</div>
-            <button class="settings-toggle active" onclick="app.toggleSetting(this,'welcomeLight')">ON</button>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Interior Light Timer</div>
-            <select class="settings-select" onchange="app.setSetting('interiorTimer',this.value)">
-              <option value="15">15 sec</option>
-              <option value="30" selected>30 sec</option>
-              <option value="45">45 sec</option>
-              <option value="60">60 sec</option>
-            </select>
-          </div>
-
-          <!-- DOOR LOCKS -->
-          <div class="settings-section-hdr">DOOR LOCKS</div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Auto-Lock When Driving</div>
-            <select class="settings-select" onchange="app.setSetting('autoLockSpeed',this.value)">
-              <option value="0">Off</option>
-              <option value="15" selected>15 mph</option>
-              <option value="25">25 mph</option>
-            </select>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Auto-Unlock in Park</div>
-            <button class="settings-toggle active" onclick="app.toggleSetting(this,'autoUnlockPark')">ON</button>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Auto-Unlock on Key Removal</div>
-            <button class="settings-toggle" onclick="app.toggleSetting(this,'autoUnlockKey')">OFF</button>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Lock All with Key Fob</div>
-            <button class="settings-toggle active" onclick="app.toggleSetting(this,'fobLockAll')">ON</button>
-          </div>
-
-          <!-- MIRRORS -->
-          <div class="settings-section-hdr">MIRRORS</div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Auto-Tilt in Reverse</div>
-            <button class="settings-toggle active" onclick="app.toggleSetting(this,'mirrorTiltReverse')">ON</button>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Fold Mirrors with Door Lock</div>
-            <button class="settings-toggle" onclick="app.toggleSetting(this,'mirrorFoldLock')">OFF</button>
-          </div>
-
-          <!-- WIPERS -->
-          <div class="settings-section-hdr">WIPERS</div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Rain Sensor Sensitivity</div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <input type="range" min="1" max="5" value="3" style="width:100px;" oninput="document.getElementById('rain-sens-val').textContent=this.value; app.setSetting('rainSens',this.value)">
-              <span id="rain-sens-val" style="color:#FFF;font-size:13px;min-width:16px;">3</span>
-            </div>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Intermittent Wiper Delay</div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <input type="range" min="1" max="5" value="3" style="width:100px;" oninput="document.getElementById('wiper-delay-val').textContent=this.value; app.setSetting('wiperDelay',this.value)">
-              <span id="wiper-delay-val" style="color:#FFF;font-size:13px;min-width:16px;">3</span>
-            </div>
-          </div>
-
-          <!-- COMFORT & CONVENIENCE -->
-          <div class="settings-section-hdr">COMFORT &amp; CONVENIENCE</div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Seat Memory on Unlock</div>
-            <button class="settings-toggle active" onclick="app.toggleSetting(this,'seatMemoryUnlock')">ON</button>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Power Window Auto-Open</div>
-            <button class="settings-toggle active" onclick="app.toggleSetting(this,'windowAutoOpen')">ON</button>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Seat Belt Reminder</div>
-            <button class="settings-toggle active" onclick="app.toggleSetting(this,'seatbeltReminder')">ON</button>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Park Assist Chime Volume</div>
-            <select class="settings-select" onchange="app.setSetting('parkChimeVol',this.value)">
-              <option value="off">Off</option>
-              <option value="low">Low</option>
-              <option value="med" selected>Medium</option>
-              <option value="high">High</option>
-            </select>
-          </div>
-
-          <!-- MAP -->
-          <div class="settings-section-hdr">MAP</div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Map Orientation</div>
-            <select class="settings-select" onchange="app.setSetting('mapOrientation',this.value)">
-              <option value="heading" selected>Heading Up</option>
-              <option value="north">North Up</option>
-              <option value="3d">3D View</option>
-            </select>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Speed Limit Display</div>
-            <button class="settings-toggle active" onclick="app.toggleSetting(this,'speedLimitDisplay')">ON</button>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">POI Icons on Map</div>
-            <button class="settings-toggle active" onclick="app.toggleSetting(this,'poiIcons')">ON</button>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Map Detail Level</div>
-            <select class="settings-select" onchange="app.setSetting('mapDetail',this.value)">
-              <option value="low">Low</option>
-              <option value="med" selected>Medium</option>
-              <option value="high">High</option>
-            </select>
-          </div>
-
-          <!-- DISPLAY -->
-          <div class="settings-section-hdr">DISPLAY</div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Brightness</div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <input type="range" min="10" max="100" value="80" style="width:100px;" oninput="document.getElementById('bright-val').textContent=this.value+'%'">
-              <span id="bright-val" style="color:#FFF;font-size:13px;min-width:30px;">80%</span>
-            </div>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Night Brightness</div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <input type="range" min="5" max="60" value="30" style="width:100px;" oninput="document.getElementById('night-bright-val').textContent=this.value+'%'">
-              <span id="night-bright-val" style="color:#FFF;font-size:13px;min-width:30px;">30%</span>
-            </div>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Day/Night Mode</div>
-            <select class="settings-select" onchange="app.setSetting('dayNightMode',this.value)">
-              <option value="auto" selected>Auto</option>
-              <option value="day">Day</option>
-              <option value="night">Night</option>
-            </select>
-          </div>
-
-          <!-- CLOCK -->
-          <div class="settings-section-hdr">CLOCK</div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Time Format</div>
-            <select class="settings-select" onchange="app.setSetting('timeFormat',this.value)">
-              <option value="12h" selected>12-hour</option>
-              <option value="24h">24-hour</option>
-            </select>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">GPS Time Sync</div>
-            <button class="settings-toggle active" onclick="app.toggleSetting(this,'gpsSync')">ON</button>
-          </div>
-
-          <!-- UNITS -->
-          <div class="settings-section-hdr">UNITS</div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Distance</div>
-            <select class="settings-select" onchange="app.setSetting('distUnit',this.value)">
-              <option value="mi" selected>Miles</option>
-              <option value="km">Kilometers</option>
-            </select>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Temperature</div>
-            <select class="settings-select" onchange="app.setSetting('tempUnit',this.value)">
-              <option value="F" selected>°F</option>
-              <option value="C">°C</option>
-            </select>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Fuel Economy</div>
-            <select class="settings-select" onchange="app.setSetting('fuelUnit',this.value)">
-              <option value="mpg" selected>MPG</option>
-              <option value="l100">L/100km</option>
-            </select>
-          </div>
-
-          <!-- MAINTENANCE -->
-          <div class="settings-section-hdr">MAINTENANCE</div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Oil Life</div>
-            <div style="color:#FF9F0A;font-size:14px;font-weight:600;">42%</div>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Reset Oil Life</div>
-            <button onclick="if(confirm('Reset oil life to 100%?')) document.querySelector('.settings-row .settings-lbl + div').style.color='#30D158';" style="background:#FF453A22;border:1px solid #FF453A;color:#FF453A;font-size:12px;padding:4px 12px;border-radius:8px;cursor:pointer;">Reset</button>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Maintenance Interval</div>
-            <select class="settings-select" onchange="app.setSetting('maintInterval',this.value)">
-              <option value="3000">3,000 mi</option>
-              <option value="5000" selected>5,000 mi</option>
-              <option value="7500">7,500 mi</option>
-              <option value="10000">10,000 mi</option>
-            </select>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">TPMS Calibration</div>
-            <button onclick="alert('TPMS calibration started. Drive for 2 minutes above 25 mph.')" style="background:#0A84FF22;border:1px solid #0A84FF;color:#0A84FF;font-size:12px;padding:4px 12px;border-radius:8px;cursor:pointer;">Calibrate</button>
-          </div>
-
-          <!-- SYSTEM -->
-          <div class="settings-section-hdr">SYSTEM</div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Language</div>
-            <select class="settings-select" onchange="app.setSetting('language',this.value)">
-              <option value="en" selected>English</option>
-              <option value="es">Español</option>
-              <option value="fr">Français</option>
-            </select>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Software Version</div>
-            <div style="color:#8E8E93;font-size:13px;">v2.1.0-alpha</div>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-lbl">Map Data Version</div>
-            <div style="color:#8E8E93;font-size:13px;">2026-Q1</div>
-          </div>
-
-          <div class="settings-row" style="margin-bottom:24px;">
-            <div class="settings-lbl" style="color:#FF453A;">Factory Reset</div>
-            <button onclick="if(confirm('Factory reset will erase all settings and profiles. Continue?')) alert('Reset complete. Rebooting…');" style="background:#FF453A22;border:1px solid #FF453A;color:#FF453A;font-size:12px;padding:4px 12px;border-radius:8px;cursor:pointer;">Reset</button>
-          </div>
-
-        </div><!-- /tab-settings -->
 
       </div><!-- /lower-content -->
 
@@ -3052,7 +2871,7 @@
         <div class="settings-screens-wrap">
 
           <!-- Category list (home screen) -->
-          <div class="settings-screen" id="settings-home">
+          <div class="settings-screen scrollable" id="settings-home">
             <div class="settings-cat-row" onclick="app.settingsOpen('lights')">
               <div class="settings-cat-icon">🔆</div>
               <div class="settings-cat-text"><div class="settings-cat-label">Lights</div><div class="settings-cat-desc">Auto shutoff, DRL, approach &amp; welcome lighting</div></div>
@@ -3649,12 +3468,12 @@ const app = {
   },
 
   navDetour() {
-    alert('Detour: searching for alternate routes avoiding next 5 miles…');
+    appToast.show('Detour: searching for alternate routes avoiding next 5 miles…');
   },
 
   navAlongRoute(cat) {
     const labels = {fuel:'Gas Station', food:'Restaurant', parking:'Parking'};
-    alert('Adding ' + labels[cat] + ' as waypoint along route');
+    appToast.show('Adding ' + labels[cat] + ' as waypoint along route');
   },
 
   navToggleTurnList() {
@@ -3765,6 +3584,11 @@ const app = {
     const slider = document.getElementById('vol-slider');
     const pct = val;
     slider.style.background = `linear-gradient(to right, #0A84FF ${pct}%, #3A3A3C ${pct}%)`;
+    if (parseInt(val) > 0 && this.ui.isMuted) {
+      this.ui.isMuted = false;
+      const btn = document.getElementById('mute-btn');
+      if (btn) { btn.textContent = '🔊'; btn.classList.remove('muted'); }
+    }
     this._updateStatusIcons();
   },
 
@@ -3792,7 +3616,7 @@ const app = {
   },
 
   // ─ PHONE ─
-  startActiveCall() {
+  startActiveCall(callerName) {
     // Hide phone sub-tab panels during active call
     ['phone-dial','phone-contacts','phone-recent','phone-messages'].forEach(id => {
       const el = document.getElementById(id);
@@ -3898,7 +3722,7 @@ const app = {
 
   dialCall() {
     if (!this._dialStr) return;
-    alert('Calling: ' + this._dialStr);
+    appToast.show('Calling: ' + this._dialStr);
     this._dialStr = '';
     document.getElementById('dial-display').textContent = '​';
   },
@@ -3926,7 +3750,7 @@ const app = {
   },
 
   _callContact(name, num) {
-    if (confirm('Call ' + name + '?')) this.startActiveCall();
+    appSheet.show('Call ' + name + '?', 'Call', () => { app.startActiveCall(); });
   },
 
   recentFilter(f) {
@@ -4288,9 +4112,15 @@ const app = {
   },
 
   joystickAction(dir) {
-    if (dir === 'up')        this.adjBrightness(10);
-    else if (dir === 'down') this.adjBrightness(-10);
-    else if (dir === 'push') this.toggleDayNight();
+    if (dir === 'up')          this.adjBrightness(10);
+    else if (dir === 'down')   this.adjBrightness(-10);
+    else if (dir === 'push')   this.toggleDayNight();
+    else if (dir === 'left') {
+      if (this._mlMap) this._mlMap.panBy([-60, 0], { duration: 200 });
+    }
+    else if (dir === 'right') {
+      if (this._mlMap) this._mlMap.panBy([60, 0], { duration: 200 });
+    }
   },
 
   toggleAdas(btn, feature) {
@@ -4452,7 +4282,7 @@ const app = {
 
     display: `
       <div class="settings-section-hdr">DISPLAY</div>
-      <div class="settings-row"><div class="settings-lbl">Upper Screen Brightness</div><div style="display:flex;align-items:center;gap:8px;"><input type="range" min="10" max="100" value="80" style="width:100px;" oninput="this.nextElementSibling.textContent=this.value+'%'"><span style="color:#FFF;font-size:13px;min-width:30px;">80%</span></div></div>
+      <div class="settings-row"><div class="settings-lbl">Upper Screen Brightness</div><div style="display:flex;align-items:center;gap:8px;"><input type="range" min="10" max="100" value="80" style="width:100px;" oninput="this.nextElementSibling.textContent=this.value+'%'; app.ui_brightness=parseInt(this.value); app._applyBrightness();"><span style="color:#FFF;font-size:13px;min-width:30px;">80%</span></div></div>
       <div class="settings-row"><div class="settings-lbl">Lower Screen Brightness</div><div style="display:flex;align-items:center;gap:8px;"><input type="range" min="10" max="100" value="80" style="width:100px;" oninput="this.nextElementSibling.textContent=this.value+'%'"><span style="color:#FFF;font-size:13px;min-width:30px;">80%</span></div></div>
       <div class="settings-row"><div class="settings-lbl">Night Brightness</div><div style="display:flex;align-items:center;gap:8px;"><input type="range" min="5" max="60" value="30" style="width:100px;" oninput="this.nextElementSibling.textContent=this.value+'%'"><span style="color:#FFF;font-size:13px;min-width:30px;">30%</span></div></div>
       <div class="settings-row" style="margin-bottom:16px;"><div class="settings-lbl">Day/Night Mode</div><select class="settings-select"><option selected>Auto</option><option>Day</option><option>Night</option></select></div>`,
@@ -4460,10 +4290,10 @@ const app = {
     maintenance: `
       <div class="settings-section-hdr">MAINTENANCE</div>
       <div class="settings-row"><div class="settings-lbl">Oil Life</div><div style="color:#FF9F0A;font-size:14px;font-weight:600;">42%</div></div>
-      <div class="settings-row"><div class="settings-lbl">Reset Oil Life</div><button onclick="if(confirm('Reset oil life to 100%?'))this.parentElement.previousElementSibling.querySelector('div:last-child').textContent='100%';" style="background:#FF453A22;border:1px solid #FF453A;color:#FF453A;font-size:12px;padding:4px 12px;border-radius:8px;cursor:pointer;">Reset</button></div>
+      <div class="settings-row"><div class="settings-lbl">Reset Oil Life</div><button onclick="appSheet.show('Reset oil life to 100%?','Reset',function(){appToast.show('Oil life reset to 100%','success');},true)" style="background:#FF453A22;border:1px solid #FF453A;color:#FF453A;font-size:12px;padding:4px 12px;border-radius:8px;cursor:pointer;">Reset</button></div>
       <div class="settings-row"><div class="settings-lbl">Maintenance Interval</div><select class="settings-select"><option>3,000 mi</option><option selected>5,000 mi</option><option>7,500 mi</option><option>10,000 mi</option></select></div>
       <div class="settings-row"><div class="settings-lbl">Next Service</div><span style="color:#8E8E93;font-size:13px;">~2,850 mi</span></div>
-      <div class="settings-row" style="margin-bottom:16px;"><div class="settings-lbl">TPMS Calibration</div><button onclick="alert('TPMS calibration started. Drive above 25 mph for 2 minutes.')" style="background:#0A84FF22;border:1px solid #0A84FF;color:#0A84FF;font-size:12px;padding:4px 12px;border-radius:8px;cursor:pointer;">Calibrate</button></div>`,
+      <div class="settings-row" style="margin-bottom:16px;"><div class="settings-lbl">TPMS Calibration</div><button onclick="appToast.show('TPMS calibration started. Drive above 25 mph for 2 minutes.','','4000')" style="background:#0A84FF22;border:1px solid #0A84FF;color:#0A84FF;font-size:12px;padding:4px 12px;border-radius:8px;cursor:pointer;">Calibrate</button></div>`,
 
     system: `
       <div class="settings-section-hdr">SYSTEM</div>
@@ -4472,8 +4302,8 @@ const app = {
       <div class="settings-row"><div class="settings-lbl">Map Data</div><span style="color:#8E8E93;font-size:13px;">2026-Q1</span></div>
       <div class="settings-row"><div class="settings-lbl">HS-CAN Status</div><span style="color:#30D158;font-size:13px;">✓ Connected</span></div>
       <div class="settings-row"><div class="settings-lbl">AV-CAN Status</div><span style="color:#30D158;font-size:13px;">✓ Connected</span></div>
-      <div class="settings-row"><div class="settings-lbl">Export Settings to USB</div><button onclick="alert('Insert USB drive to export settings.')" style="background:#0A84FF22;border:1px solid #0A84FF;color:#0A84FF;font-size:12px;padding:4px 12px;border-radius:8px;cursor:pointer;">Export</button></div>
-      <div class="settings-row" style="margin-bottom:24px;"><div class="settings-lbl" style="color:#FF453A;">Factory Reset</div><button onclick="if(confirm('Erase all settings and profiles?'))alert('Reset complete.')" style="background:#FF453A22;border:1px solid #FF453A;color:#FF453A;font-size:12px;padding:4px 12px;border-radius:8px;cursor:pointer;">Reset</button></div>`,
+      <div class="settings-row"><div class="settings-lbl">Export Settings to USB</div><button onclick="appToast.show('Insert USB drive to export settings.')" style="background:#0A84FF22;border:1px solid #0A84FF;color:#0A84FF;font-size:12px;padding:4px 12px;border-radius:8px;cursor:pointer;">Export</button></div>
+      <div class="settings-row" style="margin-bottom:24px;"><div class="settings-lbl" style="color:#FF453A;">Factory Reset</div><button onclick="appSheet.show('Erase all settings and profiles?','Reset',function(){appToast.show('Reset complete.','warn');},true)" style="background:#FF453A22;border:1px solid #FF453A;color:#FF453A;font-size:12px;padding:4px 12px;border-radius:8px;cursor:pointer;">Reset</button></div>`,
   },
 
   _categoryLabels: {
@@ -4543,13 +4373,27 @@ const app = {
     this.ui.fmFreq = this._fmPresets[i];
     const el = document.getElementById('fm-freq-display');
     if (el) el.textContent = this.ui.fmFreq.toFixed(1) + ' MHz';
+    const nameEl = document.getElementById('fm-station-display');
+    if (nameEl) nameEl.textContent = 'Preset ' + (i + 1);
   },
 
   saveFMPreset(i, e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
     this._fmPresets[i] = this.ui.fmFreq;
     const btn = document.getElementById('fm-p' + i);
     if (btn) { btn.textContent = this.ui.fmFreq.toFixed(1); btn.style.color = '#0A84FF'; setTimeout(() => btn.style.color = '#8E8E93', 1000); }
+  },
+
+  _presetLongTimer: null,
+  _presetLongStart(e, btn) {
+    this._presetLongTimer = setTimeout(() => {
+      const idx = parseInt(btn.dataset.presetIdx || '0');
+      this.saveFMPreset(idx);
+      appToast.show('Preset ' + (idx + 1) + ' saved: ' + this.ui.fmFreq.toFixed(1) + ' MHz');
+    }, 600);
+  },
+  _presetLongEnd(e) {
+    clearTimeout(this._presetLongTimer);
   },
 
   recallAMPreset(i) {
@@ -4885,7 +4729,274 @@ function dismissSimWelcome() {
   }
   if (simWelcomeTimer) { clearTimeout(simWelcomeTimer); simWelcomeTimer = null; }
 }
+
+// ── TOAST SYSTEM ──
+const appToast = (function() {
+  return {
+    show(msg, type, duration) {
+      type = type || '';
+      duration = duration || 2800;
+      const c = document.getElementById('toast-container');
+      if (!c) return;
+      const t = document.createElement('div');
+      t.className = 'toast' + (type ? ' ' + type : '');
+      t.textContent = msg;
+      c.appendChild(t);
+      setTimeout(function() { t.style.opacity = '0'; t.style.transition = 'opacity 300ms'; setTimeout(function() { t.remove(); }, 320); }, duration);
+    }
+  };
+})();
+
+// ── ACTION SHEET (replaces confirm()) ──
+const appSheet = (function() {
+  let _cb = null;
+  return {
+    show(title, okLabel, callback, destructive) {
+      destructive = destructive || false;
+      _cb = callback;
+      document.getElementById('as-title').textContent = title;
+      const ok = document.getElementById('as-ok-btn');
+      ok.textContent = okLabel;
+      ok.className = 'as-btn ' + (destructive ? 'destructive' : 'confirm-ok');
+      document.getElementById('action-sheet-overlay').classList.add('visible');
+    },
+    confirm() {
+      document.getElementById('action-sheet-overlay').classList.remove('visible');
+      if (_cb) { const f = _cb; _cb = null; f(); }
+    },
+    cancel() {
+      document.getElementById('action-sheet-overlay').classList.remove('visible');
+      _cb = null;
+    }
+  };
+})();
+
+// ── ACTIVE CALL BADGE ──
+let _callTimer = null;
+let _callSeconds = 0;
+
+function _startCallBadge(name) {
+  const badge = document.getElementById('call-badge');
+  const nameEl = document.getElementById('call-badge-name');
+  const timerEl = document.getElementById('call-badge-timer');
+  if (nameEl) nameEl.textContent = name || 'Active Call';
+  _callSeconds = 0;
+  if (timerEl) timerEl.textContent = '0:00';
+  if (badge) badge.classList.add('active');
+  clearInterval(_callTimer);
+  _callTimer = setInterval(function() {
+    _callSeconds++;
+    const m = Math.floor(_callSeconds / 60);
+    const s = (_callSeconds % 60).toString().padStart(2, '0');
+    if (timerEl) timerEl.textContent = m + ':' + s;
+  }, 1000);
+}
+
+function _stopCallBadge() {
+  clearInterval(_callTimer);
+  const badge = document.getElementById('call-badge');
+  if (badge) badge.classList.remove('active');
+}
+
+// Patch app.returnToCall
+app.returnToCall = function() {
+  app.switchTab(2);
+  const acc = document.getElementById('active-call-card');
+  if (acc) { acc.style.display = 'flex'; }
+};
+
+// Patch startActiveCall to fire badge
+const _origStartActiveCall = app.startActiveCall.bind(app);
+app.startActiveCall = function() {
+  _origStartActiveCall();
+  const callerEl = document.querySelector('#active-call-card .active-caller');
+  const callerName = callerEl ? callerEl.textContent : 'Active Call';
+  _startCallBadge(callerName);
+};
+
+// Patch endCall to stop badge
+const _origEndCall = app.endCall.bind(app);
+app.endCall = function() {
+  _origEndCall();
+  _stopCallBadge();
+};
+
+// ── ON-SCREEN KEYBOARD ──
+const osk = (function() {
+  let _target = null;
+  let _value = '';
+  let _shift = false;
+  let _mode = 'alpha';
+
+  function _updatePreview() {
+    const el = document.getElementById('osk-preview');
+    if (el) {
+      el.textContent = _value;
+      el.dataset.placeholder = _target ? (_target.placeholder || 'Type…') : 'Type…';
+    }
+  }
+
+  function _pushToTarget() {
+    if (!_target) return;
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    nativeInputValueSetter.call(_target, _value);
+    _target.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  return {
+    open(inputEl) {
+      _target = inputEl;
+      _value = inputEl.value || '';
+      _shift = false;
+      _mode = 'alpha';
+      document.getElementById('osk-rows-alpha').style.display = '';
+      document.getElementById('osk-rows-num').style.display = 'none';
+      _updatePreview();
+      document.getElementById('osk-overlay').classList.add('visible');
+    },
+    close() {
+      document.getElementById('osk-overlay').classList.remove('visible');
+      if (_target) { _target.blur(); _target = null; }
+    },
+    key(char) {
+      const c = _shift ? char.toUpperCase() : char;
+      _value += c;
+      _shift = false;
+      _updatePreview();
+      _pushToTarget();
+    },
+    backspace() {
+      _value = _value.slice(0, -1);
+      _updatePreview();
+      _pushToTarget();
+    },
+    toggleShift() {
+      _shift = !_shift;
+      const btn = document.querySelector('.osk-key.wide');
+      if (btn) btn.style.color = _shift ? '#0A84FF' : '#FFFFFF';
+    },
+    switchMode(mode) {
+      _mode = mode;
+      document.getElementById('osk-rows-alpha').style.display = mode === 'alpha' ? '' : 'none';
+      document.getElementById('osk-rows-num').style.display = mode === 'num' ? '' : 'none';
+    },
+    submit() {
+      if (_target) {
+        _target.dispatchEvent(new Event('change', { bubbles: true }));
+        if (_target.id === 'nav-search-input') { app.navSearch(_value); }
+        if (_target.id === 'phone-contacts-search') { app.filterContacts(_value); }
+      }
+      this.close();
+    },
+    getValue() { return _value; },
+    setValue(v) { _value = v; _updatePreview(); }
+  };
+})();
+
+// Wire all non-readonly text inputs to OSK — intercept focus
+document.addEventListener('focusin', function(e) {
+  if (e.target.tagName === 'INPUT' && e.target.type !== 'range' && e.target.type !== 'checkbox' && !e.target.hasAttribute('readonly')) {
+    e.target.blur();
+    osk.open(e.target);
+  }
+});
 </script>
+
+<!-- ── TOAST CONTAINER ── -->
+<div id="toast-container"></div>
+
+<!-- ── ACTION SHEET ── -->
+<div id="action-sheet-overlay" onclick="if(event.target===this)appSheet.cancel()">
+  <div id="action-sheet">
+    <div class="as-title" id="as-title"></div>
+    <button class="as-btn confirm-ok" id="as-ok-btn" onclick="appSheet.confirm()"></button>
+    <button class="as-btn cancel" onclick="appSheet.cancel()">Cancel</button>
+  </div>
+</div>
+
+<!-- ── ON-SCREEN KEYBOARD ── -->
+<div id="osk-overlay">
+  <div class="osk-field-preview">
+    <span id="osk-preview" data-placeholder="Search…"></span>
+    <button class="osk-close-btn" onclick="osk.close()">✕</button>
+  </div>
+  <div id="osk-rows-alpha">
+    <div class="osk-row">
+      <button class="osk-key" onclick="osk.key('q')">q</button>
+      <button class="osk-key" onclick="osk.key('w')">w</button>
+      <button class="osk-key" onclick="osk.key('e')">e</button>
+      <button class="osk-key" onclick="osk.key('r')">r</button>
+      <button class="osk-key" onclick="osk.key('t')">t</button>
+      <button class="osk-key" onclick="osk.key('y')">y</button>
+      <button class="osk-key" onclick="osk.key('u')">u</button>
+      <button class="osk-key" onclick="osk.key('i')">i</button>
+      <button class="osk-key" onclick="osk.key('o')">o</button>
+      <button class="osk-key" onclick="osk.key('p')">p</button>
+    </div>
+    <div class="osk-row">
+      <button class="osk-key" onclick="osk.key('a')">a</button>
+      <button class="osk-key" onclick="osk.key('s')">s</button>
+      <button class="osk-key" onclick="osk.key('d')">d</button>
+      <button class="osk-key" onclick="osk.key('f')">f</button>
+      <button class="osk-key" onclick="osk.key('g')">g</button>
+      <button class="osk-key" onclick="osk.key('h')">h</button>
+      <button class="osk-key" onclick="osk.key('j')">j</button>
+      <button class="osk-key" onclick="osk.key('k')">k</button>
+      <button class="osk-key" onclick="osk.key('l')">l</button>
+    </div>
+    <div class="osk-row">
+      <button class="osk-key wide" onclick="osk.toggleShift()">⇧</button>
+      <button class="osk-key" onclick="osk.key('z')">z</button>
+      <button class="osk-key" onclick="osk.key('x')">x</button>
+      <button class="osk-key" onclick="osk.key('c')">c</button>
+      <button class="osk-key" onclick="osk.key('v')">v</button>
+      <button class="osk-key" onclick="osk.key('b')">b</button>
+      <button class="osk-key" onclick="osk.key('n')">n</button>
+      <button class="osk-key" onclick="osk.key('m')">m</button>
+      <button class="osk-key delete wide" onclick="osk.backspace()">⌫</button>
+    </div>
+    <div class="osk-row">
+      <button class="osk-key wide" onclick="osk.switchMode('num')">123</button>
+      <button class="osk-key" onclick="osk.key(',')">，</button>
+      <button class="osk-key space" onclick="osk.key(' ')">space</button>
+      <button class="osk-key" onclick="osk.key('.')">.</button>
+      <button class="osk-key action" onclick="osk.submit()">Go</button>
+    </div>
+  </div>
+  <div id="osk-rows-num" style="display:none;">
+    <div class="osk-row">
+      <button class="osk-key" onclick="osk.key('1')">1</button>
+      <button class="osk-key" onclick="osk.key('2')">2</button>
+      <button class="osk-key" onclick="osk.key('3')">3</button>
+      <button class="osk-key" onclick="osk.key('4')">4</button>
+      <button class="osk-key" onclick="osk.key('5')">5</button>
+      <button class="osk-key" onclick="osk.key('6')">6</button>
+      <button class="osk-key" onclick="osk.key('7')">7</button>
+      <button class="osk-key" onclick="osk.key('8')">8</button>
+      <button class="osk-key" onclick="osk.key('9')">9</button>
+      <button class="osk-key" onclick="osk.key('0')">0</button>
+    </div>
+    <div class="osk-row">
+      <button class="osk-key" onclick="osk.key('-')">-</button>
+      <button class="osk-key" onclick="osk.key('/')">／</button>
+      <button class="osk-key" onclick="osk.key(':')">:</button>
+      <button class="osk-key" onclick="osk.key(';')">;</button>
+      <button class="osk-key" onclick="osk.key('(')">（</button>
+      <button class="osk-key" onclick="osk.key(')')">）</button>
+      <button class="osk-key" onclick="osk.key('$')">$</button>
+      <button class="osk-key" onclick="osk.key('&')">&amp;</button>
+      <button class="osk-key" onclick="osk.key('@')">@</button>
+      <button class="osk-key delete" onclick="osk.backspace()">⌫</button>
+    </div>
+    <div class="osk-row">
+      <button class="osk-key wide" onclick="osk.switchMode('alpha')">ABC</button>
+      <button class="osk-key" onclick="osk.key('.')">.</button>
+      <button class="osk-key space" onclick="osk.key(' ')">space</button>
+      <button class="osk-key" onclick="osk.key(',')">,</button>
+      <button class="osk-key action" onclick="osk.submit()">Go</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
