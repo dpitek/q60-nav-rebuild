@@ -480,13 +480,15 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    cursor: pointer;
-    color: #8E8E93;
-    position: relative;
-    transition: color 150ms ease;
-    border: none;
+    padding: 0;
+    height: 56px;
     background: transparent;
+    border: none;
+    color: #6E6E73;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.15s;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .tab-item::before {
@@ -505,7 +507,7 @@
   .tab-item:hover:not(.active) { color: #CCCCCC; }
 
   .tab-icon { font-size: 20px; line-height: 1; }
-  .tab-label { font-size: 10px; font-weight: 500; letter-spacing: 0.04em; }
+  .tab-label { font-size: 11px; font-weight: 500; letter-spacing: 0.04em; margin-top: 2px; }
 
   /* ── SHARED CARD STYLES ── */
   .card {
@@ -539,40 +541,39 @@
   #tab-nav {
     display: flex;
     flex-direction: column;
-    gap: 12px;
   }
 
   .nav-row-cards {
     display: flex;
-    gap: 12px;
+    gap: 8px;
   }
 
   .nav-stat-card {
     flex: 1;
     background: #1C1C1E;
-    border-radius: 16px;
-    padding: 14px 16px;
+    border-radius: 12px;
+    padding: 10px 12px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
   }
 
-  .nav-stat-lbl { font-size: 11px; color: #8E8E93; text-transform: uppercase; letter-spacing: 0.06em; }
-  .nav-stat-val { font-size: 24px; font-weight: 700; }
+  .nav-stat-lbl { font-size: 10px; color: #8E8E93; text-transform: uppercase; letter-spacing: 0.06em; }
+  .nav-stat-val { font-size: 20px; font-weight: 700; }
 
   .next-maneuver-card {
     background: #1C1C1E;
-    border-radius: 16px;
-    padding: 14px 18px;
+    border-radius: 12px;
+    padding: 10px 14px;
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
   }
 
   .speed-compare {
     background: #1C1C1E;
-    border-radius: 16px;
-    padding: 14px 18px;
+    border-radius: 12px;
+    padding: 8px 14px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -599,25 +600,33 @@
 
   .source-pills {
     display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px 10px 0;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .source-pill {
-    padding: 7px 18px;
-    font-size: 13px;
-    font-weight: 600;
-    border-radius: 18px;
-    border: none;
-    cursor: pointer;
-    font-family: 'Roboto', sans-serif;
-    transition: all 150ms ease;
-    background: #2C2C2E;
+    flex: 1;
+    height: 52px;
+    background: #1C1C1E;
+    border: 1.5px solid #3A3A3C;
+    border-radius: 10px;
     color: #8E8E93;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.04em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-
-  .source-pill.active { background: #0A84FF; color: #FFFFFF; }
-  .source-pill:hover:not(.active) { background: #3A3A3C; color: #FFFFFF; }
+  .source-pill.active {
+    background: #0A84FF22;
+    border-color: #0A84FF;
+    color: #0A84FF;
+  }
 
   .audio-main {
     background: #1C1C1E;
@@ -650,19 +659,28 @@
   }
 
   .transport-btn {
-    width: 48px; height: 48px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
-    background: #2C2C2E;
-    border: 1px solid rgba(255,255,255,0.1);
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
+    background: #1C1C1E;
+    border: 1.5px solid #3A3A3C;
     color: #FFFFFF;
-    transition: all 150ms ease;
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+  }
+  .transport-btn.play {
+    width: 72px;
+    height: 72px;
+    background: #0A84FF;
+    border-color: #0A84FF;
+    font-size: 26px;
   }
 
   .transport-btn:hover { background: #3A3A3C; }
-  .transport-btn.play { background: #0A84FF; border-color: #0A84FF; }
   .transport-btn.play:hover { background: #2196FF; }
 
   .bt-footer { font-size: 12px; color: #8E8E93; display: flex; align-items: center; gap: 6px; }
@@ -688,57 +706,54 @@
   .seek-btn:hover { background: #3A3A3C; }
 
   .volume-row {
-    background: #1C1C1E;
-    border-radius: 16px;
-    padding: 14px 18px;
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 10px;
+    padding: 10px 12px;
+    min-height: 56px;
   }
 
   .mute-btn {
-    width: 40px; height: 40px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
-    background: #2C2C2E;
-    border: 1px solid rgba(255,255,255,0.1);
+    background: #1C1C1E;
+    border: 1.5px solid #3A3A3C;
+    color: #FFFFFF;
+    font-size: 22px;
     cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
-    transition: all 150ms ease;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .mute-btn.muted { background: rgba(255,69,58,0.2); border-color: #FF453A; }
   .mute-btn:hover { background: #3A3A3C; }
 
   .vol-slider {
+    flex: 1;
+    height: 6px;
     -webkit-appearance: none;
     appearance: none;
-    width: 220px;
-    height: 6px;
+    background: linear-gradient(to right, #0A84FF 65%, #3A3A3C 65%);
     border-radius: 3px;
-    background: #3A3A3C;
     outline: none;
     cursor: pointer;
-    transition: background 150ms;
   }
-
   .vol-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
-    appearance: none;
-    width: 18px; height: 18px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     background: #FFFFFF;
     cursor: pointer;
-    box-shadow: 0 0 6px rgba(0,0,0,0.5);
-    transition: transform 150ms;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
   }
-
-  .vol-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
 
   .vol-pct { font-size: 13px; color: #8E8E93; min-width: 40px; text-align: right; }
 
   /* ── TAB 2: PHONE ── */
-  #tab-phone { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 16px; }
+  #tab-phone { display: flex; flex-direction: column; overflow: hidden; height: 100%; }
 
   .phone-idle {
     display: flex; flex-direction: column; align-items: center; gap: 12px;
@@ -855,36 +870,49 @@
   #tab-climate { display: flex; gap: 10px; height: 100%; }
 
   .climate-zone {
-    width: 180px;
-    flex-shrink: 0;
-    background: #1C1C1E;
-    border-radius: 16px;
-    padding: 14px 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    justify-content: space-between;
+    padding: 8px 6px;
+    background: #111;
+    border-radius: 12px;
+    width: 100px;
+    flex-shrink: 0;
   }
 
-  .zone-label { font-size: 11px; color: #8E8E93; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; }
+  .zone-label {
+    font-size: 12px;
+    color: #8E8E93;
+    font-weight: 500;
+    text-align: center;
+  }
 
   .temp-btn {
-    width: 52px; height: 52px;
-    border-radius: 50%;
+    width: 56px;
+    height: 48px;
+    border-radius: 10px;
     background: #2C2C2E;
-    border: 1.5px solid rgba(10,132,255,0.4);
-    color: #0A84FF;
-    font-size: 24px;
+    border: none;
+    color: #FFFFFF;
+    font-size: 22px;
     cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 300;
     transition: all 150ms ease;
     font-family: 'Roboto', sans-serif;
-    font-weight: 300;
   }
-  .temp-btn:hover { background: rgba(10,132,255,0.15); border-color: #0A84FF; }
+  .temp-btn:hover { background: rgba(10,132,255,0.15); }
   .temp-btn:active { transform: scale(0.93); }
 
-  .temp-display { font-size: 36px; font-weight: 700; line-height: 1; }
+  .temp-display {
+    font-size: 36px;
+    font-weight: 700;
+    color: #FFFFFF;
+    line-height: 1;
+  }
 
   .seat-heat-row {
     display: flex; gap: 6px; align-items: center; margin-top: 4px;
@@ -918,23 +946,27 @@
 
   .mode-btn {
     flex: 1;
-    height: 38px;
+    min-width: 0;
+    height: 52px;
     border-radius: 10px;
     background: #2C2C2E;
     border: none;
     color: #8E8E93;
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 18px;
     cursor: pointer;
-    transition: all 150ms ease;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 2px;
+    transition: all 0.15s;
     font-family: 'Roboto', sans-serif;
   }
-  .mode-btn.active { background: #0A84FF; color: #FFFFFF; }
+  .mode-btn.active {
+    background: #0A84FF22;
+    border: 1.5px solid #0A84FF;
+    color: #0A84FF;
+  }
   .mode-btn:hover:not(.active) { background: #3A3A3C; color: #FFFFFF; }
 
   .fan-row {
@@ -946,29 +978,29 @@
   .fan-label { font-size: 11px; color: #8E8E93; margin-right: 4px; align-self: center; }
 
   .fan-off-btn {
-    height: 20px;
-    padding: 0 8px;
+    height: 36px;
+    padding: 0 10px;
     background: #2C2C2E;
-    border-radius: 6px;
+    border-radius: 8px;
     border: none;
     color: #8E8E93;
-    font-size: 11px;
+    font-size: 12px;
     cursor: pointer;
     font-family: 'Roboto', sans-serif;
     transition: all 150ms ease;
-    align-self: center;
+    align-self: flex-end;
     margin-right: 2px;
   }
   .fan-off-btn.active { background: #0A84FF; color: #FFFFFF; }
   .fan-off-btn:hover:not(.active) { background: #3A3A3C; }
 
   .fan-bar {
-    width: 18px;
-    border-radius: 3px 3px 0 0;
-    background: #3A3A3C;
+    width: 20px;
+    border-radius: 3px;
+    background: #2C2C2E;
     cursor: pointer;
-    transition: background 150ms ease;
-    border: 1px solid rgba(255,255,255,0.05);
+    transition: background 0.15s;
+    flex-shrink: 0;
   }
   .fan-bar.active { background: #0A84FF; }
   .fan-bar:hover:not(.active) { background: #5A5A5E; }
@@ -980,20 +1012,25 @@
 
   .toggle-chip {
     flex: 1;
-    height: 36px;
-    border-radius: 10px;
+    height: 44px;
+    padding: 0 16px;
+    border-radius: 22px;
     background: #2C2C2E;
-    border: none;
+    border: 1.5px solid transparent;
     color: #8E8E93;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
+    transition: all 0.15s;
     font-family: 'Roboto', sans-serif;
-    transition: all 150ms ease;
     display: flex; align-items: center; justify-content: center;
     gap: 5px;
   }
-  .toggle-chip.active { background: rgba(10,132,255,0.2); border: 1px solid #0A84FF; color: #0A84FF; }
+  .toggle-chip.active {
+    background: #0A84FF22;
+    border-color: #0A84FF;
+    color: #0A84FF;
+  }
   .toggle-chip:hover:not(.active) { background: #3A3A3C; color: #FFFFFF; }
 
   .outside-temp { font-size: 12px; color: #8E8E93; text-align: center; margin-top: auto; }
@@ -1321,8 +1358,155 @@
     100% { content: "1,189 RPM"; }
   }
 
-  .audio-view { display: none; }
-  .audio-view.active { display: flex; flex-direction: column; gap: 10px; }
+  .audio-view { display: none; flex: 1; overflow: hidden; }
+  .audio-view.active { display: flex; flex-direction: column; }
+
+  /* Settings tab */
+  .settings-section-hdr {
+    font-size: 10px;
+    font-weight: 600;
+    color: #8E8E93;
+    letter-spacing: 0.08em;
+    padding: 14px 16px 6px;
+    border-top: 1px solid #1C1C1E;
+  }
+  .settings-section-hdr:first-child { border-top: none; }
+  .settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 16px;
+    border-bottom: 1px solid #111;
+    gap: 12px;
+  }
+  .settings-lbl {
+    font-size: 13px;
+    color: #FFFFFF;
+    flex: 1;
+  }
+  .settings-select {
+    background: #2C2C2E;
+    border: 1px solid #3A3A3C;
+    color: #FFFFFF;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .settings-toggle {
+    background: #3A3A3C;
+    border: none;
+    color: #8E8E93;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    min-width: 48px;
+  }
+  .settings-toggle.active {
+    background: #0A84FF22;
+    border: 1px solid #0A84FF;
+    color: #0A84FF;
+  }
+
+  /* ── Persistent cog button ── */
+  .cog-btn {
+    position: absolute;
+    top: 12px; right: 12px;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: #1C1C1E;
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #FFFFFF;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    z-index: 200;
+    transition: border-color 0.2s, background 0.2s;
+    user-select: none;
+  }
+  .cog-btn.open {
+    border-color: #0A84FF;
+    background: #0A84FF22;
+    color: #0A84FF;
+  }
+
+  /* ── Settings overlay ── */
+  #settings-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #000000;
+    z-index: 500;
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(0.25,0.46,0.45,0.94);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  #settings-overlay.open { transform: translateX(0); }
+
+  .settings-overlay-header {
+    height: 48px;
+    display: flex; align-items: center;
+    padding: 0 16px;
+    border-bottom: 1px solid #1C1C1E;
+    flex-shrink: 0;
+  }
+  .settings-overlay-header .breadcrumb {
+    flex: 1;
+    font-size: 14px; font-weight: 600; color: #FFFFFF;
+  }
+  .settings-overlay-header .back-btn {
+    background: transparent; border: none; color: #0A84FF;
+    font-size: 14px; cursor: pointer; padding: 0 12px 0 0;
+    display: none;
+  }
+  .settings-overlay-header .close-btn {
+    background: transparent; border: none; color: #8E8E93;
+    font-size: 20px; cursor: pointer; width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+  }
+  .settings-overlay-header .close-btn:hover { background: #1C1C1E; color: #FFF; }
+
+  .settings-screens-wrap {
+    flex: 1; overflow: hidden; position: relative;
+  }
+  .settings-screen {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    overflow-y: auto;
+    transform: translateX(0);
+    transition: transform 0.2s ease;
+  }
+  .settings-screen.slide-out { transform: translateX(-100%); }
+  .settings-screen.slide-in-right { transform: translateX(0); }
+  .settings-screen.offscreen-right { transform: translateX(100%); transition: none; }
+
+  /* Category cards */
+  .settings-cat-row {
+    display: flex; align-items: center;
+    padding: 14px 16px;
+    border-bottom: 1px solid #111;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .settings-cat-row:hover { background: #1A1A1A; }
+  .settings-cat-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: #1C1C1E; display: flex; align-items: center;
+    justify-content: center; font-size: 18px; margin-right: 12px;
+    flex-shrink: 0;
+  }
+  .settings-cat-text { flex: 1; }
+  .settings-cat-label { font-size: 14px; color: #FFFFFF; font-weight: 500; }
+  .settings-cat-desc { font-size: 11px; color: #8E8E93; margin-top: 1px; }
+  .settings-cat-chevron { color: #3A3A3C; font-size: 18px; }
+
+  /* Status icon signal bars */
+  #sig-b1 { height: 4px; }
+  #sig-b2 { height: 7px; }
+  #sig-b3 { height: 10px; }
+  #sig-b4 { height: 13px; }
 </style>
 </head>
 <body>
@@ -1339,7 +1523,13 @@
 
       <!-- MAP BACKGROUND -->
       <div class="map-bg">
-        <div class="map-grid"></div>
+        <div class="map-grid" id="map-grid-upper" onmousedown="app._mapDragStart(event)" style="cursor:grab;">
+          <!-- Zoom controls (bottom-right) -->
+          <button onclick="app.zoomMap(0.25)" style="position:absolute;bottom:84px;right:14px;width:40px;height:40px;background:#1C1C1E;border:1px solid rgba(255,255,255,0.12);color:#FFFFFF;font-size:20px;border-radius:8px;cursor:pointer;z-index:15;display:flex;align-items:center;justify-content:center;line-height:1;">+</button>
+          <button onclick="app.zoomMap(-0.25)" style="position:absolute;bottom:40px;right:14px;width:40px;height:40px;background:#1C1C1E;border:1px solid rgba(255,255,255,0.12);color:#FFFFFF;font-size:20px;border-radius:8px;cursor:pointer;z-index:15;display:flex;align-items:center;justify-content:center;line-height:1;">−</button>
+          <!-- Recenter (bottom-left) -->
+          <button onclick="app.recenterMap()" style="position:absolute;bottom:40px;left:14px;width:40px;height:40px;background:#1C1C1E;border:1px solid rgba(255,255,255,0.12);color:#FFFFFF;font-size:18px;border-radius:8px;cursor:pointer;z-index:15;display:flex;align-items:center;justify-content:center;line-height:1;">⊕</button>
+        </div>
         <div class="map-label">MAP</div>
         <div class="position-dot" id="pos-dot"></div>
       </div>
@@ -1348,10 +1538,39 @@
       <div class="status-bar">
         <span class="status-time" id="status-time">9:41 AM</span>
         <span class="status-center">Q60</span>
-        <div class="status-right">
-          <div class="gps-dot" id="gps-dot-upper"></div>
-          <span id="status-speed">35 mph</span>
-          <span>68°F</span>
+        <div class="status-right" style="display:flex;align-items:center;gap:6px;">
+          <!-- BT icon -->
+          <div id="si-bt" title="Bluetooth" style="display:flex;align-items:center;gap:2px;opacity:1;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0A84FF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"/></svg>
+            <span id="si-bt-label" style="font-size:10px;color:#0A84FF;font-weight:600;">82%</span>
+          </div>
+          <!-- Phone signal -->
+          <div id="si-signal" title="Phone signal" style="display:flex;align-items:flex-end;gap:1px;height:13px;">
+            <div style="width:3px;background:#30D158;border-radius:1px;" id="sig-b1"></div>
+            <div style="width:3px;background:#30D158;border-radius:1px;" id="sig-b2"></div>
+            <div style="width:3px;background:#30D158;border-radius:1px;" id="sig-b3"></div>
+            <div style="width:3px;background:#30D158;border-radius:1px;opacity:0.3;" id="sig-b4"></div>
+          </div>
+          <!-- Audio source -->
+          <div id="si-audio" title="Audio source" style="font-size:10px;color:#8E8E93;font-weight:600;letter-spacing:.03em;" id="si-audio-lbl">BT</div>
+          <!-- Volume -->
+          <div id="si-vol" title="Volume" style="display:flex;align-items:center;gap:2px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="si-vol-icon"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14" id="vol-arc-outer"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07" id="vol-arc-inner"/></svg>
+          </div>
+          <!-- Fuel warning (hidden unless low) -->
+          <div id="si-fuel" title="Low fuel" style="display:none;align-items:center;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FF9F0A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 22V9a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v3l2-2 2 2v8"/><rect x="5" y="11" width="8" height="6" rx="1"/><line x1="3" y1="22" x2="21" y2="22"/></svg>
+          </div>
+          <!-- ADAS active indicator -->
+          <div id="si-adas" title="ADAS active" style="display:flex;align-items:center;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#30D158" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M8 16l4-4 4 4"/></svg>
+          </div>
+          <!-- GPS dot -->
+          <div class="gps-dot" id="gps-dot-upper" title="GPS"></div>
+          <!-- Speed -->
+          <span id="status-speed" style="font-size:12px;color:#FFFFFF;font-weight:600;">35 mph</span>
+          <!-- Temp -->
+          <span id="si-temp" style="font-size:12px;color:#8E8E93;">68°F</span>
         </div>
       </div>
 
@@ -1450,85 +1669,193 @@
       <div class="lower-content">
 
         <!-- TAB 0: NAV COMPANION -->
-        <div class="tab-panel active" id="tab-nav">
-          <div class="nav-row-cards">
-            <div class="nav-stat-card">
-              <div class="nav-stat-lbl">ETA</div>
-              <div class="nav-stat-val" id="lwr-eta">2:14 PM</div>
+        <div class="tab-panel active" id="tab-nav" style="display:flex;flex-direction:column;overflow:hidden;padding:0;">
+
+          <!-- ── STATE A: No active navigation (destination search) ── -->
+          <div id="nav-idle" style="display:flex;flex-direction:column;height:100%;overflow:hidden;">
+
+            <!-- Search bar -->
+            <div style="padding:10px 12px 4px;">
+              <div style="display:flex;align-items:center;gap:8px;background:#1C1C1E;border-radius:14px;padding:0 14px;min-height:52px;">
+                <span style="color:#8E8E93;font-size:16px;">🔍</span>
+                <input type="text" id="nav-search-input" placeholder="Search destination…"
+                  oninput="app.navSearch(this.value)"
+                  style="flex:1;background:transparent;border:none;color:#FFF;font-size:15px;padding:14px 0;outline:none;">
+                <button onclick="app.navClearSearch()" style="background:transparent;border:none;color:#8E8E93;font-size:18px;cursor:pointer;padding:0;">✕</button>
+              </div>
             </div>
-            <div class="nav-stat-card">
-              <div class="nav-stat-lbl">Remaining</div>
-              <div class="nav-stat-val" id="lwr-remain">4.7 mi</div>
+
+            <!-- Search results (hidden until typing) -->
+            <div id="nav-search-results" style="display:none;flex:1;overflow-y:auto;padding:4px 0;">
+              <!-- populated by JS -->
             </div>
-            <div class="nav-stat-card">
-              <div class="nav-stat-lbl">Current Street</div>
-              <div class="nav-stat-val" style="font-size:17px;" id="lwr-street">US-1 South</div>
+
+            <!-- Idle content (recents + shortcuts) -->
+            <div id="nav-idle-content" style="flex:1;overflow-y:auto;">
+
+              <!-- Home / Work shortcuts -->
+              <div style="display:flex;gap:8px;padding:6px 12px 4px;">
+                <button onclick="app.navRouteTo('home')" style="flex:1;min-height:60px;background:#1C1C1E;border:1.5px solid #3A3A3C;border-radius:14px;padding:12px;cursor:pointer;display:flex;align-items:center;gap:10px;">
+                  <span style="font-size:24px;flex-shrink:0;">🏠</span>
+                  <div style="text-align:left;"><div style="color:#FFF;font-size:15px;font-weight:600;">Home</div><div style="color:#8E8E93;font-size:12px;">31 min</div></div>
+                </button>
+                <button onclick="app.navRouteTo('work')" style="flex:1;min-height:60px;background:#1C1C1E;border:1.5px solid #3A3A3C;border-radius:14px;padding:12px;cursor:pointer;display:flex;align-items:center;gap:10px;">
+                  <span style="font-size:24px;flex-shrink:0;">💼</span>
+                  <div style="text-align:left;"><div style="color:#FFF;font-size:15px;font-weight:600;">Work</div><div style="color:#8E8E93;font-size:12px;">18 min</div></div>
+                </button>
+              </div>
+
+              <!-- POI quick categories -->
+              <div style="display:flex;gap:6px;padding:0 12px 8px;overflow-x:auto;">
+                <button onclick="app.navPOI('fuel')" style="background:#1C1C1E;border:1px solid #3A3A3C;border-radius:22px;color:#FFF;font-size:13px;height:44px;padding:0 14px;cursor:pointer;white-space:nowrap;">⛽ Gas</button>
+                <button onclick="app.navPOI('food')" style="background:#1C1C1E;border:1px solid #3A3A3C;border-radius:22px;color:#FFF;font-size:13px;height:44px;padding:0 14px;cursor:pointer;white-space:nowrap;">🍽 Food</button>
+                <button onclick="app.navPOI('parking')" style="background:#1C1C1E;border:1px solid #3A3A3C;border-radius:22px;color:#FFF;font-size:13px;height:44px;padding:0 14px;cursor:pointer;white-space:nowrap;">🅿️ Parking</button>
+                <button onclick="app.navPOI('hotel')" style="background:#1C1C1E;border:1px solid #3A3A3C;border-radius:22px;color:#FFF;font-size:13px;height:44px;padding:0 14px;cursor:pointer;white-space:nowrap;">🏨 Hotel</button>
+                <button onclick="app.navPOI('atm')" style="background:#1C1C1E;border:1px solid #3A3A3C;border-radius:22px;color:#FFF;font-size:13px;height:44px;padding:0 14px;cursor:pointer;white-space:nowrap;">🏧 ATM</button>
+              </div>
+
+              <!-- Recents header -->
+              <div style="padding:2px 12px 4px;color:#8E8E93;font-size:10px;font-weight:600;letter-spacing:.06em;">RECENT</div>
+
+              <!-- Recent destinations list -->
+              <div id="nav-recents-list">
+                <!-- populated by JS init -->
+              </div>
+
+              <!-- Favorites header -->
+              <div style="padding:8px 12px 4px;color:#8E8E93;font-size:10px;font-weight:600;letter-spacing:.06em;">FAVORITES</div>
+              <div id="nav-favorites-list">
+                <!-- populated by JS init -->
+              </div>
+
+            </div><!-- /nav-idle-content -->
+          </div><!-- /nav-idle -->
+
+          <!-- ── STATE B: Active navigation ── -->
+          <div id="nav-active" style="display:none;flex-direction:column;height:100%;overflow:hidden;gap:6px;padding:8px 12px 6px;">
+
+            <!-- ETA strip -->
+            <div class="nav-row-cards">
+              <div class="nav-stat-card">
+                <div class="nav-stat-lbl">ETA</div>
+                <div class="nav-stat-val" id="lwr-eta">2:14 PM</div>
+              </div>
+              <div class="nav-stat-card">
+                <div class="nav-stat-lbl">Remaining</div>
+                <div class="nav-stat-val" id="lwr-remain">4.7 mi</div>
+              </div>
+              <div class="nav-stat-card">
+                <div class="nav-stat-lbl">Current Street</div>
+                <div class="nav-stat-val" style="font-size:17px;" id="lwr-street">US-1 South</div>
+              </div>
             </div>
-          </div>
-          <div class="next-maneuver-card">
-            <div class="turn-arrow-wrap" style="width:40px;height:40px;">
-              <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" id="arrow-svg-lower">
-                <line x1="18" y1="30" x2="18" y2="6" stroke="#0A84FF" stroke-width="3" stroke-linecap="round"/>
-                <polyline points="10,14 18,6 26,14" stroke="#0A84FF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-              </svg>
+
+            <!-- Next maneuver -->
+            <div class="next-maneuver-card">
+              <div class="turn-arrow-wrap" style="width:40px;height:40px;">
+                <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" id="arrow-svg-lower">
+                  <line x1="18" y1="30" x2="18" y2="6" stroke="#0A84FF" stroke-width="3" stroke-linecap="round"/>
+                  <polyline points="10,14 18,6 26,14" stroke="#0A84FF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+              </div>
+              <div>
+                <div style="font-size:13px;color:#8E8E93;margin-bottom:2px;">Next Maneuver</div>
+                <div style="font-size:18px;font-weight:700;" id="lwr-turn-dist">0.4 mi</div>
+                <div style="font-size:13px;color:#8E8E93;" id="lwr-turn-street">Turn right on Kildaire Farm Rd</div>
+              </div>
             </div>
-            <div>
-              <div style="font-size:13px;color:#8E8E93;margin-bottom:2px;">Next Maneuver</div>
-              <div style="font-size:18px;font-weight:700;" id="lwr-turn-dist">0.4 mi</div>
-              <div style="font-size:13px;color:#8E8E93;" id="lwr-turn-street">Turn right on Kildaire Farm Rd</div>
+
+            <!-- Speed vs limit -->
+            <div class="speed-compare">
+              <div>
+                <span class="speed-dot" id="speed-compare-dot" style="background:#30D158;"></span>
+                <span id="speed-compare-val" style="font-size:18px;font-weight:700;">35 / 45 mph</span>
+              </div>
+              <span style="font-size:12px;color:#8E8E93;">Speed / Limit</span>
             </div>
-          </div>
-          <div class="speed-compare">
-            <div>
-              <span class="speed-dot" id="speed-compare-dot" style="background:#30D158;"></span>
-              <span id="speed-compare-val" style="font-size:18px;font-weight:700;">35 / 45 mph</span>
+
+            <!-- Traffic + Map mode row -->
+            <div style="display:flex;gap:6px;">
+              <button onclick="app.navToggleTraffic()" id="traffic-btn" style="flex:1;background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:13px;font-weight:600;height:44px;border-radius:10px;cursor:pointer;">🚦 Traffic: Off</button>
+              <button onclick="app.navToggleMapMode()" id="mapmode-btn" style="flex:1;background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:13px;font-weight:600;height:44px;border-radius:10px;cursor:pointer;">🗺 Heading Up</button>
+              <button onclick="app.navDetour()" style="flex:1;background:#1C1C1E;border:1px solid #3A3A3C;color:#FF9F0A;font-size:13px;font-weight:600;height:44px;border-radius:10px;cursor:pointer;">↺ Detour</button>
             </div>
-            <span style="font-size:12px;color:#8E8E93;">Speed / Limit</span>
-          </div>
-          <div>
-            <button class="pill-btn stop-nav-btn" onclick="app.sim.navActive = false; app.apply();">✕ Stop Navigation</button>
-          </div>
-        </div>
+
+            <!-- Along route POI -->
+            <div style="color:#8E8E93;font-size:10px;font-weight:600;letter-spacing:.06em;margin-bottom:-2px;">ALONG ROUTE</div>
+            <div style="display:flex;gap:6px;overflow-x:auto;">
+              <button onclick="app.navAlongRoute('fuel')" style="background:#1C1C1E;border:1px solid #3A3A3C;border-radius:22px;color:#FFF;font-size:13px;height:44px;padding:0 14px;cursor:pointer;white-space:nowrap;">⛽ Gas · 2.1 mi</button>
+              <button onclick="app.navAlongRoute('food')" style="background:#1C1C1E;border:1px solid #3A3A3C;border-radius:22px;color:#FFF;font-size:13px;height:44px;padding:0 14px;cursor:pointer;white-space:nowrap;">🍽 Food · 0.8 mi</button>
+              <button onclick="app.navAlongRoute('parking')" style="background:#1C1C1E;border:1px solid #3A3A3C;border-radius:22px;color:#FFF;font-size:13px;height:44px;padding:0 14px;cursor:pointer;white-space:nowrap;">🅿️ Park · dest</button>
+            </div>
+
+            <!-- Turn list toggle + Stop -->
+            <div style="display:flex;gap:8px;">
+              <button onclick="app.navToggleTurnList()" id="turnlist-btn" style="flex:1;height:44px;background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:13px;font-weight:600;border-radius:10px;cursor:pointer;">≡ Turn List</button>
+              <button class="pill-btn stop-nav-btn" onclick="app.stopNav()" style="flex:1;height:44px;">✕ Stop</button>
+            </div>
+
+            <!-- Turn list panel (hidden by default) -->
+            <div id="turn-list-panel" style="display:none;overflow-y:auto;border-top:1px solid #1C1C1E;flex:1;">
+              <div style="padding:6px 0;" id="turn-list-content">
+                <!-- populated by JS -->
+              </div>
+            </div>
+
+          </div><!-- /nav-active -->
+
+        </div><!-- /tab-nav -->
 
         <!-- TAB 1: AUDIO -->
         <div class="tab-panel" id="tab-audio">
-          <div class="source-pills" id="source-pills">
+          <div class="source-pills" id="source-pills" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px 10px 0;">
             <button class="source-pill active" data-src="BT" onclick="app.setSource('BT')">BT</button>
             <button class="source-pill" data-src="FM" onclick="app.setSource('FM')">FM</button>
             <button class="source-pill" data-src="AM" onclick="app.setSource('AM')">AM</button>
             <button class="source-pill" data-src="SXM" onclick="app.setSource('SXM')">SXM</button>
             <button class="source-pill" data-src="AUX" onclick="app.setSource('AUX')">AUX</button>
+            <button class="source-pill" data-src="USB" onclick="app.setSource('USB')">USB</button>
+            <button class="source-pill" data-src="CD" onclick="app.setSource('CD')">CD</button>
           </div>
 
           <!-- BT View -->
           <div class="audio-view active" id="audio-bt">
-            <div class="audio-main">
-              <div class="album-art">♪</div>
-              <div class="audio-info">
-                <div class="track-name">Blinding Lights</div>
-                <div class="artist-name">The Weeknd</div>
-                <div class="transport-controls">
-                  <button class="transport-btn" onclick="app.prevTrack()" title="Previous">⏮</button>
-                  <button class="transport-btn play" id="play-btn" onclick="app.togglePlay()">⏸</button>
-                  <button class="transport-btn" onclick="app.nextTrack()" title="Next">⏭</button>
+            <div class="audio-main" style="flex:1;display:flex;align-items:center;gap:16px;padding:12px 16px;">
+              <div class="album-art" style="width:72px;height:72px;font-size:32px;border-radius:14px;">♪</div>
+              <div style="flex:1;min-width:0;">
+                <div class="track-name" style="font-size:18px;font-weight:700;color:#FFF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Blinding Lights</div>
+                <div class="artist-name" style="font-size:14px;color:#8E8E93;margin-top:2px;">The Weeknd</div>
+                <div style="display:flex;align-items:center;gap:6px;margin-top:8px;">
+                  <span style="color:#0A84FF;font-size:12px;">● Bluetooth</span>
                 </div>
-                <div class="bt-footer">
-                  <span style="color:#0A84FF;">●</span> Bluetooth
-                </div>
+              </div>
+              <div style="display:flex;gap:10px;align-items:center;">
+                <button class="transport-btn" onclick="app.prevTrack()">⏮</button>
+                <button class="transport-btn play" id="play-btn" onclick="app.togglePlay()">⏸</button>
+                <button class="transport-btn" onclick="app.nextTrack()">⏭</button>
               </div>
             </div>
           </div>
 
           <!-- FM View -->
           <div class="audio-view" id="audio-fm">
-            <div class="audio-main" style="justify-content:center;">
-              <div class="fm-view" style="width:100%;">
-                <div class="fm-label">FM</div>
-                <div class="fm-freq" id="fm-freq-display">97.5 MHz</div>
-                <div class="fm-station" id="fm-station-display">WRAL 97.5</div>
-                <div class="fm-seek">
-                  <button class="seek-btn" onclick="app.seekFM(-0.2)">◀◀ Seek</button>
-                  <button class="seek-btn" onclick="app.seekFM(0.2)">Seek ▶▶</button>
+            <div class="audio-main" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 16px;gap:8px;">
+              <div style="font-size:12px;font-weight:700;color:#8E8E93;letter-spacing:.12em;">FM</div>
+              <div style="font-size:38px;font-weight:700;color:#FFF;line-height:1;" id="fm-freq-display">97.5 MHz</div>
+              <div style="font-size:16px;color:#0A84FF;font-weight:600;" id="fm-station-display">WRAL 97.5</div>
+              <div style="display:flex;gap:12px;margin-top:4px;">
+                <button onclick="app.seekFM(-0.2)" style="background:#1C1C1E;border:1.5px solid #3A3A3C;color:#FFF;font-size:15px;padding:0;width:120px;height:52px;border-radius:12px;cursor:pointer;font-weight:600;">◀◀ Seek</button>
+                <button onclick="app.seekFM(0.2)" style="background:#1C1C1E;border:1.5px solid #3A3A3C;color:#FFF;font-size:15px;padding:0;width:120px;height:52px;border-radius:12px;cursor:pointer;font-weight:600;">Seek ▶▶</button>
+              </div>
+              <div style="margin-top:4px;width:100%;">
+                <div style="color:#8E8E93;font-size:10px;margin-bottom:4px;text-align:left;padding-left:2px;">PRESETS — right-click to save</div>
+                <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:5px;">
+                  <button onclick="app.recallFMPreset(0)" oncontextmenu="app.saveFMPreset(0,event)" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:40px;border-radius:8px;cursor:pointer;" id="fm-p0">87.9</button>
+                  <button onclick="app.recallFMPreset(1)" oncontextmenu="app.saveFMPreset(1,event)" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:40px;border-radius:8px;cursor:pointer;" id="fm-p1">97.5</button>
+                  <button onclick="app.recallFMPreset(2)" oncontextmenu="app.saveFMPreset(2,event)" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:40px;border-radius:8px;cursor:pointer;" id="fm-p2">99.9</button>
+                  <button onclick="app.recallFMPreset(3)" oncontextmenu="app.saveFMPreset(3,event)" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:40px;border-radius:8px;cursor:pointer;" id="fm-p3">101.5</button>
+                  <button onclick="app.recallFMPreset(4)" oncontextmenu="app.saveFMPreset(4,event)" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:40px;border-radius:8px;cursor:pointer;" id="fm-p4">103.5</button>
+                  <button onclick="app.recallFMPreset(5)" oncontextmenu="app.saveFMPreset(5,event)" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:40px;border-radius:8px;cursor:pointer;" id="fm-p5">107.9</button>
                 </div>
               </div>
             </div>
@@ -1536,14 +1863,23 @@
 
           <!-- AM View -->
           <div class="audio-view" id="audio-am">
-            <div class="audio-main" style="justify-content:center;">
-              <div class="fm-view" style="width:100%;">
-                <div class="fm-label">AM</div>
-                <div class="fm-freq" id="am-freq-display">1010 kHz</div>
-                <div class="fm-station">WPTF</div>
-                <div class="fm-seek">
-                  <button class="seek-btn" onclick="app.seekAM(-10)">◀◀ Seek</button>
-                  <button class="seek-btn" onclick="app.seekAM(10)">Seek ▶▶</button>
+            <div class="audio-main" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 16px;gap:8px;">
+              <div style="font-size:12px;font-weight:700;color:#8E8E93;letter-spacing:.12em;">AM</div>
+              <div style="font-size:38px;font-weight:700;color:#FFF;line-height:1;" id="am-freq-display">1010 kHz</div>
+              <div style="font-size:16px;color:#8E8E93;font-weight:600;">WPTF</div>
+              <div style="display:flex;gap:12px;margin-top:4px;">
+                <button onclick="app.seekAM(-10)" style="background:#1C1C1E;border:1.5px solid #3A3A3C;color:#FFF;font-size:15px;padding:0;width:120px;height:52px;border-radius:12px;cursor:pointer;font-weight:600;">◀◀ Seek</button>
+                <button onclick="app.seekAM(10)" style="background:#1C1C1E;border:1.5px solid #3A3A3C;color:#FFF;font-size:15px;padding:0;width:120px;height:52px;border-radius:12px;cursor:pointer;font-weight:600;">Seek ▶▶</button>
+              </div>
+              <div style="margin-top:4px;width:100%;">
+                <div style="color:#8E8E93;font-size:10px;margin-bottom:4px;text-align:left;padding-left:2px;">PRESETS</div>
+                <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:5px;">
+                  <button onclick="app.recallAMPreset(0)" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:40px;border-radius:8px;cursor:pointer;" id="am-p0">620</button>
+                  <button onclick="app.recallAMPreset(1)" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:40px;border-radius:8px;cursor:pointer;" id="am-p1">680</button>
+                  <button onclick="app.recallAMPreset(2)" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:40px;border-radius:8px;cursor:pointer;" id="am-p2">850</button>
+                  <button onclick="app.recallAMPreset(3)" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:40px;border-radius:8px;cursor:pointer;" id="am-p3">1010</button>
+                  <button onclick="app.recallAMPreset(4)" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:40px;border-radius:8px;cursor:pointer;" id="am-p4">1240</button>
+                  <button onclick="app.recallAMPreset(5)" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;height:40px;border-radius:8px;cursor:pointer;" id="am-p5">1560</button>
                 </div>
               </div>
             </div>
@@ -1551,14 +1887,47 @@
 
           <!-- SXM View -->
           <div class="audio-view" id="audio-sxm">
-            <div class="audio-main" style="justify-content:center;">
-              <div class="fm-view" style="width:100%;">
-                <div class="fm-label">SIRIUS XM</div>
-                <div class="fm-freq">Ch. 20</div>
-                <div class="fm-station">The Highway</div>
-                <div class="fm-seek">
-                  <button class="seek-btn">◀◀ Prev</button>
-                  <button class="seek-btn">Next ▶▶</button>
+            <div class="audio-main" style="justify-content:flex-start;flex-direction:column;gap:0;padding:0;width:100%;">
+              <!-- Now playing -->
+              <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #1C1C1E;">
+                <div style="background:#0A84FF22;border:1px solid #0A84FF;border-radius:8px;padding:4px 8px;color:#0A84FF;font-size:11px;font-weight:600;">Ch. 20</div>
+                <div>
+                  <div style="color:#FFF;font-size:14px;font-weight:600;">The Highway</div>
+                  <div style="color:#8E8E93;font-size:11px;"> Country • Morgan Wallen</div>
+                </div>
+                <div style="margin-left:auto;display:flex;gap:6px;">
+                  <button style="background:#1C1C1E;border:none;color:#FFF;font-size:16px;width:36px;height:36px;border-radius:50%;cursor:pointer;">⏮</button>
+                  <button style="background:#1C1C1E;border:none;color:#FFF;font-size:16px;width:36px;height:36px;border-radius:50%;cursor:pointer;">⏭</button>
+                </div>
+              </div>
+              <!-- Channel list -->
+              <div style="overflow-y:auto;flex:1;">
+                <div style="color:#8E8E93;font-size:10px;padding:6px 12px 2px;font-weight:600;letter-spacing:.06em;">MUSIC</div>
+                <div onclick="app.sxmTune(20,'The Highway','Country')" style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #111;cursor:pointer;background:#0A84FF11;">
+                  <span style="color:#0A84FF;font-size:12px;font-weight:600;width:28px;">20</span>
+                  <div><div style="color:#FFF;font-size:13px;">The Highway</div><div style="color:#8E8E93;font-size:10px;">Country</div></div>
+                  <span style="margin-left:auto;color:#0A84FF;font-size:11px;">▶ NOW</span>
+                </div>
+                <div onclick="app.sxmTune(22,'Hair Nation','Classic Rock')" style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #111;cursor:pointer;">
+                  <span style="color:#8E8E93;font-size:12px;font-weight:600;width:28px;">22</span>
+                  <div><div style="color:#FFF;font-size:13px;">Hair Nation</div><div style="color:#8E8E93;font-size:10px;">Classic Rock</div></div>
+                </div>
+                <div onclick="app.sxmTune(40,'40s Junction','Big Band')" style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #111;cursor:pointer;">
+                  <span style="color:#8E8E93;font-size:12px;font-weight:600;width:28px;">40</span>
+                  <div><div style="color:#FFF;font-size:13px;">40s Junction</div><div style="color:#8E8E93;font-size:10px;">Big Band / Swing</div></div>
+                </div>
+                <div onclick="app.sxmTune(78,'BPM','EDM')" style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #111;cursor:pointer;">
+                  <span style="color:#8E8E93;font-size:12px;font-weight:600;width:28px;">78</span>
+                  <div><div style="color:#FFF;font-size:13px;">BPM</div><div style="color:#8E8E93;font-size:10px;">Electronic / EDM</div></div>
+                </div>
+                <div style="color:#8E8E93;font-size:10px;padding:6px 12px 2px;font-weight:600;letter-spacing:.06em;">NEWS / TALK</div>
+                <div onclick="app.sxmTune(454,'CNN','News')" style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #111;cursor:pointer;">
+                  <span style="color:#8E8E93;font-size:12px;font-weight:600;width:28px;">454</span>
+                  <div><div style="color:#FFF;font-size:13px;">CNN</div><div style="color:#8E8E93;font-size:10px;">News</div></div>
+                </div>
+                <div onclick="app.sxmTune(105,'ESPN Radio','Sports')" style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid #111;cursor:pointer;">
+                  <span style="color:#8E8E93;font-size:12px;font-weight:600;width:28px;">105</span>
+                  <div><div style="color:#FFF;font-size:13px;">ESPN Radio</div><div style="color:#8E8E93;font-size:10px;">Sports</div></div>
                 </div>
               </div>
             </div>
@@ -1573,25 +1942,212 @@
             </div>
           </div>
 
+          <!-- USB View -->
+          <div id="audio-usb" class="audio-view" style="display:none;">
+            <div style="padding:16px;">
+              <div style="color:#8E8E93;font-size:12px;margin-bottom:12px;">USB MEDIA</div>
+              <div style="background:#1C1C1E;border-radius:12px;padding:16px;margin-bottom:12px;">
+                <div style="font-size:16px;font-weight:600;color:#FFF;margin-bottom:4px;" id="usb-track">01 - Track Name</div>
+                <div style="font-size:13px;color:#8E8E93;" id="usb-folder">📁 Music / Album</div>
+              </div>
+              <div style="display:flex;gap:16px;justify-content:center;margin-bottom:16px;">
+                <button onclick="app.prevTrack()" style="background:#1C1C1E;border:none;color:#FFF;font-size:20px;width:48px;height:48px;border-radius:50%;cursor:pointer;">⏮</button>
+                <button id="usb-play-btn" onclick="app.togglePlay()" style="background:#0A84FF;border:none;color:#FFF;font-size:20px;width:56px;height:56px;border-radius:50%;cursor:pointer;">⏸</button>
+                <button onclick="app.nextTrack()" style="background:#1C1C1E;border:none;color:#FFF;font-size:20px;width:48px;height:48px;border-radius:50%;cursor:pointer;">⏭</button>
+              </div>
+              <div style="color:#8E8E93;font-size:12px;text-align:center;">MP3 · AAC · FLAC · WAV · OGG supported</div>
+            </div>
+          </div>
+
+          <!-- CD View -->
+          <div id="audio-cd" class="audio-view" style="display:none;">
+            <div class="audio-main" style="justify-content:center;flex-direction:column;align-items:center;gap:12px;">
+              <div style="width:64px;height:64px;background:#1C1C1E;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;">💿</div>
+              <div style="text-align:center;">
+                <div style="color:#FFF;font-size:16px;font-weight:600;" id="cd-track">Track 3</div>
+                <div style="color:#8E8E93;font-size:13px;" id="cd-disc">Disc inserted</div>
+              </div>
+              <div style="display:flex;gap:12px;">
+                <button onclick="app.prevTrack()" style="background:#1C1C1E;border:none;color:#FFF;font-size:20px;width:44px;height:44px;border-radius:50%;cursor:pointer;">⏮</button>
+                <button onclick="app.togglePlay()" style="background:#0A84FF;border:none;color:#FFF;font-size:20px;width:52px;height:52px;border-radius:50%;cursor:pointer;">⏸</button>
+                <button onclick="app.nextTrack()" style="background:#1C1C1E;border:none;color:#FFF;font-size:20px;width:44px;height:44px;border-radius:50%;cursor:pointer;">⏭</button>
+              </div>
+              <div style="color:#8E8E93;font-size:11px;">Eject: hold physical button 3 seconds</div>
+            </div>
+          </div>
+
           <div class="volume-row">
             <button class="mute-btn" id="mute-btn" onclick="app.toggleMute()" title="Mute">🔊</button>
             <input type="range" class="vol-slider" id="vol-slider" min="0" max="100" value="65"
               oninput="app.setVolume(this.value)">
             <span class="vol-pct" id="vol-pct">65%</span>
+            <button onclick="app.toggleEQ()" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:13px;padding:0 16px;height:52px;border-radius:8px;cursor:pointer;flex-shrink:0;" id="eq-toggle-btn">EQ ▲</button>
+          </div>
+
+          <!-- EQ Panel (slides up) -->
+          <div id="eq-panel" style="display:none;background:#1C1C1E;border-radius:12px 12px 0 0;padding:16px;margin-top:8px;">
+            <div style="color:#8E8E93;font-size:11px;margin-bottom:12px;text-align:center;">EQUALIZER</div>
+            <div style="display:flex;gap:12px;justify-content:center;align-items:flex-end;height:100px;">
+              <!-- Bass -->
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+                <span style="color:#FFF;font-size:11px;" id="eq-bass-val">0</span>
+                <input type="range" orient="vertical" min="-7" max="7" value="0" style="height:72px;writing-mode:vertical-lr;direction:rtl;" oninput="app.setEQ('bass',this.value)">
+                <span style="color:#8E8E93;font-size:10px;">BASS</span>
+              </div>
+              <!-- Treble -->
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+                <span style="color:#FFF;font-size:11px;" id="eq-treble-val">0</span>
+                <input type="range" orient="vertical" min="-7" max="7" value="0" style="height:72px;writing-mode:vertical-lr;direction:rtl;" oninput="app.setEQ('treble',this.value)">
+                <span style="color:#8E8E93;font-size:10px;">TREBLE</span>
+              </div>
+              <!-- Balance -->
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+                <span style="color:#FFF;font-size:11px;" id="eq-bal-val">0</span>
+                <input type="range" orient="vertical" min="-9" max="9" value="0" style="height:72px;writing-mode:vertical-lr;direction:rtl;" oninput="app.setEQ('balance',this.value)">
+                <span style="color:#8E8E93;font-size:10px;">BAL</span>
+              </div>
+              <!-- Fade -->
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+                <span style="color:#FFF;font-size:11px;" id="eq-fade-val">0</span>
+                <input type="range" orient="vertical" min="-9" max="9" value="0" style="height:72px;writing-mode:vertical-lr;direction:rtl;" oninput="app.setEQ('fade',this.value)">
+                <span style="color:#8E8E93;font-size:10px;">FADE</span>
+              </div>
+            </div>
+            <!-- Bose DSP pills -->
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;justify-content:center;">
+              <button onclick="app.toggleBose('AudioPilot')" id="bose-AudioPilot" class="bose-pill active" style="background:#0A84FF22;border:1px solid #0A84FF;color:#0A84FF;font-size:11px;padding:4px 10px;border-radius:20px;cursor:pointer;">AudioPilot</button>
+              <button onclick="app.toggleBose('Centerpoint')" id="bose-Centerpoint" class="bose-pill" style="background:transparent;border:1px solid #3A3A3C;color:#8E8E93;font-size:11px;padding:4px 10px;border-radius:20px;cursor:pointer;">Centerpoint</button>
+              <button onclick="app.toggleBose('Surround')" id="bose-Surround" class="bose-pill" style="background:transparent;border:1px solid #3A3A3C;color:#8E8E93;font-size:11px;padding:4px 10px;border-radius:20px;cursor:pointer;">Surround</button>
+              <button onclick="app.toggleBose('DriverStage')" id="bose-DriverStage" class="bose-pill" style="background:transparent;border:1px solid #3A3A3C;color:#8E8E93;font-size:11px;padding:4px 10px;border-radius:20px;cursor:pointer;">DriverStage</button>
+            </div>
           </div>
         </div>
 
         <!-- TAB 2: PHONE -->
-        <div class="tab-panel" id="tab-phone" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;">
+        <div class="tab-panel" id="tab-phone" style="display:flex;flex-direction:column;overflow:hidden;">
 
-          <!-- Idle state -->
-          <div class="phone-idle" id="phone-idle" style="display:flex;">
-            <div style="display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;">
-              <div class="phone-icon-circle">✆</div>
-              <div class="phone-status" id="phone-status-lbl">Phone Connected</div>
-              <div class="phone-helper" id="phone-helper-lbl">No active call</div>
+          <!-- Phone sub-tabs -->
+          <div style="display:flex;border-bottom:1px solid #1C1C1E;flex-shrink:0;">
+            <button onclick="app.phoneTab('dial')" id="ptab-dial" style="flex:1;background:transparent;border:none;color:#0A84FF;font-size:14px;font-weight:600;height:52px;cursor:pointer;border-bottom:2px solid #0A84FF;">Dial</button>
+            <button onclick="app.phoneTab('contacts')" id="ptab-contacts" style="flex:1;background:transparent;border:none;color:#8E8E93;font-size:14px;font-weight:500;height:52px;cursor:pointer;border-bottom:2px solid transparent;">Contacts</button>
+            <button onclick="app.phoneTab('recent')" id="ptab-recent" style="flex:1;background:transparent;border:none;color:#8E8E93;font-size:14px;font-weight:500;height:52px;cursor:pointer;border-bottom:2px solid transparent;">Recent</button>
+            <button onclick="app.phoneTab('messages')" id="ptab-messages" style="flex:1;background:transparent;border:none;color:#8E8E93;font-size:14px;font-weight:500;height:52px;cursor:pointer;border-bottom:2px solid transparent;">SMS</button>
+          </div>
+
+          <!-- Dial Pad -->
+          <div id="phone-dial" style="display:flex;flex-direction:column;flex:1;min-height:0;padding:0;overflow:hidden;">
+  <!-- Display -->
+  <div style="background:#1C1C1E;margin:8px 10px 6px;border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;min-height:52px;">
+    <div style="font-size:24px;font-weight:600;color:#FFF;letter-spacing:0.08em;flex:1;" id="dial-display">&#8203;</div>
+    <button onclick="app.dialBackspace()" style="background:transparent;border:none;color:#8E8E93;font-size:24px;cursor:pointer;padding:4px 8px;min-width:44px;min-height:44px;">⌫</button>
+  </div>
+
+  <!-- Keypad grid — fills remaining space -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(4,1fr);gap:6px;padding:0 10px 8px;flex:1;">
+    <button onclick="app.dialKey('1')" style="background:#1C1C1E;border:none;border-radius:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+      <span style="color:#FFF;font-size:26px;font-weight:600;line-height:1;">1</span>
+      <span style="color:#8E8E93;font-size:10px;"> </span>
+    </button>
+    <button onclick="app.dialKey('2')" style="background:#1C1C1E;border:none;border-radius:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+      <span style="color:#FFF;font-size:26px;font-weight:600;line-height:1;">2</span>
+      <span style="color:#8E8E93;font-size:10px;">ABC</span>
+    </button>
+    <button onclick="app.dialKey('3')" style="background:#1C1C1E;border:none;border-radius:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+      <span style="color:#FFF;font-size:26px;font-weight:600;line-height:1;">3</span>
+      <span style="color:#8E8E93;font-size:10px;">DEF</span>
+    </button>
+    <button onclick="app.dialKey('4')" style="background:#1C1C1E;border:none;border-radius:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+      <span style="color:#FFF;font-size:26px;font-weight:600;line-height:1;">4</span>
+      <span style="color:#8E8E93;font-size:10px;">GHI</span>
+    </button>
+    <button onclick="app.dialKey('5')" style="background:#1C1C1E;border:none;border-radius:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+      <span style="color:#FFF;font-size:26px;font-weight:600;line-height:1;">5</span>
+      <span style="color:#8E8E93;font-size:10px;">JKL</span>
+    </button>
+    <button onclick="app.dialKey('6')" style="background:#1C1C1E;border:none;border-radius:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+      <span style="color:#FFF;font-size:26px;font-weight:600;line-height:1;">6</span>
+      <span style="color:#8E8E93;font-size:10px;">MNO</span>
+    </button>
+    <button onclick="app.dialKey('7')" style="background:#1C1C1E;border:none;border-radius:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+      <span style="color:#FFF;font-size:26px;font-weight:600;line-height:1;">7</span>
+      <span style="color:#8E8E93;font-size:10px;">PQRS</span>
+    </button>
+    <button onclick="app.dialKey('8')" style="background:#1C1C1E;border:none;border-radius:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+      <span style="color:#FFF;font-size:26px;font-weight:600;line-height:1;">8</span>
+      <span style="color:#8E8E93;font-size:10px;">TUV</span>
+    </button>
+    <button onclick="app.dialKey('9')" style="background:#1C1C1E;border:none;border-radius:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+      <span style="color:#FFF;font-size:26px;font-weight:600;line-height:1;">9</span>
+      <span style="color:#8E8E93;font-size:10px;">WXYZ</span>
+    </button>
+    <button onclick="app.dialKey('*')" style="background:#1C1C1E;border:none;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+      <span style="color:#FFF;font-size:26px;font-weight:600;">*</span>
+    </button>
+    <button onclick="app.dialKey('0')" style="background:#1C1C1E;border:none;border-radius:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+      <span style="color:#FFF;font-size:26px;font-weight:600;line-height:1;">0</span>
+      <span style="color:#8E8E93;font-size:10px;">+</span>
+    </button>
+    <!-- Call button spanning instead of # -->
+    <button onclick="app.dialCall()" style="background:#30D158;border:none;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.94a16 16 0 006.15 6.15l1.3-1.31a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+    </button>
+  </div>
+</div>
+
+          <!-- Contacts -->
+          <div id="phone-contacts" style="display:none;flex:1;overflow-y:auto;padding:8px;">
+            <input type="text" placeholder="Search contacts..." oninput="app.filterContacts(this.value)" style="width:100%;box-sizing:border-box;background:#1C1C1E;border:1px solid #3A3A3C;border-radius:10px;color:#FFF;font-size:15px;padding:12px 16px;margin-bottom:8px;min-height:52px;">
+            <div id="contacts-list">
+              <!-- rendered by JS -->
             </div>
           </div>
+
+          <!-- Recent -->
+          <div id="phone-recent" style="display:none;flex:1;overflow-y:auto;padding:8px;">
+            <div style="display:flex;gap:6px;margin-bottom:8px;">
+              <button onclick="app.recentFilter('all')" id="rfil-all" style="background:#0A84FF22;border:1px solid #0A84FF;color:#0A84FF;font-size:13px;height:44px;padding:0 18px;border-radius:22px;cursor:pointer;">All</button>
+              <button onclick="app.recentFilter('dialed')" id="rfil-dialed" style="background:transparent;border:1px solid #3A3A3C;color:#8E8E93;font-size:13px;height:44px;padding:0 18px;border-radius:22px;cursor:pointer;">Dialed</button>
+              <button onclick="app.recentFilter('missed')" id="rfil-missed" style="background:transparent;border:1px solid #3A3A3C;color:#8E8E93;font-size:13px;height:44px;padding:0 18px;border-radius:22px;cursor:pointer;">Missed</button>
+            </div>
+            <div id="recent-list">
+              <!-- rendered by JS -->
+            </div>
+          </div>
+
+          <!-- SMS / Messages -->
+          <div id="phone-messages" style="display:none;flex:1;overflow-y:auto;padding:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <div style="color:#8E8E93;font-size:11px;">READ ALOUD WHEN RECEIVED</div>
+              <button onclick="app.toggleSetting(this,'smsReadAloud')" class="settings-toggle active" style="background:#0A84FF22;border:1px solid #0A84FF;color:#0A84FF;font-size:11px;font-weight:600;padding:5px 14px;border-radius:20px;cursor:pointer;min-width:48px;">ON</button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <div style="color:#8E8E93;font-size:11px;">DO NOT DISTURB WHILE DRIVING</div>
+              <button onclick="app.toggleSetting(this,'dnd')" class="settings-toggle" style="background:#3A3A3C;border:none;color:#8E8E93;font-size:11px;font-weight:600;padding:5px 14px;border-radius:20px;cursor:pointer;min-width:48px;">OFF</button>
+            </div>
+            <div style="color:#8E8E93;font-size:10px;font-weight:600;letter-spacing:.06em;margin-bottom:6px;">UNREAD MESSAGES</div>
+            <div id="sms-list">
+              <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #111;">
+                <div style="width:36px;height:36px;background:#0A84FF22;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">👩</div>
+                <div style="flex:1;">
+                  <div style="display:flex;justify-content:space-between;"><span style="color:#FFF;font-size:13px;font-weight:600;">KellyAnne</span><span style="color:#8E8E93;font-size:11px;">2 min ago</span></div>
+                  <div style="color:#CCC;font-size:12px;margin-top:2px;">Can you grab dinner on the way home?</div>
+                  <button onclick="app.smsReadAloud(this)" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#0A84FF;font-size:11px;padding:3px 10px;border-radius:8px;cursor:pointer;margin-top:4px;">🔊 Read Aloud</button>
+                </div>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #111;">
+                <div style="width:36px;height:36px;background:#1C1C1E;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">🏗️</div>
+                <div style="flex:1;">
+                  <div style="display:flex;justify-content:space-between;"><span style="color:#FFF;font-size:13px;font-weight:600;">Builder - Todd</span><span style="color:#8E8E93;font-size:11px;">47 min ago</span></div>
+                  <div style="color:#CCC;font-size:12px;margin-top:2px;">Framing inspection is Tuesday at 10am</div>
+                  <button onclick="app.smsReadAloud(this)" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#0A84FF;font-size:11px;padding:3px 10px;border-radius:8px;cursor:pointer;margin-top:4px;">🔊 Read Aloud</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- BT status footer / hidden anchor for _applyPhone() -->
+          <div id="phone-status-lbl" style="display:none;text-align:center;color:#8E8E93;font-size:12px;padding:6px;">Phone Connected</div>
+          <div id="phone-helper-lbl" style="display:none;"></div>
 
           <!-- Active call state -->
           <div class="active-call-card" id="active-call-card" style="display:none;">
@@ -1666,11 +2222,22 @@
         </div><!-- /tab-phone -->
 
         <!-- TAB 3: CLIMATE -->
-        <div class="tab-panel" id="tab-climate">
+        <div class="tab-panel" id="tab-climate" style="flex-direction:column;gap:0;">
+
+          <!-- Climate Action Row -->
+          <div style="display:flex;gap:6px;padding:8px 10px 4px;flex-shrink:0;">
+            <button onclick="app.climateAuto()" id="auto-btn" style="flex:1;height:44px;background:#1C1C1E;border:1.5px solid #3A3A3C;color:#8E8E93;font-size:13px;font-weight:600;border-radius:10px;cursor:pointer;">AUTO</button>
+            <button onclick="app.climateSync()" id="sync-btn" style="flex:1;height:44px;background:#1C1C1E;border:1.5px solid #3A3A3C;color:#8E8E93;font-size:13px;font-weight:600;border-radius:10px;cursor:pointer;">SYNC</button>
+            <button onclick="app.climateMaxAC()" style="flex:1;height:44px;background:#1C1C1E;border:1.5px solid #3A3A3C;color:#8E8E93;font-size:13px;font-weight:600;border-radius:10px;cursor:pointer;">MAX A/C</button>
+            <button onclick="app.climateMaxDef()" style="flex:1;height:44px;background:#1C1C1E;border:1.5px solid #3A3A3C;color:#8E8E93;font-size:13px;font-weight:600;border-radius:10px;cursor:pointer;">MAX DEF</button>
+          </div>
+
+          <!-- Zone + Center Row -->
+          <div style="display:flex;gap:10px;flex:1;min-height:0;padding-top:6px;">
 
           <!-- Driver Zone -->
           <div class="climate-zone" id="driver-zone">
-            <div class="zone-label">Driver</div>
+            <div class="zone-label">🪑 Driver</div>
             <button class="temp-btn" onclick="app.adjustTemp('driver', 1)">▲</button>
             <div class="temp-display" id="driver-temp">72°</div>
             <button class="temp-btn" onclick="app.adjustTemp('driver', -1)">▼</button>
@@ -1697,6 +2264,9 @@
               <button class="mode-btn" data-mode="defrost" onclick="app.setMode('defrost')">
                 <span>❄</span><span style="font-size:9px;">Defrost</span>
               </button>
+              <button class="mode-btn" data-mode="feetdef" onclick="app.setMode('feetdef')">
+                <span>⬇❄</span><span style="font-size:9px;">Feet+Def</span>
+              </button>
             </div>
 
             <div>
@@ -1721,7 +2291,7 @@
 
           <!-- Passenger Zone -->
           <div class="climate-zone" id="pass-zone">
-            <div class="zone-label">Passenger</div>
+            <div class="zone-label">🪑 Passenger</div>
             <button class="temp-btn" onclick="app.adjustTemp('pass', 1)">▲</button>
             <div class="temp-display" id="pass-temp">70°</div>
             <button class="temp-btn" onclick="app.adjustTemp('pass', -1)">▼</button>
@@ -1733,88 +2303,613 @@
             </div>
           </div>
 
+          </div><!-- /zone+center row -->
+
+          <!-- Heated Wheel + Rear Defrost Row -->
+          <div style="display:flex;gap:6px;padding:4px 10px 8px;flex-shrink:0;">
+            <button onclick="app.toggleClimateRearDef()" id="reardefrost-climate-btn" style="flex:1;height:44px;background:#1C1C1E;border:1.5px solid #3A3A3C;color:#8E8E93;font-size:13px;font-weight:600;border-radius:10px;cursor:pointer;">🔆 Rear Defrost</button>
+            <button onclick="app.toggleHeatWheel()" id="heatwheel-btn" style="flex:1;height:44px;background:#1C1C1E;border:1.5px solid #3A3A3C;color:#8E8E93;font-size:13px;font-weight:600;border-radius:10px;cursor:pointer;">🌡️ Steering Wheel</button>
+            <button onclick="app.cyclePlasmacluster()" id="plasma-btn" style="flex:1;height:44px;background:#1C1C1E;border:1.5px solid #3A3A3C;color:#8E8E93;font-size:13px;font-weight:600;border-radius:10px;cursor:pointer;">🌀 Plasma: Off</button>
+          </div>
+
         </div><!-- /tab-climate -->
 
         <!-- TAB 4: VEHICLE -->
-        <div class="tab-panel" id="tab-vehicle">
+        <div class="tab-panel" id="tab-vehicle" style="padding:0;overflow-y:auto;">
 
-          <div class="vehicle-top">
+          <!-- Vehicle Sub-tab Bar -->
+          <div style="display:flex;border-bottom:1px solid #1C1C1E;">
+            <button onclick="app.vehicleTab('info')" id="vtab-info" style="flex:1;background:transparent;border:none;color:#0A84FF;font-size:13px;font-weight:600;height:48px;cursor:pointer;border-bottom:2px solid #0A84FF;">Info</button>
+            <button onclick="app.vehicleTab('drive')" id="vtab-drive" style="flex:1;background:transparent;border:none;color:#8E8E93;font-size:13px;font-weight:600;height:48px;cursor:pointer;border-bottom:2px solid transparent;">Drive</button>
+            <button onclick="app.vehicleTab('adas')" id="vtab-adas" style="flex:1;background:transparent;border:none;color:#8E8E93;font-size:13px;font-weight:600;height:48px;cursor:pointer;border-bottom:2px solid transparent;">ADAS</button>
+            <button onclick="app.vehicleTab('status')" id="vtab-status" style="flex:1;background:transparent;border:none;color:#8E8E93;font-size:13px;font-weight:600;height:48px;cursor:pointer;border-bottom:2px solid transparent;">Status</button>
+          </div>
 
-            <!-- Door Diagram -->
-            <div class="door-diagram">
-              <div class="door-diagram-title">Door Status</div>
-              <div class="car-outline">
-                <div class="car-body"></div>
-                <div class="door-rect door-fl" id="door-fl" onclick="app.toggleDoor('fl')">FL</div>
-                <div class="door-rect door-fr" id="door-fr" onclick="app.toggleDoor('fr')">FR</div>
-                <div class="door-rect door-rl" id="door-rl" onclick="app.toggleDoor('rl')">RL</div>
-                <div class="door-rect door-rr" id="door-rr" onclick="app.toggleDoor('rr')">RR</div>
-                <div class="trunk-rect" id="door-trunk" onclick="app.toggleDoor('trunk')">TRUNK</div>
+          <!-- INFO sub-tab -->
+          <div id="vtab-content-info" style="padding:8px;">
+            <!-- Q60 Coupe SVG top view -->
+            <div style="text-align:center;margin-bottom:8px;">
+              <svg viewBox="0 0 200 360" width="100" height="180" style="filter:drop-shadow(0 0 8px #0A84FF44);">
+                <!-- Body -->
+                <ellipse cx="100" cy="180" rx="52" ry="155" fill="#1A1A1A" stroke="#3A3A3C" stroke-width="1.5"/>
+                <!-- Roof -->
+                <ellipse cx="100" cy="165" rx="36" ry="90" fill="#0A0A0A" stroke="#2A2A2A" stroke-width="1"/>
+                <!-- Windshield -->
+                <ellipse cx="100" cy="115" rx="30" ry="28" fill="#0A2A3A" stroke="#0A84FF" stroke-width="0.8" opacity="0.7"/>
+                <!-- Rear window -->
+                <ellipse cx="100" cy="225" rx="26" ry="22" fill="#0A2A3A" stroke="#0A84FF" stroke-width="0.8" opacity="0.5"/>
+                <!-- Headlights -->
+                <path d="M58 82 Q52 78 55 70 Q65 65 72 72 Q70 80 63 82 Z" fill="#FFE066" opacity="0.85"/>
+                <path d="M142 82 Q148 78 145 70 Q135 65 128 72 Q130 80 137 82 Z" fill="#FFE066" opacity="0.85"/>
+                <!-- Taillights -->
+                <path d="M62 278 Q55 282 56 292 Q67 298 74 290 Q73 280 66 278 Z" fill="#FF453A" opacity="0.8"/>
+                <path d="M138 278 Q145 282 144 292 Q133 298 126 290 Q127 280 134 278 Z" fill="#FF453A" opacity="0.8"/>
+                <!-- Wheels -->
+                <ellipse cx="62" cy="130" rx="14" ry="18" fill="#2A2A2A" stroke="#555" stroke-width="1.5"/>
+                <ellipse cx="138" cy="130" rx="14" ry="18" fill="#2A2A2A" stroke="#555" stroke-width="1.5"/>
+                <ellipse cx="62" cy="230" rx="14" ry="18" fill="#2A2A2A" stroke="#555" stroke-width="1.5"/>
+                <ellipse cx="138" cy="230" rx="14" ry="18" fill="#2A2A2A" stroke="#555" stroke-width="1.5"/>
+                <!-- Door lines -->
+                <line x1="56" y1="155" x2="56" y2="205" stroke="#3A3A3C" stroke-width="1" id="door-line-fl"/>
+                <line x1="144" y1="155" x2="144" y2="205" stroke="#3A3A3C" stroke-width="1" id="door-line-fr"/>
+                <line x1="58" y1="205" x2="58" y2="250" stroke="#3A3A3C" stroke-width="1" id="door-line-rl"/>
+                <line x1="142" y1="205" x2="142" y2="250" stroke="#3A3A3C" stroke-width="1" id="door-line-rr"/>
+                <!-- Door open indicators (hidden by default) -->
+                <path d="M56 170 L35 160 L30 175 L56 180 Z" fill="#FF9F0A" opacity="0" id="svg-door-fl"/>
+                <path d="M144 170 L165 160 L170 175 L144 180 Z" fill="#FF9F0A" opacity="0" id="svg-door-fr"/>
+                <path d="M58 218 L37 210 L33 225 L58 228 Z" fill="#FF9F0A" opacity="0" id="svg-door-rl"/>
+                <path d="M142 218 L163 210 L167 225 L142 228 Z" fill="#FF9F0A" opacity="0" id="svg-door-rr"/>
+                <!-- Trunk open indicator -->
+                <path d="M80 330 Q100 345 120 330 L115 318 Q100 328 85 318 Z" fill="#FF9F0A" opacity="0" id="svg-door-trunk"/>
+              </svg>
+            </div>
+
+            <!-- TPMS row -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+              <div style="background:#1C1C1E;border-radius:10px;padding:8px;text-align:center;">
+                <div style="color:#8E8E93;font-size:10px;">FL</div>
+                <div id="tpms-fl" style="color:#30D158;font-size:16px;font-weight:700;">34 psi</div>
+              </div>
+              <div style="background:#1C1C1E;border-radius:10px;padding:8px;text-align:center;">
+                <div style="color:#8E8E93;font-size:10px;">FR</div>
+                <div id="tpms-fr" style="color:#30D158;font-size:16px;font-weight:700;">34 psi</div>
+              </div>
+              <div style="background:#1C1C1E;border-radius:10px;padding:8px;text-align:center;">
+                <div style="color:#8E8E93;font-size:10px;">RL</div>
+                <div id="tpms-rl" style="color:#30D158;font-size:16px;font-weight:700;">33 psi</div>
+              </div>
+              <div style="background:#1C1C1E;border-radius:10px;padding:8px;text-align:center;">
+                <div style="color:#8E8E93;font-size:10px;">RR</div>
+                <div id="tpms-rr" style="color:#30D158;font-size:16px;font-weight:700;">33 psi</div>
               </div>
             </div>
 
-            <!-- Vehicle Stats -->
-            <div class="vehicle-stats">
-              <div class="fuel-card">
-                <div style="font-size:11px;color:#8E8E93;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Fuel Level</div>
-                <div class="fuel-arc-wrap">
-                  <canvas id="fuel-canvas" width="80" height="80"></canvas>
-                  <div>
-                    <div style="font-size:24px;font-weight:700;" id="fuel-pct-display">62%</div>
-                    <div style="font-size:12px;color:#8E8E93;">~220 mi range</div>
-                  </div>
-                </div>
-                <div class="fuel-slider-row">
-                  <span>E</span>
-                  <input type="range" class="fuel-slider" id="fuel-slider" min="0" max="100" value="62"
-                    oninput="app.setFuel(this.value)">
-                  <span>F</span>
-                </div>
+            <!-- Stat badges row -->
+            <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;">
+              <div style="background:#1C1C1E;border-radius:10px;padding:6px 12px;text-align:center;">
+                <div style="color:#8E8E93;font-size:9px;">COOLANT</div>
+                <div style="color:#30D158;font-size:13px;font-weight:600;">195°F</div>
               </div>
-
-              <div class="stat-row">
-                <div class="stat-chip">
-                  <div class="stat-chip-lbl">Coolant Temp</div>
-                  <div class="stat-chip-val">205°F</div>
-                  <div class="coolant-bar-wrap"><div class="coolant-bar-fill"></div></div>
-                </div>
-                <div class="stat-chip">
-                  <div class="stat-chip-lbl">Battery</div>
-                  <div class="stat-chip-val">12.6V</div>
-                </div>
-                <div class="stat-chip">
-                  <div class="stat-chip-lbl">RPM</div>
-                  <div class="stat-chip-val" id="rpm-display">1,200 RPM</div>
-                </div>
+              <div style="background:#1C1C1E;border-radius:10px;padding:6px 12px;text-align:center;">
+                <div style="color:#8E8E93;font-size:9px;">BATTERY</div>
+                <div style="color:#30D158;font-size:13px;font-weight:600;">14.2V</div>
+              </div>
+              <div style="background:#1C1C1E;border-radius:10px;padding:6px 12px;text-align:center;">
+                <div style="color:#8E8E93;font-size:9px;">OIL LIFE</div>
+                <div style="color:#FF9F0A;font-size:13px;font-weight:600;">42%</div>
+              </div>
+              <div style="background:#1C1C1E;border-radius:10px;padding:6px 12px;text-align:center;">
+                <div style="color:#8E8E93;font-size:9px;">RPM</div>
+                <div style="color:#FFF;font-size:13px;font-weight:600;" id="rpm-display">1,200 RPM</div>
+              </div>
+              <div style="background:#1C1C1E;border-radius:10px;padding:6px 12px;text-align:center;">
+                <div style="color:#8E8E93;font-size:9px;">RANGE</div>
+                <div style="color:#FFF;font-size:13px;font-weight:600;">217 mi</div>
+              </div>
+              <div style="background:#1C1C1E;border-radius:10px;padding:6px 12px;text-align:center;">
+                <div style="color:#8E8E93;font-size:9px;">AVG MPG</div>
+                <div style="color:#FFF;font-size:13px;font-weight:600;">22.4</div>
               </div>
             </div>
 
-          </div>
+            <!-- Door toggle buttons for sim -->
+            <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:8px;">
+              <button onclick="app.toggleDoor('fl')" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:11px;padding:4px 10px;border-radius:16px;cursor:pointer;">FL Door</button>
+              <button onclick="app.toggleDoor('fr')" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:11px;padding:4px 10px;border-radius:16px;cursor:pointer;">FR Door</button>
+              <button onclick="app.toggleDoor('rl')" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:11px;padding:4px 10px;border-radius:16px;cursor:pointer;">RL Door</button>
+              <button onclick="app.toggleDoor('rr')" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:11px;padding:4px 10px;border-radius:16px;cursor:pointer;">RR Door</button>
+              <button onclick="app.toggleDoor('trunk')" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:11px;padding:4px 10px;border-radius:16px;cursor:pointer;">Trunk</button>
+            </div>
 
-          <!-- Vehicle Toggles -->
-          <div class="vehicle-toggles">
-            <button class="vtoggle-btn" id="cruise-btn" onclick="app.toggleVehicle('cruise')">
-              ◈ Cruise Control
-            </button>
-            <button class="vtoggle-btn" id="parkbrake-btn" onclick="app.toggleVehicle('parkbrake')">
-              ⚑ Parking Brake
-            </button>
-            <button class="vtoggle-btn" id="reardefrost-btn" onclick="app.toggleVehicle('reardefrost')">
-              ❄ Rear Defrost
-            </button>
-            <button class="lock-btn lock-btn-lock" onclick="app.lockDoors(true)">
-              <span class="tooltip">⚠ Q50_LIKELY — Confirm UDS command</span>
-              🔒 Lock All
-            </button>
-            <button class="lock-btn lock-btn-unlock" onclick="app.lockDoors(false)">
-              <span class="tooltip">⚠ Q50_LIKELY — Confirm UDS command</span>
-              🔓 Unlock All
-            </button>
-          </div>
+            <!-- Fuel gauge -->
+            <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:8px;padding:8px;background:#1C1C1E;border-radius:12px;">
+              <canvas id="fuel-canvas" width="80" height="80"></canvas>
+              <div>
+                <div id="fuel-pct-display" style="color:#30D158;font-size:20px;font-weight:700;">62%</div>
+                <div style="color:#8E8E93;font-size:12px;">~217 mi range</div>
+                <input type="range" min="0" max="100" value="62" oninput="app.setFuel(this.value)" style="width:120px;margin-top:4px;">
+              </div>
+            </div>
+          </div><!-- /vtab-content-info -->
+
+          <!-- DRIVE sub-tab -->
+          <div id="vtab-content-drive" style="display:none;padding:12px;">
+            <div style="color:#8E8E93;font-size:11px;margin-bottom:10px;text-align:center;">DRIVE MODE</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+              <button onclick="app.setDriveMode('standard')" id="dm-standard" style="background:linear-gradient(135deg,#0A84FF22,#0A84FF44);border:1px solid #0A84FF;color:#0A84FF;font-size:15px;min-height:72px;border-radius:14px;cursor:pointer;">⚖️<br>Standard</button>
+              <button onclick="app.setDriveMode('sport')" id="dm-sport" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:15px;min-height:72px;border-radius:14px;cursor:pointer;">🏎️<br>Sport</button>
+              <button onclick="app.setDriveMode('sport+')" id="dm-sport+" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:15px;min-height:72px;border-radius:14px;cursor:pointer;">⚡<br>Sport+</button>
+              <button onclick="app.setDriveMode('eco')" id="dm-eco" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:15px;min-height:72px;border-radius:14px;cursor:pointer;">🌱<br>Eco</button>
+              <button onclick="app.setDriveMode('snow')" id="dm-snow" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:15px;min-height:72px;border-radius:14px;cursor:pointer;">❄️<br>Snow</button>
+              <button onclick="app.setDriveMode('personal')" id="dm-personal" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:15px;min-height:72px;border-radius:14px;cursor:pointer;">⚙️<br>Personal</button>
+            </div>
+            <div style="margin-top:12px;padding:10px;background:#1C1C1E;border-radius:10px;">
+              <div style="color:#8E8E93;font-size:11px;margin-bottom:6px;">ATTESA AWD TORQUE SPLIT</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="text-align:center;"><div style="color:#0A84FF;font-size:18px;font-weight:700;">12%</div><div style="color:#8E8E93;font-size:10px;">Front</div></div>
+                <div style="flex:1;height:6px;background:#3A3A3C;border-radius:3px;margin:0 12px;overflow:hidden;"><div id="attesa-bar" style="height:100%;width:12%;background:#0A84FF;border-radius:3px;transition:width 0.3s;"></div></div>
+                <div style="text-align:center;"><div style="color:#FF9F0A;font-size:18px;font-weight:700;">88%</div><div style="color:#8E8E93;font-size:10px;">Rear</div></div>
+              </div>
+            </div>
+          </div><!-- /vtab-content-drive -->
+
+          <!-- ADAS sub-tab -->
+          <div id="vtab-content-adas" style="display:none;padding:12px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <button onclick="app.toggleAdas(this,'BSW')" style="background:#1C1C1E;border:1px solid #30D158;color:#30D158;font-size:14px;font-weight:600;height:56px;border-radius:12px;cursor:pointer;">✓ BSW</button>
+              <button onclick="app.toggleAdas(this,'BSI')" style="background:#1C1C1E;border:1px solid #30D158;color:#30D158;font-size:14px;font-weight:600;height:56px;border-radius:12px;cursor:pointer;">✓ BSI</button>
+              <button onclick="app.toggleAdas(this,'LDW')" style="background:#1C1C1E;border:1px solid #30D158;color:#30D158;font-size:14px;font-weight:600;height:56px;border-radius:12px;cursor:pointer;">✓ LDW</button>
+              <button onclick="app.toggleAdas(this,'LDP')" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:14px;font-weight:600;height:56px;border-radius:12px;cursor:pointer;">LDP</button>
+              <button onclick="app.toggleAdas(this,'FEB')" style="background:#1C1C1E;border:1px solid #30D158;color:#30D158;font-size:14px;font-weight:600;height:56px;border-radius:12px;cursor:pointer;">✓ FEB</button>
+              <button onclick="app.toggleAdas(this,'VDC')" style="background:#1C1C1E;border:1px solid #30D158;color:#30D158;font-size:14px;font-weight:600;height:56px;border-radius:12px;cursor:pointer;">✓ VDC</button>
+            </div>
+            <div style="margin-top:10px;padding:10px;background:#1C1C1E;border-radius:10px;">
+              <div style="color:#8E8E93;font-size:11px;margin-bottom:6px;">PFCW SENSITIVITY</div>
+              <div style="display:flex;gap:6px;">
+                <button onclick="app.setPFCW(this,'Far')" style="flex:1;background:#0A84FF22;border:1px solid #0A84FF;color:#0A84FF;font-size:13px;font-weight:600;height:44px;border-radius:8px;cursor:pointer;">Far</button>
+                <button onclick="app.setPFCW(this,'Med')" style="flex:1;background:transparent;border:1px solid #3A3A3C;color:#8E8E93;font-size:13px;font-weight:600;height:44px;border-radius:8px;cursor:pointer;">Med</button>
+                <button onclick="app.setPFCW(this,'Near')" style="flex:1;background:transparent;border:1px solid #3A3A3C;color:#8E8E93;font-size:13px;font-weight:600;height:44px;border-radius:8px;cursor:pointer;">Near</button>
+                <button onclick="app.setPFCW(this,'Off')" style="flex:1;background:transparent;border:1px solid #3A3A3C;color:#8E8E93;font-size:13px;font-weight:600;height:44px;border-radius:8px;cursor:pointer;">Off</button>
+              </div>
+            </div>
+          </div><!-- /vtab-content-adas -->
+
+          <!-- STATUS sub-tab -->
+          <div id="vtab-content-status" style="display:none;padding:12px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+              <div style="background:#1C1C1E;border-radius:10px;padding:10px;text-align:center;">
+                <div style="color:#8E8E93;font-size:10px;">TRIP A</div>
+                <div style="color:#FFF;font-size:18px;font-weight:700;">47.3 mi</div>
+                <div style="color:#8E8E93;font-size:11px;">22.4 mpg avg</div>
+              </div>
+              <div style="background:#1C1C1E;border-radius:10px;padding:10px;text-align:center;">
+                <div style="color:#8E8E93;font-size:10px;">TRIP B</div>
+                <div style="color:#FFF;font-size:18px;font-weight:700;">1,204 mi</div>
+                <div style="color:#8E8E93;font-size:11px;">23.1 mpg avg</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:center;">
+              <button onclick="app.lockDoors(true)" style="background:#0A84FF22;border:1px solid #0A84FF;color:#0A84FF;font-size:13px;padding:10px 20px;border-radius:10px;cursor:pointer;">🔒 Lock All</button>
+              <button onclick="app.lockDoors(false)" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#8E8E93;font-size:13px;padding:10px 20px;border-radius:10px;cursor:pointer;">🔓 Unlock</button>
+            </div>
+            <div style="margin-top:10px;padding:10px;background:#1C1C1E;border-radius:10px;">
+              <div style="color:#8E8E93;font-size:11px;margin-bottom:6px;">CRUISE CONTROL</div>
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <button onclick="app.toggleVehicle('cruise')" id="cruise-btn" style="background:transparent;border:1px solid #3A3A3C;color:#8E8E93;font-size:12px;padding:6px 14px;border-radius:8px;cursor:pointer;">OFF</button>
+                <div style="color:#FFF;font-size:14px;font-weight:600;">SET: 70 mph</div>
+                <div style="display:flex;gap:4px;">
+                  <button style="background:#1C1C1E;border:1px solid #3A3A3C;color:#FFF;font-size:14px;width:32px;height:32px;border-radius:8px;cursor:pointer;">−</button>
+                  <button style="background:#1C1C1E;border:1px solid #3A3A3C;color:#FFF;font-size:14px;width:32px;height:32px;border-radius:8px;cursor:pointer;">+</button>
+                </div>
+              </div>
+            </div>
+          </div><!-- /vtab-content-status -->
 
         </div><!-- /tab-vehicle -->
 
+        <!-- ── SETTINGS TAB ── -->
+        <div class="tab-panel" id="tab-settings" style="display:none;overflow-y:auto;padding:0;">
+
+          <!-- LIGHTS -->
+          <div class="settings-section-hdr">LIGHTS</div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Auto Light Shutoff</div>
+            <select class="settings-select" onchange="app.setSetting('lightShutoff',this.value)">
+              <option value="0">Off</option>
+              <option value="30">30 sec</option>
+              <option value="45" selected>45 sec</option>
+              <option value="60">60 sec</option>
+              <option value="90">90 sec</option>
+              <option value="120">2 min</option>
+              <option value="180">3 min</option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Auto Headlight Sensitivity</div>
+            <select class="settings-select" onchange="app.setSetting('headlightSens',this.value)">
+              <option value="low">Low</option>
+              <option value="med" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Daytime Running Lights</div>
+            <button class="settings-toggle active" onclick="app.toggleSetting(this,'drl')">ON</button>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Approach Lighting</div>
+            <button class="settings-toggle active" onclick="app.toggleSetting(this,'approachLight')">ON</button>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Approach Light Duration</div>
+            <select class="settings-select" onchange="app.setSetting('approachDuration',this.value)">
+              <option value="30">30 sec</option>
+              <option value="60" selected>60 sec</option>
+              <option value="90">90 sec</option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Welcome Lighting</div>
+            <button class="settings-toggle active" onclick="app.toggleSetting(this,'welcomeLight')">ON</button>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Interior Light Timer</div>
+            <select class="settings-select" onchange="app.setSetting('interiorTimer',this.value)">
+              <option value="15">15 sec</option>
+              <option value="30" selected>30 sec</option>
+              <option value="45">45 sec</option>
+              <option value="60">60 sec</option>
+            </select>
+          </div>
+
+          <!-- DOOR LOCKS -->
+          <div class="settings-section-hdr">DOOR LOCKS</div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Auto-Lock When Driving</div>
+            <select class="settings-select" onchange="app.setSetting('autoLockSpeed',this.value)">
+              <option value="0">Off</option>
+              <option value="15" selected>15 mph</option>
+              <option value="25">25 mph</option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Auto-Unlock in Park</div>
+            <button class="settings-toggle active" onclick="app.toggleSetting(this,'autoUnlockPark')">ON</button>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Auto-Unlock on Key Removal</div>
+            <button class="settings-toggle" onclick="app.toggleSetting(this,'autoUnlockKey')">OFF</button>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Lock All with Key Fob</div>
+            <button class="settings-toggle active" onclick="app.toggleSetting(this,'fobLockAll')">ON</button>
+          </div>
+
+          <!-- MIRRORS -->
+          <div class="settings-section-hdr">MIRRORS</div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Auto-Tilt in Reverse</div>
+            <button class="settings-toggle active" onclick="app.toggleSetting(this,'mirrorTiltReverse')">ON</button>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Fold Mirrors with Door Lock</div>
+            <button class="settings-toggle" onclick="app.toggleSetting(this,'mirrorFoldLock')">OFF</button>
+          </div>
+
+          <!-- WIPERS -->
+          <div class="settings-section-hdr">WIPERS</div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Rain Sensor Sensitivity</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="range" min="1" max="5" value="3" style="width:100px;" oninput="document.getElementById('rain-sens-val').textContent=this.value; app.setSetting('rainSens',this.value)">
+              <span id="rain-sens-val" style="color:#FFF;font-size:13px;min-width:16px;">3</span>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Intermittent Wiper Delay</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="range" min="1" max="5" value="3" style="width:100px;" oninput="document.getElementById('wiper-delay-val').textContent=this.value; app.setSetting('wiperDelay',this.value)">
+              <span id="wiper-delay-val" style="color:#FFF;font-size:13px;min-width:16px;">3</span>
+            </div>
+          </div>
+
+          <!-- COMFORT & CONVENIENCE -->
+          <div class="settings-section-hdr">COMFORT &amp; CONVENIENCE</div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Seat Memory on Unlock</div>
+            <button class="settings-toggle active" onclick="app.toggleSetting(this,'seatMemoryUnlock')">ON</button>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Power Window Auto-Open</div>
+            <button class="settings-toggle active" onclick="app.toggleSetting(this,'windowAutoOpen')">ON</button>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Seat Belt Reminder</div>
+            <button class="settings-toggle active" onclick="app.toggleSetting(this,'seatbeltReminder')">ON</button>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Park Assist Chime Volume</div>
+            <select class="settings-select" onchange="app.setSetting('parkChimeVol',this.value)">
+              <option value="off">Off</option>
+              <option value="low">Low</option>
+              <option value="med" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+
+          <!-- MAP -->
+          <div class="settings-section-hdr">MAP</div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Map Orientation</div>
+            <select class="settings-select" onchange="app.setSetting('mapOrientation',this.value)">
+              <option value="heading" selected>Heading Up</option>
+              <option value="north">North Up</option>
+              <option value="3d">3D View</option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Speed Limit Display</div>
+            <button class="settings-toggle active" onclick="app.toggleSetting(this,'speedLimitDisplay')">ON</button>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">POI Icons on Map</div>
+            <button class="settings-toggle active" onclick="app.toggleSetting(this,'poiIcons')">ON</button>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Map Detail Level</div>
+            <select class="settings-select" onchange="app.setSetting('mapDetail',this.value)">
+              <option value="low">Low</option>
+              <option value="med" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+
+          <!-- DISPLAY -->
+          <div class="settings-section-hdr">DISPLAY</div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Brightness</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="range" min="10" max="100" value="80" style="width:100px;" oninput="document.getElementById('bright-val').textContent=this.value+'%'">
+              <span id="bright-val" style="color:#FFF;font-size:13px;min-width:30px;">80%</span>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Night Brightness</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="range" min="5" max="60" value="30" style="width:100px;" oninput="document.getElementById('night-bright-val').textContent=this.value+'%'">
+              <span id="night-bright-val" style="color:#FFF;font-size:13px;min-width:30px;">30%</span>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Day/Night Mode</div>
+            <select class="settings-select" onchange="app.setSetting('dayNightMode',this.value)">
+              <option value="auto" selected>Auto</option>
+              <option value="day">Day</option>
+              <option value="night">Night</option>
+            </select>
+          </div>
+
+          <!-- CLOCK -->
+          <div class="settings-section-hdr">CLOCK</div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Time Format</div>
+            <select class="settings-select" onchange="app.setSetting('timeFormat',this.value)">
+              <option value="12h" selected>12-hour</option>
+              <option value="24h">24-hour</option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">GPS Time Sync</div>
+            <button class="settings-toggle active" onclick="app.toggleSetting(this,'gpsSync')">ON</button>
+          </div>
+
+          <!-- UNITS -->
+          <div class="settings-section-hdr">UNITS</div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Distance</div>
+            <select class="settings-select" onchange="app.setSetting('distUnit',this.value)">
+              <option value="mi" selected>Miles</option>
+              <option value="km">Kilometers</option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Temperature</div>
+            <select class="settings-select" onchange="app.setSetting('tempUnit',this.value)">
+              <option value="F" selected>°F</option>
+              <option value="C">°C</option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Fuel Economy</div>
+            <select class="settings-select" onchange="app.setSetting('fuelUnit',this.value)">
+              <option value="mpg" selected>MPG</option>
+              <option value="l100">L/100km</option>
+            </select>
+          </div>
+
+          <!-- MAINTENANCE -->
+          <div class="settings-section-hdr">MAINTENANCE</div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Oil Life</div>
+            <div style="color:#FF9F0A;font-size:14px;font-weight:600;">42%</div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Reset Oil Life</div>
+            <button onclick="if(confirm('Reset oil life to 100%?')) document.querySelector('.settings-row .settings-lbl + div').style.color='#30D158';" style="background:#FF453A22;border:1px solid #FF453A;color:#FF453A;font-size:12px;padding:4px 12px;border-radius:8px;cursor:pointer;">Reset</button>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Maintenance Interval</div>
+            <select class="settings-select" onchange="app.setSetting('maintInterval',this.value)">
+              <option value="3000">3,000 mi</option>
+              <option value="5000" selected>5,000 mi</option>
+              <option value="7500">7,500 mi</option>
+              <option value="10000">10,000 mi</option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">TPMS Calibration</div>
+            <button onclick="alert('TPMS calibration started. Drive for 2 minutes above 25 mph.')" style="background:#0A84FF22;border:1px solid #0A84FF;color:#0A84FF;font-size:12px;padding:4px 12px;border-radius:8px;cursor:pointer;">Calibrate</button>
+          </div>
+
+          <!-- SYSTEM -->
+          <div class="settings-section-hdr">SYSTEM</div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Language</div>
+            <select class="settings-select" onchange="app.setSetting('language',this.value)">
+              <option value="en" selected>English</option>
+              <option value="es">Español</option>
+              <option value="fr">Français</option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Software Version</div>
+            <div style="color:#8E8E93;font-size:13px;">v2.1.0-alpha</div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-lbl">Map Data Version</div>
+            <div style="color:#8E8E93;font-size:13px;">2026-Q1</div>
+          </div>
+
+          <div class="settings-row" style="margin-bottom:24px;">
+            <div class="settings-lbl" style="color:#FF453A;">Factory Reset</div>
+            <button onclick="if(confirm('Factory reset will erase all settings and profiles. Continue?')) alert('Reset complete. Rebooting…');" style="background:#FF453A22;border:1px solid #FF453A;color:#FF453A;font-size:12px;padding:4px 12px;border-radius:8px;cursor:pointer;">Reset</button>
+          </div>
+
+        </div><!-- /tab-settings -->
+
       </div><!-- /lower-content -->
+
+      <!-- Cog button (lower screen) -->
+      <button class="cog-btn" id="cog-btn-lower" onclick="app.toggleSettings()" title="Settings">⚙</button>
+
+      <!-- ── SETTINGS OVERLAY (shared, lives in lower screen) ── -->
+      <div id="settings-overlay">
+        <div class="settings-overlay-header">
+          <button class="back-btn" id="settings-back-btn" onclick="app.settingsBack()">‹ Settings</button>
+          <span class="breadcrumb" id="settings-breadcrumb">Settings</span>
+          <button class="close-btn" onclick="app.closeSettings()">✕</button>
+        </div>
+        <div class="settings-screens-wrap">
+
+          <!-- Category list (home screen) -->
+          <div class="settings-screen" id="settings-home">
+            <div class="settings-cat-row" onclick="app.settingsOpen('lights')">
+              <div class="settings-cat-icon">🔆</div>
+              <div class="settings-cat-text"><div class="settings-cat-label">Lights</div><div class="settings-cat-desc">Auto shutoff, DRL, approach &amp; welcome lighting</div></div>
+              <span class="settings-cat-chevron">›</span>
+            </div>
+            <div class="settings-cat-row" onclick="app.settingsOpen('locks')">
+              <div class="settings-cat-icon">🔒</div>
+              <div class="settings-cat-text"><div class="settings-cat-label">Door Locks</div><div class="settings-cat-desc">Auto-lock speed, Park unlock, key removal</div></div>
+              <span class="settings-cat-chevron">›</span>
+            </div>
+            <div class="settings-cat-row" onclick="app.settingsOpen('mirrors')">
+              <div class="settings-cat-icon">🪞</div>
+              <div class="settings-cat-text"><div class="settings-cat-label">Mirrors</div><div class="settings-cat-desc">Reverse tilt, fold with lock</div></div>
+              <span class="settings-cat-chevron">›</span>
+            </div>
+            <div class="settings-cat-row" onclick="app.settingsOpen('wipers')">
+              <div class="settings-cat-icon">💨</div>
+              <div class="settings-cat-text"><div class="settings-cat-label">Wipers</div><div class="settings-cat-desc">Rain sensor sensitivity, intermittent delay</div></div>
+              <span class="settings-cat-chevron">›</span>
+            </div>
+            <div class="settings-cat-row" onclick="app.settingsOpen('climate')">
+              <div class="settings-cat-icon">🌡️</div>
+              <div class="settings-cat-text"><div class="settings-cat-label">Climate</div><div class="settings-cat-desc">Pre-conditioning, defaults, auto thresholds</div></div>
+              <span class="settings-cat-chevron">›</span>
+            </div>
+            <div class="settings-cat-row" onclick="app.settingsOpen('nav')">
+              <div class="settings-cat-icon">🗺️</div>
+              <div class="settings-cat-text"><div class="settings-cat-label">Navigation</div><div class="settings-cat-desc">Map orientation, speed limit, route preferences</div></div>
+              <span class="settings-cat-chevron">›</span>
+            </div>
+            <div class="settings-cat-row" onclick="app.settingsOpen('audio')">
+              <div class="settings-cat-icon">🎵</div>
+              <div class="settings-cat-text"><div class="settings-cat-label">Audio</div><div class="settings-cat-desc">EQ defaults, Bose DSP, SSV, startup volume</div></div>
+              <span class="settings-cat-chevron">›</span>
+            </div>
+            <div class="settings-cat-row" onclick="app.settingsOpen('connectivity')">
+              <div class="settings-cat-icon">📱</div>
+              <div class="settings-cat-text"><div class="settings-cat-label">Connectivity</div><div class="settings-cat-desc">Bluetooth, Wi-Fi hotspot, CarPlay/Android Auto</div></div>
+              <span class="settings-cat-chevron">›</span>
+            </div>
+            <div class="settings-cat-row" onclick="app.settingsOpen('drive')">
+              <div class="settings-cat-icon">🏎️</div>
+              <div class="settings-cat-text"><div class="settings-cat-label">Drive</div><div class="settings-cat-desc">Default mode, ADAS defaults, cruise offset</div></div>
+              <span class="settings-cat-chevron">›</span>
+            </div>
+            <div class="settings-cat-row" onclick="app.settingsOpen('profiles')">
+              <div class="settings-cat-icon">👤</div>
+              <div class="settings-cat-text"><div class="settings-cat-label">Driver Profiles</div><div class="settings-cat-desc">Key fob assignments, PIN lock, Kid Mode</div></div>
+              <span class="settings-cat-chevron">›</span>
+            </div>
+            <div class="settings-cat-row" onclick="app.settingsOpen('clockunits')">
+              <div class="settings-cat-icon">🕐</div>
+              <div class="settings-cat-text"><div class="settings-cat-label">Clock &amp; Units</div><div class="settings-cat-desc">Time format, GPS sync, distance, temperature</div></div>
+              <span class="settings-cat-chevron">›</span>
+            </div>
+            <div class="settings-cat-row" onclick="app.settingsOpen('display')">
+              <div class="settings-cat-icon">🖥️</div>
+              <div class="settings-cat-text"><div class="settings-cat-label">Display</div><div class="settings-cat-desc">Brightness, day/night mode, theme</div></div>
+              <span class="settings-cat-chevron">›</span>
+            </div>
+            <div class="settings-cat-row" onclick="app.settingsOpen('maintenance')">
+              <div class="settings-cat-icon">🔧</div>
+              <div class="settings-cat-text"><div class="settings-cat-label">Maintenance</div><div class="settings-cat-desc">Oil life, TPMS calibration, service intervals</div></div>
+              <span class="settings-cat-chevron">›</span>
+            </div>
+            <div class="settings-cat-row" onclick="app.settingsOpen('system')" style="margin-bottom:16px;">
+              <div class="settings-cat-icon">⚡</div>
+              <div class="settings-cat-text"><div class="settings-cat-label">System</div><div class="settings-cat-desc">Language, software version, factory reset</div></div>
+              <span class="settings-cat-chevron">›</span>
+            </div>
+          </div><!-- /settings-home -->
+
+          <!-- Sub-screens (hidden by default) -->
+          <div class="settings-screen offscreen-right" id="settings-sub">
+            <div id="settings-sub-content"></div>
+          </div>
+
+        </div>
+      </div><!-- /settings-overlay -->
 
       <!-- TAB BAR -->
       <div class="tab-bar">
@@ -1909,7 +3004,171 @@
       </label>
     </div>
 
+    <div class="sim-control">
+      <div class="sim-lbl">Fuel Level (%)</div>
+      <input type="range" class="sim-slider" id="sim-fuel" min="0" max="100" value="62"
+        oninput="app.setFuel(this.value); document.getElementById('sim-fuel-val').textContent=this.value+'%'">
+      <span id="sim-fuel-val" style="font-size:12px;color:#8E8E93;">62%</span>
+    </div>
+
+    <div class="sim-control">
+      <div class="sim-lbl">Drive Mode</div>
+      <select onchange="app.setDriveMode(this.value)" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#FFF;padding:4px 8px;border-radius:6px;font-size:12px;">
+        <option value="standard">Standard</option>
+        <option value="sport">Sport</option>
+        <option value="sport+">Sport+</option>
+        <option value="eco">Eco</option>
+        <option value="snow">Snow</option>
+        <option value="personal">Personal</option>
+      </select>
+    </div>
+
+    <div class="sim-control">
+      <label class="sim-check-row">
+        <input type="checkbox" class="sim-check" id="sim-door-fl" onchange="app.toggleDoor('fl')">
+        FL Door Open
+      </label>
+    </div>
+
+    <div class="sim-control">
+      <label class="sim-check-row">
+        <input type="checkbox" class="sim-check" id="sim-door-trunk" onchange="app.toggleDoor('trunk')">
+        Trunk Open
+      </label>
+    </div>
+
+    <div class="sim-control">
+      <div class="sim-lbl">Profile</div>
+      <select onchange="app.simProfile(this.value)" style="background:#1C1C1E;border:1px solid #3A3A3C;color:#FFF;padding:4px 8px;border-radius:6px;font-size:12px;">
+        <option value="doug">🏎️ Doug</option>
+        <option value="kelly">☀️ KellyAnne</option>
+        <option value="guest">👤 Guest</option>
+      </select>
+    </div>
+
+    <!-- ── PROFILES SIMULATION ── -->
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.10);">
+      <div class="sim-lbl" style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#8E8E93;margin-bottom:10px;">Driver Profiles</div>
+
+      <div class="sim-control">
+        <div class="sim-lbl">Active Profile</div>
+        <select id="sim-profile-select" style="background:#2C2C2E;color:#FFFFFF;border:1px solid #3A3A3C;border-radius:8px;padding:4px 10px;font-size:13px;font-family:'Roboto',sans-serif;width:100%;"
+          onchange="simProfileChange(this.value)">
+          <option value="doug">🏎️  Doug (Key 1)</option>
+          <option value="kellyanne">🌊  KellyAnne (Key 2)</option>
+          <option value="guest">👤  Guest Mode</option>
+          <option value="none">— No Profile (first boot)</option>
+        </select>
+      </div>
+
+      <div class="sim-control" style="margin-top:8px;">
+        <button onclick="simKeyInsert()" style="background:#0A84FF;color:#FFFFFF;border:none;border-radius:10px;padding:8px 16px;font-size:13px;font-family:'Roboto',sans-serif;font-weight:600;cursor:pointer;width:100%;">
+          Simulate Key Insert →
+        </button>
+      </div>
+
+      <div id="sim-profile-status" style="font-size:11px;color:#8E8E93;margin-top:6px;text-align:center;min-height:16px;"></div>
+    </div>
+
   </div>
+</div>
+
+<style>
+/* Welcome overlay simulation */
+#sim-welcome-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 16px;
+  animation: fadeInOverlay 0.35s ease forwards;
+}
+#sim-welcome-overlay.visible { display: flex; }
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.sim-welcome-avatar {
+  font-size: 72px;
+  animation: avatarPop 0.42s cubic-bezier(0.175,0.885,0.32,1.275) 0.1s both;
+}
+@keyframes avatarPop {
+  from { transform: scale(0.5); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+.sim-welcome-name {
+  font-size: 32px;
+  font-weight: 300;
+  color: #FFFFFF;
+  font-family: 'Roboto', sans-serif;
+  animation: fadeUp 0.35s ease 0.3s both;
+}
+.sim-welcome-chip {
+  font-size: 13px;
+  color: #8E8E93;
+  background: rgba(255,255,255,0.10);
+  padding: 6px 18px;
+  border-radius: 20px;
+  font-family: 'Roboto', sans-serif;
+  animation: fadeUp 0.3s ease 0.5s both;
+}
+.sim-welcome-dismiss {
+  font-size: 11px;
+  color: #48484A;
+  font-family: 'Roboto', sans-serif;
+  margin-top: 8px;
+  animation: fadeUp 0.3s ease 0.7s both;
+}
+.sim-welcome-who {
+  font-size: 26px;
+  font-weight: 300;
+  color: #FFFFFF;
+  font-family: 'Roboto', sans-serif;
+}
+.sim-welcome-avatars {
+  display: flex;
+  gap: 24px;
+  margin-top: 8px;
+}
+.sim-welcome-avatarcard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.sim-welcome-avatarcard .ring {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: #1C1C1E;
+  border: 2px solid var(--accent, #0A84FF);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px;
+  transition: transform 0.15s;
+}
+.sim-welcome-avatarcard:hover .ring { transform: scale(1.08); }
+.sim-welcome-avatarcard span { font-size: 12px; color: #FFFFFF; font-family: 'Roboto',sans-serif; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.sim-glow-border {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  border: 3px solid var(--profile-accent, #0A84FF);
+  opacity: 0.5;
+  transition: opacity 0.4s;
+}
+</style>
+
+<!-- Welcome overlay DOM -->
+<div id="sim-welcome-overlay" onclick="dismissSimWelcome()">
+  <div id="sim-glow-border" class="sim-glow-border"></div>
 </div>
 
 <script>
@@ -1965,6 +3224,7 @@ const app = {
     this._applyNavTab();
     this._applyPhone();
     this._applyBT();
+    this._updateStatusIcons();
   },
 
   _applyNav() {
@@ -2020,10 +3280,154 @@ const app = {
     document.getElementById('rerouting-banner').classList.toggle('visible', this.sim.rerouting);
   },
 
+  // ─ NAV COMPANION ─
+  _navRecents: [
+    {icon:'📍', name:'Topsail Island, NC', sub:'171 Auger Shell Ct, Surf City', time:'Yesterday'},
+    {icon:'🏪', name:'Whole Foods Market', sub:'1540 Beaver Creek Commons Dr, Apex', time:'2 days ago'},
+    {icon:'⛽', name:'Shell Gas Station', sub:'US-1 South, Cary', time:'Last week'},
+    {icon:'🏥', name:'WakeMed Cary Hospital', sub:'1900 Kildaire Farm Rd, Cary', time:'Last week'},
+    {icon:'🎯', name:'High Point University', sub:'833 Montlieu Ave, High Point', time:'3 weeks ago'},
+  ],
+  _navFavorites: [
+    {icon:'🏠', name:'Home', sub:'Cary, NC'},
+    {icon:'💼', name:'Work — ServiceNow', sub:'4700 Six Forks Rd, Raleigh'},
+    {icon:'🏖️', name:'Topsail Island', sub:'Surf City, NC'},
+  ],
+  _navTrafficOn: false,
+  _navMapMode: 'heading',
+  _navTurnListOpen: false,
+  _navMockTurns: [
+    {dist:'0.4 mi', arrow:'↱', street:'Turn right on Kildaire Farm Rd'},
+    {dist:'1.2 mi', arrow:'↰', street:'Turn left on Tryon Rd'},
+    {dist:'2.8 mi', arrow:'⬆', street:'Continue on US-1 South'},
+    {dist:'0.6 mi', arrow:'↱', street:'Take exit 89 toward Apex'},
+    {dist:'0.2 mi', arrow:'↰', street:'Merge onto US-64 West'},
+    {dist:'4.1 mi', arrow:'⬆', street:'Continue on US-64 West'},
+    {dist:'0.3 mi', arrow:'🏁', street:'Arrive at destination'},
+  ],
+
+  _renderNavRecents() {
+    const el = document.getElementById('nav-recents-list');
+    if (!el) return;
+    el.innerHTML = this._navRecents.map(r => `
+      <div onclick="app.navRouteTo('${r.name}')" style="display:flex;align-items:center;gap:10px;padding:13px 12px;border-bottom:1px solid #111;cursor:pointer;">
+        <div style="width:40px;height:40px;background:#1C1C1E;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;">${r.icon}</div>
+        <div style="flex:1;"><div style="color:#FFF;font-size:13px;">${r.name}</div><div style="color:#8E8E93;font-size:11px;">${r.sub}</div></div>
+        <div style="color:#8E8E93;font-size:10px;">${r.time}</div>
+      </div>`).join('');
+  },
+
+  _renderNavFavorites() {
+    const el = document.getElementById('nav-favorites-list');
+    if (!el) return;
+    el.innerHTML = this._navFavorites.map(f => `
+      <div onclick="app.navRouteTo('${f.name}')" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #111;cursor:pointer;">
+        <div style="width:32px;height:32px;background:#0A84FF22;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;">${f.icon}</div>
+        <div style="flex:1;"><div style="color:#FFF;font-size:13px;">${f.name}</div><div style="color:#8E8E93;font-size:11px;">${f.sub}</div></div>
+        <div style="color:#0A84FF;font-size:18px;">›</div>
+      </div>`).join('');
+  },
+
+  navSearch(q) {
+    const results = document.getElementById('nav-search-results');
+    const idle = document.getElementById('nav-idle-content');
+    if (!q || q.length < 2) {
+      results.style.display = 'none';
+      idle.style.display = 'block';
+      return;
+    }
+    results.style.display = 'block';
+    idle.style.display = 'none';
+    const mock = [
+      {icon:'📍', name: q + ' (Address)', sub:'Cary, NC 27513'},
+      {icon:'🏪', name: q + ' Shopping Center', sub:'US-1, Cary, NC'},
+      {icon:'⛽', name: q + ' Gas Station', sub:'0.4 mi — Kildaire Farm Rd'},
+    ];
+    results.innerHTML = mock.map(r => `
+      <div onclick="app.navRouteTo('${r.name}')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #111;cursor:pointer;">
+        <div style="width:32px;height:32px;background:#1C1C1E;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;">${r.icon}</div>
+        <div><div style="color:#FFF;font-size:13px;">${r.name}</div><div style="color:#8E8E93;font-size:11px;">${r.sub}</div></div>
+      </div>`).join('');
+  },
+
+  navClearSearch() {
+    const inp = document.getElementById('nav-search-input');
+    if (inp) inp.value = '';
+    this.navSearch('');
+  },
+
+  navRouteTo(dest) {
+    this.sim.navActive = true;
+    this.apply();
+    document.getElementById('nav-idle').style.display = 'none';
+    document.getElementById('nav-active').style.display = 'flex';
+    document.getElementById('sim-nav').checked = true;
+  },
+
+  stopNav() {
+    this.sim.navActive = false;
+    this.apply();
+    document.getElementById('nav-idle').style.display = 'flex';
+    document.getElementById('nav-active').style.display = 'none';
+    const cb = document.getElementById('sim-nav');
+    if (cb) cb.checked = false;
+  },
+
+  navPOI(cat) {
+    const inp = document.getElementById('nav-search-input');
+    const labels = {fuel:'Gas stations', food:'Restaurants', parking:'Parking', hotel:'Hotels', atm:'ATMs'};
+    if (inp) inp.value = labels[cat] || cat;
+    this.navSearch(labels[cat] || cat);
+  },
+
+  navToggleTraffic() {
+    this._navTrafficOn = !this._navTrafficOn;
+    const btn = document.getElementById('traffic-btn');
+    if (btn) {
+      btn.textContent = this._navTrafficOn ? '🚦 Traffic: On' : '🚦 Traffic: Off';
+      btn.style.color = this._navTrafficOn ? '#FF9F0A' : '#8E8E93';
+      btn.style.borderColor = this._navTrafficOn ? '#FF9F0A' : '#3A3A3C';
+    }
+  },
+
+  navToggleMapMode() {
+    const modes = ['heading', 'north', '3d'];
+    const labels = {heading:'Heading Up', north:'North Up', '3d':'3D View'};
+    const idx = (modes.indexOf(this._navMapMode) + 1) % modes.length;
+    this._navMapMode = modes[idx];
+    const btn = document.getElementById('mapmode-btn');
+    if (btn) btn.textContent = '🗺 ' + labels[this._navMapMode];
+  },
+
+  navDetour() {
+    alert('Detour: searching for alternate routes avoiding next 5 miles…');
+  },
+
+  navAlongRoute(cat) {
+    const labels = {fuel:'Gas Station', food:'Restaurant', parking:'Parking'};
+    alert('Adding ' + labels[cat] + ' as waypoint along route');
+  },
+
+  navToggleTurnList() {
+    this._navTurnListOpen = !this._navTurnListOpen;
+    const panel = document.getElementById('turn-list-panel');
+    const btn = document.getElementById('turnlist-btn');
+    if (panel) panel.style.display = this._navTurnListOpen ? 'block' : 'none';
+    if (btn) btn.textContent = this._navTurnListOpen ? '✕ Close List' : '≡ Turn List';
+    if (this._navTurnListOpen) {
+      const content = document.getElementById('turn-list-content');
+      if (content) content.innerHTML = this._navMockTurns.map((t,i) => `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #111;${i===0?'background:#0A84FF11;':''}">
+          <div style="width:28px;height:28px;background:#1C1C1E;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px;">${t.arrow}</div>
+          <div><div style="color:${i===0?'#0A84FF':'#FFF'};font-size:13px;">${t.street}</div><div style="color:#8E8E93;font-size:11px;">${t.dist}</div></div>
+        </div>`).join('');
+    }
+  },
+
   _applyNavTab() {
     const on = this.sim.navActive;
-    const stopBtn = document.querySelector('.stop-nav-btn');
-    if (stopBtn) stopBtn.style.display = on ? '' : 'none';
+    document.getElementById('nav-idle').style.display = on ? 'none' : 'flex';
+    document.getElementById('nav-active').style.display = on ? 'flex' : 'none';
   },
 
   _applyPhone() {
@@ -2057,11 +3461,12 @@ const app = {
     document.querySelectorAll('.source-pill').forEach(p => {
       p.classList.toggle('active', p.dataset.src === src);
     });
-    const views = ['BT','FM','AM','SXM','AUX'];
+    const views = ['BT','FM','AM','SXM','AUX','USB','CD'];
     views.forEach(v => {
       const el = document.getElementById('audio-' + v.toLowerCase());
       if (el) el.classList.toggle('active', v === src);
     });
+    this._updateStatusIcons();
   },
 
   togglePlay() {
@@ -2101,6 +3506,7 @@ const app = {
     const btn = document.getElementById('mute-btn');
     btn.classList.toggle('muted', this.ui.isMuted);
     btn.textContent = this.ui.isMuted ? '🔇' : '🔊';
+    this._updateStatusIcons();
   },
 
   setVolume(val) {
@@ -2110,6 +3516,7 @@ const app = {
     const slider = document.getElementById('vol-slider');
     const pct = val;
     slider.style.background = `linear-gradient(to right, #0A84FF ${pct}%, #3A3A3C ${pct}%)`;
+    this._updateStatusIcons();
   },
 
   seekFM(delta) {
@@ -2137,14 +3544,19 @@ const app = {
 
   // ─ PHONE ─
   startActiveCall() {
-    document.getElementById('phone-idle').style.display = 'none';
+    // Hide phone sub-tab panels during active call
+    ['phone-dial','phone-contacts','phone-recent','phone-messages'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
     document.getElementById('active-call-card').style.display = 'flex';
     this.ui.callStartTime = Date.now();
     this.ui.callTimerInterval = setInterval(() => this._updateCallTimer(), 1000);
   },
 
   endCall() {
-    document.getElementById('phone-idle').style.display = 'flex';
+    // Restore dial pad as default sub-tab
+    document.getElementById('phone-dial').style.display = 'block';
     document.getElementById('active-call-card').style.display = 'none';
     if (this.ui.callTimerInterval) clearInterval(this.ui.callTimerInterval);
     this.ui.callTimerInterval = null;
@@ -2187,6 +3599,116 @@ const app = {
         setTimeout(() => k.style.background = '', 200);
       }
     });
+  },
+
+  // ─ PHONE TABS ─
+  _contacts: [
+    {name:'KellyAnne Pitek', num:'(919) 555-0100', avatar:'👩'},
+    {name:'Tyler Pitek', num:'(919) 555-0101', avatar:'👦'},
+    {name:'Jordan Pitek', num:'(919) 555-0102', avatar:'👦'},
+    {name:'Mom', num:'(919) 555-0200', avatar:'👵'},
+    {name:'Dad', num:'(919) 555-0201', avatar:'👴'},
+    {name:'Mike (Work)', num:'(704) 555-0300', avatar:'💼'},
+    {name:'Sarah (Work)', num:'(704) 555-0301', avatar:'💼'},
+    {name:'Builder - Todd', num:'(910) 555-0400', avatar:'🏗️'},
+  ],
+  _recent: [
+    {name:'KellyAnne Pitek', num:'(919) 555-0100', type:'dialed', time:'2h ago'},
+    {name:'Builder - Todd', num:'(910) 555-0400', type:'missed', time:'3h ago'},
+    {name:'Mike (Work)', num:'(704) 555-0300', type:'dialed', time:'Yesterday'},
+    {name:'Unknown', num:'(555) 867-5309', type:'missed', time:'Yesterday'},
+    {name:'Mom', num:'(919) 555-0200', type:'dialed', time:'2 days ago'},
+  ],
+  _dialStr: '',
+  _recentFil: 'all',
+
+  phoneTab(tab) {
+    ['dial','contacts','recent','messages'].forEach(t => {
+      document.getElementById('phone-' + t).style.display = t === tab ? 'block' : 'none';
+      const btn = document.getElementById('ptab-' + t);
+      if (btn) {
+        btn.style.color = t === tab ? '#0A84FF' : '#8E8E93';
+        btn.style.borderBottom = t === tab ? '2px solid #0A84FF' : '2px solid transparent';
+      }
+    });
+    if (tab === 'contacts') this._renderContacts(this._contacts);
+    if (tab === 'recent') this._renderRecent();
+  },
+
+  dialKey(k) {
+    this._dialStr += k;
+    const el = document.getElementById('dial-display');
+    if (el) el.textContent = this._dialStr;
+  },
+
+  dialBackspace() {
+    this._dialStr = this._dialStr.slice(0, -1);
+    const el = document.getElementById('dial-display');
+    if (el) el.textContent = this._dialStr || '​';
+  },
+
+  dialCall() {
+    if (!this._dialStr) return;
+    alert('Calling: ' + this._dialStr);
+    this._dialStr = '';
+    document.getElementById('dial-display').textContent = '​';
+  },
+
+  filterContacts(q) {
+    const filtered = this._contacts.filter(c =>
+      c.name.toLowerCase().includes(q.toLowerCase()) ||
+      c.num.includes(q)
+    );
+    this._renderContacts(filtered);
+  },
+
+  _renderContacts(list) {
+    const el = document.getElementById('contacts-list');
+    if (!el) return;
+    el.innerHTML = list.map(c => `
+      <div onclick="app._callContact('${c.name}','${c.num}')" style="display:flex;align-items:center;gap:12px;padding:14px 12px;border-bottom:1px solid #1C1C1E;cursor:pointer;">
+        <div style="width:44px;height:44px;border-radius:50%;background:#2C2C2E;display:flex;align-items:center;justify-content:center;font-size:20px;">${c.avatar}</div>
+        <div>
+          <div style="color:#FFF;font-size:15px;">${c.name}</div>
+          <div style="color:#8E8E93;font-size:13px;">${c.num}</div>
+        </div>
+        <div style="margin-left:auto;color:#30D158;font-size:22px;">📞</div>
+      </div>`).join('');
+  },
+
+  _callContact(name, num) {
+    if (confirm('Call ' + name + '?')) this.startActiveCall();
+  },
+
+  recentFilter(f) {
+    this._recentFil = f;
+    ['all','dialed','missed'].forEach(x => {
+      const btn = document.getElementById('rfil-' + x);
+      if (!btn) return;
+      const active = x === f;
+      btn.style.background = active ? '#0A84FF22' : 'transparent';
+      btn.style.borderColor = active ? '#0A84FF' : '#3A3A3C';
+      btn.style.color = active ? '#0A84FF' : '#8E8E93';
+    });
+    this._renderRecent();
+  },
+
+  _renderRecent() {
+    const el = document.getElementById('recent-list');
+    if (!el) return;
+    const colors = {dialed:'#0A84FF', missed:'#FF453A'};
+    const icons = {dialed:'↗', missed:'↙'};
+    const list = this._recentFil === 'all' ? this._recent :
+      this._recent.filter(r => r.type === this._recentFil);
+    el.innerHTML = list.map(r => `
+      <div onclick="app._callContact('${r.name}','${r.num}')" style="display:flex;align-items:center;gap:12px;padding:14px 12px;border-bottom:1px solid #1C1C1E;cursor:pointer;">
+        <div style="color:${colors[r.type]};font-size:18px;width:24px;">${icons[r.type]}</div>
+        <div style="flex:1;">
+          <div style="color:#FFF;font-size:15px;">${r.name}</div>
+          <div style="color:#8E8E93;font-size:13px;">${r.num} · ${r.time}</div>
+        </div>
+        <div style="color:#30D158;font-size:22px;">📞</div>
+      </div>`).join('');
   },
 
   // ─ CLIMATE ─
@@ -2234,11 +3756,72 @@ const app = {
     document.getElementById('recirc-btn').classList.toggle('active', this.ui.recircOn);
   },
 
+  climateAuto() {
+    const btn = document.getElementById('auto-btn');
+    if (!btn) return;
+    const active = btn.style.borderColor === 'rgb(10, 132, 255)';
+    btn.style.borderColor = active ? '#3A3A3C' : '#0A84FF';
+    btn.style.color = active ? '#8E8E93' : '#0A84FF';
+    btn.style.background = active ? '#1C1C1E' : '#0A84FF22';
+  },
+
+  climateSync() {
+    this.ui.passTemp = this.ui.driverTemp;
+    document.getElementById('pass-temp').textContent = this.ui.passTemp + '°';
+    const btn = document.getElementById('sync-btn');
+    if (btn) {
+      btn.style.borderColor = '#0A84FF';
+      btn.style.color = '#0A84FF';
+      btn.style.background = '#0A84FF22';
+      setTimeout(() => {
+        btn.style.borderColor = '#3A3A3C';
+        btn.style.color = '#8E8E93';
+        btn.style.background = '#1C1C1E';
+      }, 1500);
+    }
+  },
+
+  climateMaxAC() {
+    this.ui.acOn = true;
+    document.getElementById('ac-btn').classList.add('active');
+    this.ui.fanSpeed = 5;
+    this.setFan(5);
+    this.setMode('face');
+  },
+
+  climateMaxDef() {
+    this.setMode('defrost');
+    this.ui.fanSpeed = 5;
+    this.setFan(5);
+  },
+
+  toggleHeatWheel() {
+    const btn = document.getElementById('heatwheel-btn');
+    if (!btn) return;
+    const active = btn.style.borderColor === 'rgb(255, 159, 10)';
+    btn.style.borderColor = active ? '#3A3A3C' : '#FF9F0A';
+    btn.style.color = active ? '#8E8E93' : '#FF9F0A';
+    btn.style.background = active ? '#1C1C1E' : '#FF9F0A22';
+  },
+
+  toggleClimateRearDef() {
+    const btn = document.getElementById('reardefrost-climate-btn');
+    if (!btn) return;
+    const active = btn.style.borderColor === 'rgb(255, 159, 10)';
+    btn.style.borderColor = active ? '#3A3A3C' : '#FF9F0A';
+    btn.style.color = active ? '#8E8E93' : '#FF9F0A';
+    btn.style.background = active ? '#1C1C1E' : '#FF9F0A22';
+    // Also sync with Vehicle tab reardefrost button
+    this.toggleVehicle('reardefrost');
+  },
+
   // ─ VEHICLE ─
   toggleDoor(door) {
     this.ui.doors[door] = !this.ui.doors[door];
     const el = document.getElementById('door-' + door);
     if (el) el.classList.toggle('open', this.ui.doors[door]);
+    const svgDoor = document.getElementById('svg-door-' + door);
+    if (svgDoor) svgDoor.style.opacity = this.ui.doors[door] ? '1' : '0';
   },
 
   setFuel(val) {
@@ -2302,6 +3885,434 @@ const app = {
       if (el) el.classList.remove('open');
     });
   },
+
+  // ─ MAP ─
+  mapOffset: { x: 0, y: 0 },
+  mapZoom: 1.0,
+
+  zoomMap(delta) {
+    this.mapZoom = Math.max(0.5, Math.min(3.0, this.mapZoom + delta));
+    const grid = document.getElementById('map-grid-upper');
+    if (grid) {
+      const size = Math.round(40 / this.mapZoom);
+      grid.style.backgroundSize = `${size}px ${size}px`;
+    }
+  },
+
+  recenterMap() {
+    this.mapOffset = { x: 0, y: 0 };
+    const grid = document.getElementById('map-grid-upper');
+    if (grid) grid.style.backgroundPosition = '0 0';
+  },
+
+  panMap(dx, dy) {
+    this.mapOffset.x += dx;
+    this.mapOffset.y += dy;
+    const grid = document.getElementById('map-grid-upper');
+    if (grid) grid.style.backgroundPosition = `${this.mapOffset.x}px ${this.mapOffset.y}px`;
+  },
+
+  // ─ AUDIO EQ ─
+  toggleEQ() {
+    const panel = document.getElementById('eq-panel');
+    const btn = document.getElementById('eq-toggle-btn');
+    const visible = panel.style.display !== 'none';
+    panel.style.display = visible ? 'none' : 'block';
+    if (btn) btn.textContent = visible ? 'EQ ▲' : 'EQ ▼';
+  },
+
+  setEQ(band, val) {
+    document.getElementById('eq-' + band + '-val').textContent = (val > 0 ? '+' : '') + val;
+  },
+
+  toggleBose(feature) {
+    const btn = document.getElementById('bose-' + feature);
+    if (!btn) return;
+    const active = btn.classList.contains('active');
+    btn.classList.toggle('active', !active);
+    btn.style.background = !active ? '#0A84FF22' : 'transparent';
+    btn.style.borderColor = !active ? '#0A84FF' : '#3A3A3C';
+    btn.style.color = !active ? '#0A84FF' : '#8E8E93';
+  },
+
+  // ─ VEHICLE SUB-TABS ─
+  vehicleTab(tab) {
+    ['info','drive','adas','status'].forEach(t => {
+      const c = document.getElementById('vtab-content-' + t);
+      const b = document.getElementById('vtab-' + t);
+      if (c) c.style.display = t === tab ? 'block' : 'none';
+      if (b) {
+        b.style.color = t === tab ? '#0A84FF' : '#8E8E93';
+        b.style.borderBottom = t === tab ? '2px solid #0A84FF' : '2px solid transparent';
+      }
+    });
+    if (tab === 'info') { setTimeout(() => this._drawFuelArc(this.ui.fuel / 100), 50); }
+  },
+
+  setDriveMode(mode) {
+    const modes = ['standard','sport','sport+','eco','snow','personal'];
+    modes.forEach(m => {
+      const btn = document.getElementById('dm-' + m);
+      if (!btn) return;
+      const active = m === mode;
+      btn.style.background = active ? 'linear-gradient(135deg,#0A84FF22,#0A84FF44)' : '#1C1C1E';
+      btn.style.borderColor = active ? '#0A84FF' : '#3A3A3C';
+      btn.style.color = active ? '#0A84FF' : '#8E8E93';
+    });
+  },
+
+  toggleAdas(btn, feature) {
+    const active = btn.style.borderColor === 'rgb(48, 209, 88)';
+    btn.style.borderColor = active ? '#3A3A3C' : '#30D158';
+    btn.style.color = active ? '#8E8E93' : '#30D158';
+    btn.textContent = (active ? '' : '✓ ') + feature;
+  },
+
+  setPFCW(btn, level) {
+    btn.parentElement.querySelectorAll('button').forEach(b => {
+      b.style.background = 'transparent';
+      b.style.borderColor = '#3A3A3C';
+      b.style.color = '#8E8E93';
+    });
+    btn.style.background = '#0A84FF22';
+    btn.style.borderColor = '#0A84FF';
+    btn.style.color = '#0A84FF';
+  },
+
+  simProfile(profile) {
+    const profiles = {
+      doug:  { driverTemp: 72, volume: 65, source: 'BT' },
+      kelly: { driverTemp: 70, volume: 55, source: 'FM' },
+      guest: { driverTemp: 72, volume: 60, source: 'BT' },
+    };
+    const p = profiles[profile];
+    if (!p) return;
+    this.ui.driverTemp = p.driverTemp;
+    const dtEl = document.getElementById('driver-temp');
+    if (dtEl) dtEl.textContent = p.driverTemp + '°';
+    this.ui.volume = p.volume;
+    this.setVolume(p.volume);
+    this.setSource(p.source);
+  },
+
+  // ─ SETTINGS ─
+  _settingsData: {},
+
+  setSetting(key, value) {
+    this._settingsData[key] = value;
+  },
+
+  toggleSetting(btn, key) {
+    const active = btn.classList.contains('active');
+    btn.classList.toggle('active', !active);
+    btn.textContent = !active ? 'ON' : 'OFF';
+    this._settingsData[key] = !active;
+  },
+
+  // ─ SETTINGS OVERLAY ─
+  _settingsOpen: false,
+  _settingsCurrent: null,
+
+  _settingsSubContent: {
+    lights: `
+      <div class="settings-section-hdr">LIGHTS</div>
+      <div class="settings-row"><div class="settings-lbl">Auto Light Shutoff</div><select class="settings-select" onchange="app.setSetting('lightShutoff',this.value)"><option value="0">Off</option><option value="30">30 sec</option><option value="45" selected>45 sec</option><option value="60">60 sec</option><option value="90">90 sec</option><option value="120">2 min</option><option value="180">3 min</option></select></div>
+      <div class="settings-row"><div class="settings-lbl">Auto Headlight Sensitivity</div><select class="settings-select"><option>Low</option><option selected>Medium</option><option>High</option></select></div>
+      <div class="settings-row"><div class="settings-lbl">Daytime Running Lights</div><button class="settings-toggle active" onclick="app.toggleSetting(this,'drl')">ON</button></div>
+      <div class="settings-row"><div class="settings-lbl">Approach Lighting</div><button class="settings-toggle active" onclick="app.toggleSetting(this,'approachLight')">ON</button></div>
+      <div class="settings-row"><div class="settings-lbl">Approach Light Duration</div><select class="settings-select"><option>30 sec</option><option selected>60 sec</option><option>90 sec</option></select></div>
+      <div class="settings-row"><div class="settings-lbl">Welcome Lighting</div><button class="settings-toggle active" onclick="app.toggleSetting(this,'welcomeLight')">ON</button></div>
+      <div class="settings-row" style="margin-bottom:16px;"><div class="settings-lbl">Interior Light Timer</div><select class="settings-select"><option>15 sec</option><option selected>30 sec</option><option>45 sec</option><option>60 sec</option></select></div>`,
+
+    locks: `
+      <div class="settings-section-hdr">DOOR LOCKS</div>
+      <div class="settings-row"><div class="settings-lbl">Auto-Lock When Driving</div><select class="settings-select"><option>Off</option><option selected>15 mph</option><option>25 mph</option></select></div>
+      <div class="settings-row"><div class="settings-lbl">Auto-Unlock in Park</div><button class="settings-toggle active" onclick="app.toggleSetting(this,'autoUnlockPark')">ON</button></div>
+      <div class="settings-row"><div class="settings-lbl">Auto-Unlock on Key Removal</div><button class="settings-toggle" onclick="app.toggleSetting(this,'autoUnlockKey')">OFF</button></div>
+      <div class="settings-row" style="margin-bottom:16px;"><div class="settings-lbl">Lock All with Key Fob</div><button class="settings-toggle active" onclick="app.toggleSetting(this,'fobLockAll')">ON</button></div>`,
+
+    mirrors: `
+      <div class="settings-section-hdr">MIRRORS</div>
+      <div class="settings-row"><div class="settings-lbl">Auto-Tilt in Reverse</div><button class="settings-toggle active" onclick="app.toggleSetting(this,'mirrorTilt')">ON</button></div>
+      <div class="settings-row" style="margin-bottom:16px;"><div class="settings-lbl">Fold Mirrors with Door Lock</div><button class="settings-toggle" onclick="app.toggleSetting(this,'mirrorFold')">OFF</button></div>`,
+
+    wipers: `
+      <div class="settings-section-hdr">WIPERS</div>
+      <div class="settings-row"><div class="settings-lbl">Rain Sensor Sensitivity</div><div style="display:flex;align-items:center;gap:8px;"><input type="range" min="1" max="5" value="3" style="width:100px;" oninput="this.nextElementSibling.textContent=this.value"><span style="color:#FFF;font-size:13px;min-width:12px;">3</span></div></div>
+      <div class="settings-row" style="margin-bottom:16px;"><div class="settings-lbl">Intermittent Wiper Delay</div><div style="display:flex;align-items:center;gap:8px;"><input type="range" min="1" max="5" value="3" style="width:100px;" oninput="this.nextElementSibling.textContent=this.value"><span style="color:#FFF;font-size:13px;min-width:12px;">3</span></div></div>`,
+
+    climate: `
+      <div class="settings-section-hdr">CLIMATE DEFAULTS</div>
+      <div class="settings-row"><div class="settings-lbl">Pre-conditioning Threshold</div><select class="settings-select"><option>Off</option><option>40°F</option><option selected>35°F</option><option>30°F</option></select></div>
+      <div class="settings-row"><div class="settings-lbl">Zone Auto-Sync Default</div><button class="settings-toggle active" onclick="app.toggleSetting(this,'zoneSync')">ON</button></div>
+      <div class="settings-row"><div class="settings-lbl">Seat Heat Auto-On</div><select class="settings-select"><option>Off</option><option selected>45°F</option><option>40°F</option><option>35°F</option></select></div>
+      <div class="settings-row"><div class="settings-lbl">Steering Wheel Heat Auto-On</div><select class="settings-select"><option>Off</option><option selected>45°F</option><option>40°F</option><option>35°F</option></select></div>
+      <div class="settings-row" style="margin-bottom:16px;"><div class="settings-lbl">Climate at Startup</div><select class="settings-select"><option selected>Last Used</option><option>Default</option><option>Off</option></select></div>`,
+
+    nav: `
+      <div class="settings-section-hdr">NAVIGATION</div>
+      <div class="settings-row"><div class="settings-lbl">Map Orientation</div><select class="settings-select"><option selected>Heading Up</option><option>North Up</option><option>3D View</option></select></div>
+      <div class="settings-row"><div class="settings-lbl">Speed Limit Display</div><button class="settings-toggle active" onclick="app.toggleSetting(this,'speedLimit')">ON</button></div>
+      <div class="settings-row"><div class="settings-lbl">Route Preference</div><select class="settings-select"><option selected>Fastest</option><option>Shortest</option><option>Eco</option></select></div>
+      <div class="settings-row"><div class="settings-lbl">Avoid Tolls</div><button class="settings-toggle" onclick="app.toggleSetting(this,'avoidTolls')">OFF</button></div>
+      <div class="settings-row"><div class="settings-lbl">Avoid Highways</div><button class="settings-toggle" onclick="app.toggleSetting(this,'avoidHwy')">OFF</button></div>
+      <div class="settings-row"><div class="settings-lbl">Voice Guidance</div><button class="settings-toggle active" onclick="app.toggleSetting(this,'voiceGuidance')">ON</button></div>
+      <div class="settings-row"><div class="settings-lbl">Map Detail Level</div><select class="settings-select"><option>Low</option><option selected>Medium</option><option>High</option></select></div>
+      <div class="settings-row" style="margin-bottom:16px;"><div class="settings-lbl">POI Icons on Map</div><button class="settings-toggle active" onclick="app.toggleSetting(this,'poiIcons')">ON</button></div>`,
+
+    audio: `
+      <div class="settings-section-hdr">AUDIO DEFAULTS</div>
+      <div class="settings-row"><div class="settings-lbl">Startup Volume</div><div style="display:flex;align-items:center;gap:8px;"><input type="range" min="0" max="100" value="40" style="width:100px;" oninput="this.nextElementSibling.textContent=this.value+'%'"><span style="color:#FFF;font-size:13px;min-width:30px;">40%</span></div></div>
+      <div class="settings-row"><div class="settings-lbl">Max Volume Limit</div><div style="display:flex;align-items:center;gap:8px;"><input type="range" min="40" max="100" value="85" style="width:100px;" oninput="this.nextElementSibling.textContent=this.value+'%'"><span style="color:#FFF;font-size:13px;min-width:30px;">85%</span></div></div>
+      <div class="settings-row"><div class="settings-lbl">Speed-Sensitive Volume</div><select class="settings-select"><option>Off</option><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option></select></div>
+      <div class="settings-row"><div class="settings-lbl">Navigation Prompt Volume</div><div style="display:flex;align-items:center;gap:8px;"><input type="range" min="0" max="100" value="80" style="width:100px;" oninput="this.nextElementSibling.textContent=this.value+'%'"><span style="color:#FFF;font-size:13px;min-width:30px;">80%</span></div></div>
+      <div class="settings-row"><div class="settings-lbl">Chime Volume</div><select class="settings-select"><option>Off</option><option>Low</option><option selected>Medium</option><option>High</option></select></div>
+      <div class="settings-row"><div class="settings-lbl">Bose AudioPilot</div><button class="settings-toggle active" onclick="app.toggleSetting(this,'audioPilot')">ON</button></div>
+      <div class="settings-row" style="margin-bottom:16px;"><div class="settings-lbl">EQ Default Preset</div><select class="settings-select"><option selected>Flat</option><option>Bass Boost</option><option>Treble</option><option>Custom</option></select></div>`,
+
+    connectivity: `
+      <div class="settings-section-hdr">BLUETOOTH</div>
+      <div style="background:#1C1C1E;border-radius:12px;margin:8px 16px;padding:12px;display:flex;align-items:center;justify-content:space-between;">
+        <div><div style="color:#FFF;font-size:14px;font-weight:600;">Doug's iPhone</div><div style="color:#8E8E93;font-size:12px;">🔋 82% · Connected</div></div>
+        <button style="background:#FF453A22;border:1px solid #FF453A;color:#FF453A;font-size:12px;padding:4px 10px;border-radius:8px;cursor:pointer;">Disconnect</button>
+      </div>
+      <div class="settings-row"><div class="settings-lbl">Pair New Device</div><span style="color:#0A84FF;font-size:14px;">›</span></div>
+      <div class="settings-row"><div class="settings-lbl">Auto-Connect Priority</div><select class="settings-select"><option selected>Last Connected</option><option>Doug's iPhone</option><option>KellyAnne's iPhone</option></select></div>
+      <div class="settings-section-hdr">WI-FI &amp; HOTSPOT</div>
+      <div class="settings-row"><div class="settings-lbl">Wi-Fi Hotspot</div><button class="settings-toggle" onclick="app.toggleSetting(this,'hotspot')">OFF</button></div>
+      <div class="settings-row"><div class="settings-lbl">Hotspot Name</div><span style="color:#8E8E93;font-size:13px;">Q60-Hotspot</span></div>
+      <div class="settings-section-hdr">FUTURE CAPABILITIES</div>
+      <div class="settings-row" style="opacity:0.5;"><div class="settings-lbl">Apple CarPlay</div><span style="color:#8E8E93;font-size:12px;">Coming soon</span></div>
+      <div class="settings-row" style="opacity:0.5;margin-bottom:16px;"><div class="settings-lbl">Android Auto</div><span style="color:#8E8E93;font-size:12px;">Coming soon</span></div>`,
+
+    drive: `
+      <div class="settings-section-hdr">DRIVE DEFAULTS</div>
+      <div class="settings-row"><div class="settings-lbl">Default Drive Mode</div><select class="settings-select"><option selected>Standard</option><option>Sport</option><option>Sport+</option><option>Eco</option><option>Snow</option></select></div>
+      <div class="settings-row"><div class="settings-lbl">Cruise Control Offset</div><select class="settings-select"><option selected>0 mph</option><option>+3 mph</option><option>+5 mph</option><option>+7 mph</option></select></div>
+      <div class="settings-row"><div class="settings-lbl">VDC Override in Sport+</div><button class="settings-toggle" onclick="app.toggleSetting(this,'vdcOverride')">OFF</button></div>
+      <div class="settings-row"><div class="settings-lbl">Show ATTESA Display</div><button class="settings-toggle active" onclick="app.toggleSetting(this,'attesaDisplay')">ON</button></div>
+      <div class="settings-section-hdr">ADAS DEFAULTS</div>
+      <div class="settings-row"><div class="settings-lbl">PFCW Sensitivity</div><select class="settings-select"><option selected>Far</option><option>Medium</option><option>Near</option><option>Off</option></select></div>
+      <div class="settings-row"><div class="settings-lbl">BSW Default</div><button class="settings-toggle active" onclick="app.toggleSetting(this,'bswDefault')">ON</button></div>
+      <div class="settings-row"><div class="settings-lbl">LDW Default</div><button class="settings-toggle active" onclick="app.toggleSetting(this,'ldwDefault')">ON</button></div>
+      <div class="settings-row" style="margin-bottom:16px;"><div class="settings-lbl">FEB Default</div><button class="settings-toggle active" onclick="app.toggleSetting(this,'febDefault')">ON</button></div>`,
+
+    profiles: `
+      <div class="settings-section-hdr">DRIVER PROFILES</div>
+      <div style="display:flex;gap:10px;padding:12px 16px;overflow-x:auto;">
+        <div style="background:#0A84FF22;border:1px solid #0A84FF;border-radius:14px;padding:12px 16px;text-align:center;min-width:90px;cursor:pointer;flex-shrink:0;"><div style="font-size:28px;">🏎️</div><div style="color:#0A84FF;font-size:12px;font-weight:600;margin-top:4px;">Doug</div><div style="color:#8E8E93;font-size:10px;">Key 1 · Active</div></div>
+        <div style="background:#1C1C1E;border:1px solid #3A3A3C;border-radius:14px;padding:12px 16px;text-align:center;min-width:90px;cursor:pointer;flex-shrink:0;"><div style="font-size:28px;">☀️</div><div style="color:#FFF;font-size:12px;font-weight:600;margin-top:4px;">KellyAnne</div><div style="color:#8E8E93;font-size:10px;">Key 2</div></div>
+        <div style="background:#1C1C1E;border:1px solid #3A3A3C;border-radius:14px;padding:12px 16px;text-align:center;min-width:90px;cursor:pointer;flex-shrink:0;"><div style="font-size:28px;">👤</div><div style="color:#FFF;font-size:12px;font-weight:600;margin-top:4px;">Guest</div><div style="color:#8E8E93;font-size:10px;">No key</div></div>
+        <div style="background:#1C1C1E;border:1px dashed #3A3A3C;border-radius:14px;padding:12px 16px;text-align:center;min-width:90px;cursor:pointer;flex-shrink:0;"><div style="font-size:28px;color:#3A3A3C;">+</div><div style="color:#8E8E93;font-size:12px;margin-top:4px;">Add</div></div>
+      </div>
+      <div class="settings-row"><div class="settings-lbl">PIN Lock</div><button class="settings-toggle" onclick="app.toggleSetting(this,'profilePin')">OFF</button></div>
+      <div class="settings-row"><div class="settings-lbl">Guest Mode</div><button class="settings-toggle" onclick="app.toggleSetting(this,'guestMode')">OFF</button></div>
+      <div class="settings-row" style="margin-bottom:16px;"><div class="settings-lbl">Kid Mode (70 mph alert)</div><button class="settings-toggle" onclick="app.toggleSetting(this,'kidMode')">OFF</button></div>`,
+
+    clockunits: `
+      <div class="settings-section-hdr">CLOCK</div>
+      <div class="settings-row"><div class="settings-lbl">Time Format</div><select class="settings-select"><option selected>12-hour</option><option>24-hour</option></select></div>
+      <div class="settings-row"><div class="settings-lbl">GPS Time Sync</div><button class="settings-toggle active" onclick="app.toggleSetting(this,'gpsSync')">ON</button></div>
+      <div class="settings-section-hdr">UNITS</div>
+      <div class="settings-row"><div class="settings-lbl">Distance</div><select class="settings-select"><option selected>Miles</option><option>Kilometers</option></select></div>
+      <div class="settings-row"><div class="settings-lbl">Temperature</div><select class="settings-select"><option selected>°F</option><option>°C</option></select></div>
+      <div class="settings-row" style="margin-bottom:16px;"><div class="settings-lbl">Fuel Economy</div><select class="settings-select"><option selected>MPG</option><option>L/100km</option></select></div>`,
+
+    display: `
+      <div class="settings-section-hdr">DISPLAY</div>
+      <div class="settings-row"><div class="settings-lbl">Upper Screen Brightness</div><div style="display:flex;align-items:center;gap:8px;"><input type="range" min="10" max="100" value="80" style="width:100px;" oninput="this.nextElementSibling.textContent=this.value+'%'"><span style="color:#FFF;font-size:13px;min-width:30px;">80%</span></div></div>
+      <div class="settings-row"><div class="settings-lbl">Lower Screen Brightness</div><div style="display:flex;align-items:center;gap:8px;"><input type="range" min="10" max="100" value="80" style="width:100px;" oninput="this.nextElementSibling.textContent=this.value+'%'"><span style="color:#FFF;font-size:13px;min-width:30px;">80%</span></div></div>
+      <div class="settings-row"><div class="settings-lbl">Night Brightness</div><div style="display:flex;align-items:center;gap:8px;"><input type="range" min="5" max="60" value="30" style="width:100px;" oninput="this.nextElementSibling.textContent=this.value+'%'"><span style="color:#FFF;font-size:13px;min-width:30px;">30%</span></div></div>
+      <div class="settings-row" style="margin-bottom:16px;"><div class="settings-lbl">Day/Night Mode</div><select class="settings-select"><option selected>Auto</option><option>Day</option><option>Night</option></select></div>`,
+
+    maintenance: `
+      <div class="settings-section-hdr">MAINTENANCE</div>
+      <div class="settings-row"><div class="settings-lbl">Oil Life</div><div style="color:#FF9F0A;font-size:14px;font-weight:600;">42%</div></div>
+      <div class="settings-row"><div class="settings-lbl">Reset Oil Life</div><button onclick="if(confirm('Reset oil life to 100%?'))this.parentElement.previousElementSibling.querySelector('div:last-child').textContent='100%';" style="background:#FF453A22;border:1px solid #FF453A;color:#FF453A;font-size:12px;padding:4px 12px;border-radius:8px;cursor:pointer;">Reset</button></div>
+      <div class="settings-row"><div class="settings-lbl">Maintenance Interval</div><select class="settings-select"><option>3,000 mi</option><option selected>5,000 mi</option><option>7,500 mi</option><option>10,000 mi</option></select></div>
+      <div class="settings-row"><div class="settings-lbl">Next Service</div><span style="color:#8E8E93;font-size:13px;">~2,850 mi</span></div>
+      <div class="settings-row" style="margin-bottom:16px;"><div class="settings-lbl">TPMS Calibration</div><button onclick="alert('TPMS calibration started. Drive above 25 mph for 2 minutes.')" style="background:#0A84FF22;border:1px solid #0A84FF;color:#0A84FF;font-size:12px;padding:4px 12px;border-radius:8px;cursor:pointer;">Calibrate</button></div>`,
+
+    system: `
+      <div class="settings-section-hdr">SYSTEM</div>
+      <div class="settings-row"><div class="settings-lbl">Language</div><select class="settings-select"><option selected>English</option><option>Español</option><option>Français</option></select></div>
+      <div class="settings-row"><div class="settings-lbl">Software Version</div><span style="color:#8E8E93;font-size:13px;">v2.1.0-alpha</span></div>
+      <div class="settings-row"><div class="settings-lbl">Map Data</div><span style="color:#8E8E93;font-size:13px;">2026-Q1</span></div>
+      <div class="settings-row"><div class="settings-lbl">HS-CAN Status</div><span style="color:#30D158;font-size:13px;">✓ Connected</span></div>
+      <div class="settings-row"><div class="settings-lbl">AV-CAN Status</div><span style="color:#30D158;font-size:13px;">✓ Connected</span></div>
+      <div class="settings-row"><div class="settings-lbl">Export Settings to USB</div><button onclick="alert('Insert USB drive to export settings.')" style="background:#0A84FF22;border:1px solid #0A84FF;color:#0A84FF;font-size:12px;padding:4px 12px;border-radius:8px;cursor:pointer;">Export</button></div>
+      <div class="settings-row" style="margin-bottom:24px;"><div class="settings-lbl" style="color:#FF453A;">Factory Reset</div><button onclick="if(confirm('Erase all settings and profiles?'))alert('Reset complete.')" style="background:#FF453A22;border:1px solid #FF453A;color:#FF453A;font-size:12px;padding:4px 12px;border-radius:8px;cursor:pointer;">Reset</button></div>`,
+  },
+
+  _categoryLabels: {
+    lights:'Lights', locks:'Door Locks', mirrors:'Mirrors', wipers:'Wipers',
+    climate:'Climate', nav:'Navigation', audio:'Audio', connectivity:'Connectivity',
+    drive:'Drive', profiles:'Driver Profiles', clockunits:'Clock & Units',
+    display:'Display', maintenance:'Maintenance', system:'System'
+  },
+
+  toggleSettings() {
+    this._settingsOpen ? this.closeSettings() : this.openSettings();
+  },
+
+  openSettings() {
+    this._settingsOpen = true;
+    document.getElementById('settings-overlay').classList.add('open');
+    document.getElementById('cog-btn-lower').classList.add('open');
+    document.getElementById('cog-btn-lower').textContent = '✕';
+    // Reset to home
+    document.getElementById('settings-home').style.transform = 'translateX(0)';
+    document.getElementById('settings-sub').className = 'settings-screen offscreen-right';
+    document.getElementById('settings-back-btn').style.display = 'none';
+    document.getElementById('settings-breadcrumb').textContent = 'Settings';
+    this._settingsCurrent = null;
+  },
+
+  closeSettings() {
+    this._settingsOpen = false;
+    document.getElementById('settings-overlay').classList.remove('open');
+    document.getElementById('cog-btn-lower').classList.remove('open');
+    document.getElementById('cog-btn-lower').textContent = '⚙';
+  },
+
+  settingsOpen(cat) {
+    const content = this._settingsSubContent[cat];
+    if (!content) return;
+    this._settingsCurrent = cat;
+    document.getElementById('settings-sub-content').innerHTML = content;
+    document.getElementById('settings-home').style.transform = 'translateX(-100%)';
+    const sub = document.getElementById('settings-sub');
+    sub.style.transition = 'none';
+    sub.style.transform = 'translateX(100%)';
+    requestAnimationFrame(() => {
+      sub.style.transition = 'transform 0.2s ease';
+      sub.style.transform = 'translateX(0)';
+    });
+    document.getElementById('settings-back-btn').style.display = '';
+    document.getElementById('settings-breadcrumb').textContent = this._categoryLabels[cat] || cat;
+    sub.scrollTop = 0;
+  },
+
+  settingsBack() {
+    document.getElementById('settings-home').style.transform = 'translateX(0)';
+    const sub = document.getElementById('settings-sub');
+    sub.style.transition = 'transform 0.2s ease';
+    sub.style.transform = 'translateX(100%)';
+    document.getElementById('settings-back-btn').style.display = 'none';
+    document.getElementById('settings-breadcrumb').textContent = 'Settings';
+    this._settingsCurrent = null;
+  },
+
+  // ─ AUDIO: FM/AM Presets + SXM ─
+  _fmPresets: [87.9, 97.5, 99.9, 101.5, 103.5, 107.9],
+  _amPresets: [620, 680, 850, 1010, 1240, 1560],
+
+  recallFMPreset(i) {
+    this.ui.fmFreq = this._fmPresets[i];
+    const el = document.getElementById('fm-freq-display');
+    if (el) el.textContent = this.ui.fmFreq.toFixed(1) + ' MHz';
+  },
+
+  saveFMPreset(i, e) {
+    e.preventDefault();
+    this._fmPresets[i] = this.ui.fmFreq;
+    const btn = document.getElementById('fm-p' + i);
+    if (btn) { btn.textContent = this.ui.fmFreq.toFixed(1); btn.style.color = '#0A84FF'; setTimeout(() => btn.style.color = '#8E8E93', 1000); }
+  },
+
+  recallAMPreset(i) {
+    this.ui.amFreq = this._amPresets[i];
+    const el = document.getElementById('am-freq-display');
+    if (el) el.textContent = this.ui.amFreq + ' kHz';
+  },
+
+  sxmTune(ch, name, genre) {
+    document.querySelectorAll('#audio-sxm [onclick^="app.sxmTune"]').forEach(el => {
+      el.style.background = '';
+      const badge = el.querySelector('span:last-child');
+      if (badge && badge.textContent.includes('NOW')) badge.remove();
+    });
+    const rows = document.querySelectorAll('#audio-sxm [onclick]');
+    rows.forEach(r => {
+      if (r.getAttribute('onclick').includes('sxmTune(' + ch + ',')) {
+        r.style.background = '#0A84FF11';
+      }
+    });
+  },
+
+  // ─ PHONE: SMS read aloud ─
+  smsReadAloud(btn) {
+    const text = btn.parentElement.querySelector('div:nth-child(2)').textContent;
+    btn.textContent = '🔊 Reading…';
+    btn.style.color = '#30D158';
+    setTimeout(() => { btn.textContent = '🔊 Read Aloud'; btn.style.color = '#0A84FF'; }, 2500);
+    if ('speechSynthesis' in window) {
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 0.9;
+      window.speechSynthesis.speak(u);
+    }
+  },
+
+  // ─ CLIMATE: Plasmacluster ─
+  _plasmaLevel: 0,
+  cyclePlasmacluster() {
+    this._plasmaLevel = (this._plasmaLevel + 1) % 4;
+    const btn = document.getElementById('plasma-btn');
+    if (!btn) return;
+    const labels = ['Off', 'Low', 'Med', 'High'];
+    const colors = ['#8E8E93', '#30D158', '#0A84FF', '#0A84FF'];
+    const borders = ['#3A3A3C', '#30D15833', '#0A84FF33', '#0A84FF'];
+    btn.textContent = '🌀 Plasma: ' + labels[this._plasmaLevel];
+    btn.style.color = colors[this._plasmaLevel];
+    btn.style.borderColor = borders[this._plasmaLevel];
+  },
+
+  // ─ STATUS ICONS ─
+  _updateStatusIcons() {
+    const bt = this.sim.btConnected;
+
+    // BT icon
+    const btEl = document.getElementById('si-bt');
+    const btLbl = document.getElementById('si-bt-label');
+    if (btEl) {
+      btEl.style.opacity = bt ? '1' : '0.3';
+      if (btLbl) btLbl.style.color = bt ? '#0A84FF' : '#8E8E93';
+    }
+
+    // Signal bars — dim all if no BT/phone
+    ['sig-b1','sig-b2','sig-b3','sig-b4'].forEach((id, i) => {
+      const bar = document.getElementById(id);
+      if (bar) {
+        bar.style.background = bt ? '#30D158' : '#3A3A3C';
+        bar.style.opacity = bt ? (i < 3 ? '1' : '0.3') : '0.3';
+      }
+    });
+
+    // Audio source label
+    const audioLbl = document.getElementById('si-audio');
+    if (audioLbl) {
+      audioLbl.textContent = this.ui.audioSource || 'BT';
+      audioLbl.style.color = '#8E8E93';
+    }
+
+    // Volume icon — muted = dim + strike style
+    const volIcon = document.getElementById('si-vol-icon');
+    const arcOuter = document.getElementById('vol-arc-outer');
+    const arcInner = document.getElementById('vol-arc-inner');
+    if (volIcon) {
+      const muted = this.ui.isMuted || this.ui.volume === 0;
+      volIcon.style.stroke = muted ? '#FF453A' : (this.ui.volume > 60 ? '#FFFFFF' : '#8E8E93');
+      if (arcOuter) arcOuter.style.display = muted ? 'none' : (this.ui.volume > 40 ? '' : 'none');
+      if (arcInner) arcInner.style.display = muted ? 'none' : '';
+    }
+
+    // Fuel warning — show if fuel < 15%
+    const fuelEl = document.getElementById('si-fuel');
+    if (fuelEl) {
+      const low = this.ui.fuel < 15;
+      fuelEl.style.display = low ? 'flex' : 'none';
+    }
+  },
 };
 
 // ─ Global call helpers ─
@@ -2328,6 +4339,29 @@ function toggleSimPanel() {
   header.classList.toggle('open', !isOpen);
   body.classList.toggle('open', !isOpen);
 }
+
+// ─ Map drag ─
+(function(){
+  let dragging = false, lastX = 0, lastY = 0;
+  app._mapDragStart = function(e) {
+    dragging = true; lastX = e.clientX; lastY = e.clientY;
+    const grid = document.getElementById('map-grid-upper');
+    if (grid) grid.style.cursor = 'grabbing';
+    const up = () => {
+      dragging = false;
+      if (grid) grid.style.cursor = 'grab';
+      window.removeEventListener('mouseup', up);
+      window.removeEventListener('mousemove', move);
+    };
+    const move = (ev) => {
+      if (!dragging) return;
+      app.panMap(ev.clientX - lastX, ev.clientY - lastY);
+      lastX = ev.clientX; lastY = ev.clientY;
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+})();
 
 // ─ Clock ─
 function updateClock() {
@@ -2358,13 +4392,159 @@ app.setVolume(65);
 // ─ Draw initial fuel arc ─
 window.addEventListener('load', () => {
   app._drawFuelArc(0.62);
-  // Hide stop nav btn initially
-  const stopBtn = document.querySelector('.stop-nav-btn');
-  if (stopBtn) stopBtn.style.display = 'none';
+  app._renderNavRecents();
+  app._renderNavFavorites();
+  app._updateStatusIcons();
 });
 
 // ─ Initial state apply ─
 app.apply();
+
+// ════════════════════════════════════════════
+//  PROFILE SIMULATION
+// ════════════════════════════════════════════
+const simProfiles = {
+  doug: {
+    name: "Doug",
+    avatar: "🏎️",
+    accent: "#0A84FF",
+    lastSession: "Last drive · 47 mi · 28.3 mpg · 52 min",
+    keySlot: 1,
+  },
+  kellyanne: {
+    name: "KellyAnne",
+    avatar: "🌊",
+    accent: "#30D158",
+    lastSession: "Last drive · 12 mi · 31.1 mpg · 18 min",
+    keySlot: 2,
+  },
+  guest: {
+    name: "Guest",
+    avatar: "👤",
+    accent: "#8E8E93",
+    lastSession: "",
+    keySlot: null,
+  },
+  none: null,
+};
+
+let simWelcomeTimer = null;
+
+function simProfileChange(val) {
+  const profile = simProfiles[val];
+  const glow = document.getElementById('sim-glow-border');
+  if (profile && glow) {
+    document.documentElement.style.setProperty('--profile-accent', profile.accent);
+  }
+  const status = document.getElementById('sim-profile-status');
+  if (status) status.textContent = '';
+}
+
+function simKeyInsert() {
+  const sel = document.getElementById('sim-profile-select');
+  const val = sel ? sel.value : 'doug';
+  const profile = simProfiles[val];
+  const overlay = document.getElementById('sim-welcome-overlay');
+  if (!overlay) return;
+
+  // Clear any existing timer
+  if (simWelcomeTimer) { clearTimeout(simWelcomeTimer); simWelcomeTimer = null; }
+
+  // Build overlay content
+  overlay.innerHTML = '';
+
+  // Glow border
+  const glowEl = document.createElement('div');
+  glowEl.className = 'sim-glow-border';
+  glowEl.id = 'sim-glow-border-active';
+  overlay.appendChild(glowEl);
+
+  if (!profile) {
+    // First-boot / no profile mode — "Who's driving?"
+    const whoDiv = document.createElement('div');
+    whoDiv.className = 'sim-welcome-who';
+    whoDiv.textContent = "Who's driving?";
+    overlay.appendChild(whoDiv);
+
+    const avatarRow = document.createElement('div');
+    avatarRow.className = 'sim-welcome-avatars';
+    ['doug','kellyanne'].forEach(key => {
+      const p = simProfiles[key];
+      const card = document.createElement('div');
+      card.className = 'sim-welcome-avatarcard';
+      card.style.setProperty('--accent', p.accent);
+      card.innerHTML = `<div class="ring" style="border-color:${p.accent}">${p.avatar}</div><span>${p.name}</span>`;
+      card.onclick = (e) => {
+        e.stopPropagation();
+        document.getElementById('sim-profile-select').value = key;
+        dismissSimWelcome();
+        simKeyInsert();
+      };
+      avatarRow.appendChild(card);
+    });
+    overlay.appendChild(avatarRow);
+
+    const guestLink = document.createElement('div');
+    guestLink.style.cssText = 'font-size:12px;color:#8E8E93;margin-top:12px;cursor:pointer;font-family:Roboto,sans-serif;';
+    guestLink.textContent = 'Continue as Guest';
+    guestLink.onclick = (e) => { e.stopPropagation(); dismissSimWelcome(); };
+    overlay.appendChild(guestLink);
+
+    document.documentElement.style.setProperty('--profile-accent', '#8E8E93');
+    overlay.classList.add('visible');
+    // No auto-dismiss in no-profile mode
+    const status = document.getElementById('sim-profile-status');
+    if (status) status.textContent = 'No profile — showing first-boot prompt';
+    return;
+  }
+
+  // Profile loaded — welcome back
+  document.documentElement.style.setProperty('--profile-accent', profile.accent);
+
+  const avatarEl = document.createElement('div');
+  avatarEl.className = 'sim-welcome-avatar';
+  avatarEl.textContent = profile.avatar;
+
+  const nameEl = document.createElement('div');
+  nameEl.className = 'sim-welcome-name';
+  nameEl.textContent = 'Welcome back, ' + profile.name;
+
+  overlay.appendChild(avatarEl);
+  overlay.appendChild(nameEl);
+
+  if (profile.lastSession) {
+    const chip = document.createElement('div');
+    chip.className = 'sim-welcome-chip';
+    chip.textContent = profile.lastSession;
+    overlay.appendChild(chip);
+  }
+
+  const dismiss = document.createElement('div');
+  dismiss.className = 'sim-welcome-dismiss';
+  dismiss.textContent = 'Tap to dismiss · Auto in 3s';
+  overlay.appendChild(dismiss);
+
+  overlay.classList.add('visible');
+
+  const status = document.getElementById('sim-profile-status');
+  if (status) status.textContent = `Key ${profile.keySlot} detected → loaded "${profile.name}"`;
+
+  simWelcomeTimer = setTimeout(dismissSimWelcome, 3000);
+}
+
+function dismissSimWelcome() {
+  const overlay = document.getElementById('sim-welcome-overlay');
+  if (overlay) {
+    overlay.style.opacity = '0';
+    overlay.style.transition = 'opacity 0.28s ease';
+    setTimeout(() => {
+      overlay.classList.remove('visible');
+      overlay.style.opacity = '';
+      overlay.style.transition = '';
+    }, 290);
+  }
+  if (simWelcomeTimer) { clearTimeout(simWelcomeTimer); simWelcomeTimer = null; }
+}
 </script>
 
 </body>

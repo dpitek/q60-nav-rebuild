@@ -89,6 +89,7 @@ set(SOURCES
     src/services/vehicle/ButtonLogger.cpp
     src/services/audio/AudioService.cpp
     src/services/search/SearchService.cpp
+    src/services/profile/ProfileService.cpp
     src/ui/bridge/StatusBridge.cpp
     src/ui/map/MapLibreItem.cpp
 )
@@ -121,11 +122,15 @@ qt6_add_qml_module(q60nav
         src/qml/components/TabBar.qml
         src/qml/screens/SettingsView.qml
         src/qml/screens/InfoView.qml
+        src/qml/screens/ProfileView.qml
+        src/qml/components/WelcomeOverlay.qml
 )
 
 target_include_directories(q60nav PRIVATE
     src/
     src/services/
+    src/services/profile/
+    src/services/vehicle/
     src/ui/
     src/ui/map/         # Qt QML type registration generates '#include <MapLibreItem.h>' — bare filename
 )

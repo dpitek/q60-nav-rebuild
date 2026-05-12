@@ -466,6 +466,37 @@ void VehicleService::parseVehicleFrame(const struct can_frame &f)
         break;
     }
 
+    // ── 0x266: Drive mode status read-back (UNVERIFIED) ──────────────────────
+    // byte 0: active drive mode index
+    //   0=Standard, 1=Sport, 2=Sport+, 3=Eco, 4=Snow, 5=Personal
+    // Confirms that the physical selector or a prior setDriveMode() write took effect.
+    // ID UNVERIFIED — Q50_LIKELY candidate; confirm via J2534 capture on first boot.
+    case CAN_DRIVE_MODE_STATUS: {
+        if (f.can_dlc < 1) break;
+        const uint8_t mode = f.data[0];
+        if (mode <= 5 && static_cast<int>(mode) != m_driveMode) {
+            m_driveMode = static_cast<int>(mode);
+            emit driveModeChanged(m_driveMode);
+            emit driveModeConfirmed(m_driveMode);
+            qDebug("[CAN] Drive mode confirmed by status frame: %d (UNVERIFIED ID)", m_driveMode);
+        }
+        break;
+    }
+
+    // ── 0x35B: Intelligent Key slot detection (UNVERIFIED) ───────────────────────
+    // BCM broadcasts key presence when Intelligent Key is detected (proximity or
+    // Start button press). byte 2 = key slot (0x01=key1, 0x02=key2, 0x00=none).
+    // UNVERIFIED: ID 0x35B is a Q50_LIKELY candidate. Verify via J2534 on first boot.
+    case CAN_KEY_DETECT: {
+        if (f.can_dlc < 3) break;
+        const int slot = f.data[2] & 0x03;
+        if (slot > 0) {
+            emit keySlotDetected(slot);
+            qDebug("[CAN] Intelligent Key slot detected: %d (UNVERIFIED ID 0x35B)", slot);
+        }
+        break;
+    }
+
     default:
         break;
     }
@@ -514,9 +545,58 @@ void VehicleService::parseAVFrame(const struct can_frame &f)
             action = QStringLiteral("SHORT_FRAME");
         }
         m_buttonLog.logAction(QStringLiteral("AV-CAN"), id, f, action);
+    } else if (id == CAN_COMMANDER || id == CAN_COMMANDER_BTN) {
+        // Commander frames handled in switch below — fall through
     } else if (id != CAN_AV_BTNS) {
         // Log all other non-idle AV-CAN frames for discovery
         m_buttonLog.logDiscovery(QStringLiteral("AV-CAN"), id, f);
+        return;
+    }
+
+    // ── Commander joystick (AV-CAN, UNVERIFIED IDs) ──────────────────────────
+    // Handle before the steering-wheel guard so Commander frames aren't filtered out.
+    if (id == CAN_COMMANDER) {
+        // UNVERIFIED: byte 0 = direction bitmap (bit0=up, bit1=down, bit2=left, bit3=right, bit4=push)
+        // Encoding is placeholder — verify against J2534 capture
+        if (f.can_dlc < 1) return;
+        const uint8_t dir = f.data[0];
+        int x = 0, y = 0;
+        bool pushed = false;
+        if (dir & 0x01) y = -1;        // up
+        if (dir & 0x02) y = +1;        // down
+        if (dir & 0x04) x = -1;        // left
+        if (dir & 0x08) x = +1;        // right
+        if (dir & 0x10) pushed = true;  // push/select
+
+        if (x != 0 || y != 0) {
+            m_joystickX = x;
+            m_joystickY = y;
+            emit joystickMoved(x, y);
+            qDebug("[CAN AV] Commander joystick x=%d y=%d (UNVERIFIED encoding)", x, y);
+        }
+        if (pushed && !m_joystickPressed) {
+            m_joystickPressed = true;
+            emit joystickClicked();
+            qDebug("[CAN AV] Commander joystick click (UNVERIFIED)");
+        } else if (!pushed) {
+            m_joystickPressed = false;
+        }
+        return;
+    }
+
+    if (id == CAN_COMMANDER_BTN) {
+        // UNVERIFIED: byte 0 = button bitmap (bit0=back, bit1=home, bit2=map)
+        if (f.can_dlc < 1) return;
+        const uint8_t btn = f.data[0];
+        QString name;
+        if      (btn & 0x01) name = QStringLiteral("back");
+        else if (btn & 0x02) name = QStringLiteral("home");
+        else if (btn & 0x04) name = QStringLiteral("map");
+        if (!name.isEmpty()) {
+            m_lastButtonPress = name;
+            emit buttonPressed(name);
+            qDebug("[CAN AV] Commander button: %s (UNVERIFIED encoding)", qPrintable(name));
+        }
         return;
     }
 

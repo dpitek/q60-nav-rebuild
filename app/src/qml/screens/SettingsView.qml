@@ -47,12 +47,51 @@ Item {
 
         // Vehicle
         property bool vdcEnabled: true
+
+        // Lights
+        property int lightShutoff: 2         // index: 0=Off 1=30s 2=45s 3=60s 4=90s 5=2m 6=3m
+        property int headlightSensitivity: 1  // 0=Low 1=Med 2=High
+        property bool drlEnabled: true
+        property bool approachLighting: true
+        property int approachLightDuration: 1  // 0=30s 1=60s 2=90s
+        property bool welcomeLighting: true
+        property int interiorLightTimer: 1    // 0=15s 1=30s 2=45s 3=60s
+
+        // Door Locks
+        property int autoLockSpeed: 1         // 0=Off 1=15mph 2=25mph
+        property bool autoUnlockPark: true
+        property bool autoUnlockKeyRemoval: false
+        property bool fobLockAll: true
+
+        // Mirrors
+        property bool mirrorTiltReverse: true
+        property bool mirrorFoldLock: false
+
+        // Wipers
+        property int rainSensorSensitivity: 3  // 1-5
+        property int wiperDelay: 3             // 1-5
+
+        // Comfort
+        property bool seatMemoryOnUnlock: true
+        property bool powerWindowAutoOpen: true
+        property bool seatbeltReminder: true
+        property int parkAssistChimeVolume: 2   // 0=Off 1=Low 2=Med 3=High
+
+        // Map
+        property int mapOrientation: 0        // 0=Heading 1=North 2=3D
+        property bool speedLimitDisplay: true
+        property int mapDetailLevel: 1        // 0=Low 1=Med 2=High
+
+        // Maintenance
+        property int maintenanceInterval: 1    // 0=3k 1=5k 2=7.5k 3=10k
     }
 
     // Pairing sheet visible flag
     property bool pairingSheetVisible: false
     // Factory reset dialog visible flag
     property bool resetDialogVisible: false
+    // Profile view visible flag
+    property bool profileViewVisible: false
 
     // ── Header ────────────────────────────────────────────────────────────────
     Rectangle {
@@ -94,6 +133,73 @@ Item {
             id: contentCol
             width: scroller.width
             spacing: 0
+
+            // ================================================================
+            // DRIVER PROFILES  (pinned to top)
+            // ================================================================
+            SectionHeader { label: "DRIVER PROFILES" }
+
+            // Active profile summary card — tap to open ProfileView
+            Rectangle {
+                width: contentCol.width - 32
+                height: 56
+                radius: 14
+                color: "#1C1C1E"
+                anchors.horizontalCenter: parent.horizontalCenter
+
+                // Accent color left bar
+                Rectangle {
+                    anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
+                    width: 4; radius: 2
+                    color: ProfileService.activeAccentColor
+                }
+
+                Row {
+                    anchors { left: parent.left; leftMargin: 18; verticalCenter: parent.verticalCenter }
+                    spacing: 10
+
+                    // Avatar
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: ProfileService.profileLoaded ? ProfileService.activeProfileAvatar : "👤"
+                        font.pixelSize: 28
+                    }
+
+                    Column {
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 2
+                        Text {
+                            text: ProfileService.profileLoaded ? ProfileService.activeProfileName : "No Profile"
+                            color: "#FFFFFF"
+                            font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                        }
+                        Text {
+                            text: ProfileService.profileLoaded
+                                  ? (ProfileService.lastSessionSummary !== "" ? ProfileService.lastSessionSummary : "Active profile")
+                                  : "Tap to set up driver profiles"
+                            color: "#8E8E93"
+                            font { family: "Roboto"; pixelSize: 11 }
+                            elide: Text.ElideRight
+                            width: 240
+                        }
+                    }
+                }
+
+                // Chevron
+                Text {
+                    anchors { right: parent.right; rightMargin: 14; verticalCenter: parent.verticalCenter }
+                    text: "›"
+                    color: "#8E8E93"
+                    font { pixelSize: 22 }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: root.profileViewVisible = true
+                }
+            }
+
+            Item { width: 1; height: 8 }
 
             // ================================================================
             // DISPLAY
@@ -470,6 +576,260 @@ Item {
             }
 
             // ================================================================
+            // LIGHTS
+            // ================================================================
+            SectionHeader { label: "LIGHTS" }
+
+            SettingsRow {
+                label: "Auto Light Shutoff"
+                control: PillGroup {
+                    options: ["Off", "30s", "45s", "60s", "90s", "2m", "3m"]
+                    selected: settings.lightShutoff
+                    onSelectedChanged: settings.lightShutoff = selected
+                }
+            }
+
+            SettingsRow {
+                label: "Auto Headlight Sensitivity"
+                control: PillGroup {
+                    options: ["Low", "Med", "High"]
+                    selected: settings.headlightSensitivity
+                    onSelectedChanged: settings.headlightSensitivity = selected
+                }
+            }
+
+            SettingsRow {
+                label: "Daytime Running Lights"
+                control: ToggleSwitch {
+                    checked: settings.drlEnabled
+                    onCheckedChanged: settings.drlEnabled = checked
+                }
+            }
+
+            SettingsRow {
+                label: "Approach Lighting"
+                control: ToggleSwitch {
+                    checked: settings.approachLighting
+                    onCheckedChanged: settings.approachLighting = checked
+                }
+            }
+
+            SettingsRow {
+                label: "Approach Light Duration"
+                control: PillGroup {
+                    options: ["30s", "60s", "90s"]
+                    selected: settings.approachLightDuration
+                    onSelectedChanged: settings.approachLightDuration = selected
+                }
+            }
+
+            SettingsRow {
+                label: "Welcome Lighting"
+                control: ToggleSwitch {
+                    checked: settings.welcomeLighting
+                    onCheckedChanged: settings.welcomeLighting = checked
+                }
+            }
+
+            SettingsRow {
+                label: "Interior Light Timer"
+                control: PillGroup {
+                    options: ["15s", "30s", "45s", "60s"]
+                    selected: settings.interiorLightTimer
+                    onSelectedChanged: settings.interiorLightTimer = selected
+                }
+            }
+
+            // ================================================================
+            // DOOR LOCKS
+            // ================================================================
+            SectionHeader { label: "DOOR LOCKS" }
+
+            SettingsRow {
+                label: "Auto-Lock When Driving"
+                control: PillGroup {
+                    options: ["Off", "15 mph", "25 mph"]
+                    selected: settings.autoLockSpeed
+                    onSelectedChanged: settings.autoLockSpeed = selected
+                }
+            }
+
+            SettingsRow {
+                label: "Auto-Unlock in Park"
+                control: ToggleSwitch {
+                    checked: settings.autoUnlockPark
+                    onCheckedChanged: settings.autoUnlockPark = checked
+                }
+            }
+
+            SettingsRow {
+                label: "Auto-Unlock on Key Removal"
+                control: ToggleSwitch {
+                    checked: settings.autoUnlockKeyRemoval
+                    onCheckedChanged: settings.autoUnlockKeyRemoval = checked
+                }
+            }
+
+            SettingsRow {
+                label: "Lock All with Key Fob"
+                control: ToggleSwitch {
+                    checked: settings.fobLockAll
+                    onCheckedChanged: settings.fobLockAll = checked
+                }
+            }
+
+            // ================================================================
+            // MIRRORS
+            // ================================================================
+            SectionHeader { label: "MIRRORS" }
+
+            SettingsRow {
+                label: "Auto-Tilt in Reverse"
+                control: ToggleSwitch {
+                    checked: settings.mirrorTiltReverse
+                    onCheckedChanged: settings.mirrorTiltReverse = checked
+                }
+            }
+
+            SettingsRow {
+                label: "Fold Mirrors with Door Lock"
+                control: ToggleSwitch {
+                    checked: settings.mirrorFoldLock
+                    onCheckedChanged: settings.mirrorFoldLock = checked
+                }
+            }
+
+            // ================================================================
+            // WIPERS
+            // ================================================================
+            SectionHeader { label: "WIPERS" }
+
+            SettingsRow {
+                label: "Rain Sensor Sensitivity"
+                control: PillGroup {
+                    options: ["1", "2", "3", "4", "5"]
+                    selected: settings.rainSensorSensitivity - 1
+                    onSelectedChanged: settings.rainSensorSensitivity = selected + 1
+                }
+            }
+
+            SettingsRow {
+                label: "Intermittent Wiper Delay"
+                control: PillGroup {
+                    options: ["1", "2", "3", "4", "5"]
+                    selected: settings.wiperDelay - 1
+                    onSelectedChanged: settings.wiperDelay = selected + 1
+                }
+            }
+
+            // ================================================================
+            // COMFORT & CONVENIENCE
+            // ================================================================
+            SectionHeader { label: "COMFORT & CONVENIENCE" }
+
+            SettingsRow {
+                label: "Seat Memory on Unlock"
+                control: ToggleSwitch {
+                    checked: settings.seatMemoryOnUnlock
+                    onCheckedChanged: settings.seatMemoryOnUnlock = checked
+                }
+            }
+
+            SettingsRow {
+                label: "Power Window Auto-Open"
+                control: ToggleSwitch {
+                    checked: settings.powerWindowAutoOpen
+                    onCheckedChanged: settings.powerWindowAutoOpen = checked
+                }
+            }
+
+            SettingsRow {
+                label: "Seat Belt Reminder"
+                control: ToggleSwitch {
+                    checked: settings.seatbeltReminder
+                    onCheckedChanged: settings.seatbeltReminder = checked
+                }
+            }
+
+            SettingsRow {
+                label: "Park Assist Chime Volume"
+                control: PillGroup {
+                    options: ["Off", "Low", "Med", "High"]
+                    selected: settings.parkAssistChimeVolume
+                    onSelectedChanged: settings.parkAssistChimeVolume = selected
+                }
+            }
+
+            // ================================================================
+            // MAP
+            // ================================================================
+            SectionHeader { label: "MAP" }
+
+            SettingsRow {
+                label: "Map Orientation"
+                control: PillGroup {
+                    options: ["Heading", "North", "3D"]
+                    selected: settings.mapOrientation
+                    onSelectedChanged: settings.mapOrientation = selected
+                }
+            }
+
+            SettingsRow {
+                label: "Speed Limit Display"
+                control: ToggleSwitch {
+                    checked: settings.speedLimitDisplay
+                    onCheckedChanged: settings.speedLimitDisplay = checked
+                }
+            }
+
+            SettingsRow {
+                label: "Map Detail Level"
+                control: PillGroup {
+                    options: ["Low", "Med", "High"]
+                    selected: settings.mapDetailLevel
+                    onSelectedChanged: settings.mapDetailLevel = selected
+                }
+            }
+
+            // ================================================================
+            // MAINTENANCE
+            // ================================================================
+            SectionHeader { label: "MAINTENANCE" }
+
+            SettingsRow {
+                label: "Oil Life"
+                control: Text {
+                    text: VehicleService.oilLife + "%"
+                    color: VehicleService.oilLife > 30 ? "#30D158" : VehicleService.oilLife > 15 ? "#FF9F0A" : "#FF453A"
+                    font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                }
+            }
+
+            SettingsRow {
+                label: "Maintenance Interval"
+                control: PillGroup {
+                    options: ["3k mi", "5k mi", "7.5k", "10k mi"]
+                    selected: settings.maintenanceInterval
+                    onSelectedChanged: settings.maintenanceInterval = selected
+                }
+            }
+
+            SettingsRow {
+                label: "TPMS Calibration"
+                control: Rectangle {
+                    width: 88; height: 30; radius: 8
+                    color: "#0A84FF22"
+                    border { color: "#0A84FF"; width: 1 }
+                    Text {
+                        anchors.centerIn: parent; text: "Calibrate"
+                        color: "#0A84FF"
+                        font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
+                    }
+                    MouseArea { anchors.fill: parent; onClicked: console.log("TPMS calibration started") }
+                }
+            }
+
+            // ================================================================
             // SYSTEM
             // ================================================================
             SectionHeader { label: "SYSTEM" }
@@ -628,6 +988,16 @@ Item {
                     }
                 }
             }
+        }
+    }
+
+    // ── Profile View (full-screen overlay) ───────────────────────────────────
+    ProfileView {
+        anchors.fill: parent
+        visible: root.profileViewVisible
+        z: 10
+        onVisibleChanged: {
+            if (!visible) root.profileViewVisible = false
         }
     }
 

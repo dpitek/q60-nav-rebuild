@@ -316,6 +316,42 @@ Item {
         }
     }
 
+    // ── Commander joystick + button wiring ─────────────────────────────────
+    // Signals from VehicleService (AV-CAN 0x3F6 / 0x4CE — UNVERIFIED IDs).
+    // panMap() and joystickSelect() are stubs pending MapLibre EGL completion.
+    // When MapLibre is live, replace mapLoader.item calls with mapLibreMap
+    // directly once the Loader has promoted it to a reachable id.
+    Connections {
+        target: VehicleService
+
+        function onJoystickMoved(x, y) {
+            // Map joystick tick to map pan — 40px per tick
+            // TODO: wire to mapLoader.item.panMap(x * panDelta, y * panDelta)
+            //       once MapLibre EGL pan API is confirmed
+            const panDelta = 40
+            if (mapLoader.item && typeof mapLoader.item.panMap === "function")
+                mapLoader.item.panMap(x * panDelta, y * panDelta)
+            // else: silently drop — map not ready yet
+        }
+
+        function onJoystickClicked() {
+            // Select / confirm on map
+            // TODO: wire to mapLoader.item.joystickSelect() once API is confirmed
+            if (mapLoader.item && typeof mapLoader.item.joystickSelect === "function")
+                mapLoader.item.joystickSelect()
+        }
+
+        function onButtonPressed(button) {
+            if (button === "back")
+                Qt.callLater(() => navigationStack.pop())
+            else if (button === "home")
+                Qt.callLater(() => navigationStack.clear())
+            else if (button === "map") {
+                // TODO: toggle map/turn-by-turn view when secondary view exists
+            }
+        }
+    }
+
     // ── Reverse overlay ─────────────────────────────────────────────────────
     Rectangle {
         anchors.fill: parent

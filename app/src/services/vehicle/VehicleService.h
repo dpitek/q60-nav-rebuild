@@ -74,6 +74,11 @@ class VehicleService : public QObject {
     Q_PROPERTY(float tripBAvgSpeed READ tripBAvgSpeed NOTIFY tripBChanged)
     // Drive mode (0=Std 1=Sport 2=Sport+ 3=Eco 4=Snow 5=Personal)
     Q_PROPERTY(int  driveMode      READ driveMode      NOTIFY driveModeChanged)
+    // Commander joystick + adjacent buttons
+    Q_PROPERTY(int joystickX READ joystickX NOTIFY joystickMoved)
+    Q_PROPERTY(int joystickY READ joystickY NOTIFY joystickMoved)
+    Q_PROPERTY(bool joystickPressed READ joystickPressed NOTIFY joystickClicked)
+    Q_PROPERTY(QString lastButtonPress READ lastButtonPress NOTIFY buttonPressed)
     // Driver aids
     Q_PROPERTY(bool bswOn          READ bswOn          NOTIFY bswOnChanged)
     Q_PROPERTY(bool bsiOn          READ bsiOn          NOTIFY bsiOnChanged)
@@ -158,6 +163,11 @@ public:
     float tripBAvgSpeed() const { return m_tripBAvgSpeed; }
     // Drive mode
     int  driveMode()      const { return m_driveMode; }
+    // Commander joystick + adjacent buttons
+    int joystickX() const { return m_joystickX; }
+    int joystickY() const { return m_joystickY; }
+    bool joystickPressed() const { return m_joystickPressed; }
+    QString lastButtonPress() const { return m_lastButtonPress; }
     // Driver aids
     bool bswOn()          const { return m_bswOn; }
     bool bsiOn()          const { return m_bsiOn; }
@@ -271,6 +281,14 @@ signals:
     void vdcOnChanged(bool);
     void pfcwSensitivityChanged(int);
     void atessaChanged();
+    // Commander joystick signals
+    void joystickMoved(int x, int y);   // x: -1/0/+1, y: -1/0/+1
+    void joystickClicked();
+    void buttonPressed(const QString &button);  // "back", "home", "map"
+    void driveModeConfirmed(int mode);  // CAN status read-back confirmed the mode
+    // Intelligent Key slot detected (CAN_KEY_DETECT 0x35B — UNVERIFIED)
+    // Slot: 1 = key fob 1, 2 = key fob 2
+    void keySlotDetected(int slot);
     // Steering wheel button events (fired from AV-CAN 0x681)
     void volUp();
     void volDown();
@@ -360,6 +378,11 @@ private:
     // Trip B
     float m_tripBMiles    = 0.0f, m_tripBAvgMPG = 0.0f, m_tripBAvgSpeed = 0.0f;
     int   m_tripBSeconds  = 0;
+    // Commander joystick state
+    int m_joystickX = 0;
+    int m_joystickY = 0;
+    bool m_joystickPressed = false;
+    QString m_lastButtonPress;
     // Drive mode + driver aids
     int  m_driveMode      = 0;
     bool m_bswOn          = true;
@@ -592,4 +615,21 @@ private:
     // Sniff at Bose amp connector (trunk, multi-pin green connector on the amp body).
     static constexpr canid_t CAN_BOSE_WAKE       = 0x3B3;  // UNVERIFIED PLACEHOLDER
     static constexpr canid_t CAN_BOSE_VOL        = 0x3B4;  // UNVERIFIED PLACEHOLDER
+
+    // Commander (center console joystick + adjacent buttons)
+    // AV-CAN — IDs UNVERIFIED, need J2534 capture on first boot
+    static constexpr uint32_t CAN_COMMANDER       = 0x3F6;  // UNVERIFIED — joystick direction + push
+    static constexpr uint32_t CAN_COMMANDER_BTN   = 0x4CE;  // UNVERIFIED — Back/Home/Map adjacent buttons
+
+    // Drive mode status read-back (physical selector button)
+    // HS-CAN — ID UNVERIFIED
+    static constexpr uint32_t CAN_DRIVE_MODE_STATUS = 0x266; // UNVERIFIED — active mode broadcast
+
+    // ── Intelligent Key detection (BCM → HS-CAN) ─────────────────────────────
+    // BCM broadcasts key presence/ID when an Intelligent Key is detected in the
+    // vehicle (proximity sensor or Start button press).
+    //   byte 2: key slot (0x01=key1, 0x02=key2, 0x00=no key)
+    // UNVERIFIED: ID 0x35B is a Q50_LIKELY candidate based on BCM frame analysis.
+    // Confirm via J2534 capture on first boot before trusting slot values.
+    static constexpr canid_t CAN_KEY_DETECT = 0x35B; // UNVERIFIED — BCM key slot broadcast
 };

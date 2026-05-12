@@ -15,6 +15,7 @@
 #include "services/vehicle/VehicleService.h"
 #include "services/audio/AudioService.h"
 #include "services/search/SearchService.h"
+#include "services/profile/ProfileService.h"
 #include "ui/bridge/StatusBridge.h"
 #include "ui/map/MapLibreItem.h"
 
@@ -42,6 +43,7 @@ int main(int argc, char *argv[])
     AudioService    audioSvc;     // ALSA + Bose CAN + SXM/FM proxies
     NavigationService navSvc;     // Valhalla + MapLibre
     SearchService   searchSvc;    // Pelias/Nominatim offline
+    ProfileService  profileSvc;   // Driver profiles — CAN key detect + JSON persistence
 
     // StatusBridge — shared state between both screens
     StatusBridge bridge(&navSvc, &vehicleSvc, &audioSvc);
@@ -54,6 +56,7 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("VehicleService",    &vehicleSvc);
     engine.rootContext()->setContextProperty("AudioService",      &audioSvc);
     engine.rootContext()->setContextProperty("SearchService",     &searchSvc);
+    engine.rootContext()->setContextProperty("ProfileService",    &profileSvc);
     engine.rootContext()->setContextProperty("StatusBridge",      &bridge);
 
     engine.load(QUrl(QStringLiteral("qrc:/Q60Nav/src/qml/Main.qml")));
@@ -105,6 +108,7 @@ int main(int argc, char *argv[])
     vehicleSvc.start();
     audioSvc.start();
     navSvc.start();
+    profileSvc.start(&vehicleSvc);  // subscribes to keySlotDetected + ignitionOff
 
     return app.exec();
 }
