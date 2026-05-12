@@ -9,7 +9,7 @@
   "sources": {
     "openmaptiles": {
       "type": "vector",
-      "url": "mbtiles:///opt/nav/tiles/co.mbtiles"
+      "url": "mbtiles:///opt/nav/tiles/nc.mbtiles"
     }
   },
   "sprite": "file:///opt/nav/style/sprites",

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# build-tiles.sh — Build Valhalla routing tiles from CO OSM PBF
+# build-tiles.sh — Build Valhalla routing tiles from NC OSM PBF
 # Uses the official Valhalla Docker image (no host-tool build required).
-# Output lands at /Users/dpitek/q60-rebuild/output/valhalla-tiles/
+# Output lands at <repo-root>/output/valhalla-tiles/
 #
 # Usage:
 #   ./build-tiles.sh                  # use existing PBF
@@ -11,21 +11,21 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-PBF_PATH="/tmp/colorado-latest.osm.pbf"
+PBF_PATH="/tmp/north-carolina-latest.osm.pbf"
 TILES_OUT="$PROJECT_ROOT/output/valhalla-tiles"
 CONFIG_TEMPLATE="$PROJECT_ROOT/output/valhalla-config.json"
 BUILD_CONFIG="/tmp/valhalla-build.json"
 
-VALHALLA_IMAGE="ghcr.io/valhalla/valhalla:run-latest"
+VALHALLA_IMAGE="ghcr.io/valhalla/valhalla:latest"   # arm64 + amd64, use native
 
 FRESH_PBF=false
 [[ "${1:-}" == "--fresh-pbf" ]] && FRESH_PBF=true
 
 # ─── Prerequisites ────────────────────────────────────────────────────────────
 if $FRESH_PBF || [[ ! -f "$PBF_PATH" ]]; then
-    echo "Downloading CO OSM PBF (~400MB)..."
+    echo "Downloading NC OSM PBF (~400MB)..."
     curl -L --progress-bar -o "$PBF_PATH" \
-        "https://download.geofabrik.de/north-america/us/colorado-latest.osm.pbf"
+        "https://download.geofabrik.de/north-america/us/north-carolina-latest.osm.pbf"
 fi
 
 PBF_SIZE=$(stat -f%z "$PBF_PATH" 2>/dev/null || stat -c%s "$PBF_PATH")
@@ -34,7 +34,7 @@ echo "PBF: $PBF_PATH ($(numfmt --to=iec $PBF_SIZE 2>/dev/null || echo "${PBF_SIZ
 # ─── Ensure Valhalla image is available ───────────────────────────────────────
 if ! docker image inspect "$VALHALLA_IMAGE" &>/dev/null; then
     echo "Pulling Valhalla image..."
-    docker pull --platform linux/arm64 "$VALHALLA_IMAGE"
+    docker pull "$VALHALLA_IMAGE"
 fi
 
 mkdir -p "$TILES_OUT"
@@ -63,27 +63,27 @@ echo ""
 
 # ─── Step 1: Build admin database ─────────────────────────────────────────────
 echo "--- Step 1/3: Building admin DB (turn restrictions, country codes) ---"
-docker run --rm --platform linux/arm64 \
+docker run --rm \
     -v "$TILES_OUT:/tiles" \
     -v "$(dirname "$PBF_PATH"):/pbf:ro" \
     -v "$BUILD_CONFIG:/conf/valhalla.json:ro" \
     "$VALHALLA_IMAGE" \
     valhalla_build_admins \
         -c /conf/valhalla.json \
-        /pbf/colorado-latest.osm.pbf \
+        /pbf/north-carolina-latest.osm.pbf \
     2>&1 || echo "WARNING: Admin build failed or not available — continuing"
 
 # ─── Step 2: Build routing tiles ──────────────────────────────────────────────
 echo ""
-echo "--- Step 2/3: Building routing tiles (20-45 min for CO) ---"
-docker run --rm --platform linux/arm64 \
+echo "--- Step 2/3: Building routing tiles (20-45 min for NC) ---"
+docker run --rm \
     -v "$TILES_OUT:/tiles" \
     -v "$(dirname "$PBF_PATH"):/pbf:ro" \
     -v "$BUILD_CONFIG:/conf/valhalla.json:ro" \
     "$VALHALLA_IMAGE" \
     valhalla_build_tiles \
         -c /conf/valhalla.json \
-        /pbf/colorado-latest.osm.pbf \
+        /pbf/north-carolina-latest.osm.pbf \
     2>&1
 
 echo ""

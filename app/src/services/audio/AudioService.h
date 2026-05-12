@@ -4,7 +4,9 @@
 #include <QTimer>
 #include <QFile>
 #include <QVariantMap>
+#ifdef HAVE_QT_DBUS
 #include <QDBusObjectPath>
+#endif
 
 class AudioService : public QObject {
     Q_OBJECT
@@ -23,6 +25,7 @@ public:
     Q_ENUM(AudioSource)
 
     explicit AudioService(QObject *parent = nullptr);
+    ~AudioService() override;
     void start();
 
     AudioSource source()       const { return m_source; }
@@ -73,9 +76,11 @@ private:
     QProcess m_sxmProxy;
     QProcess m_fmProxy;
 
-    // BlueZ D-Bus
+    // BlueZ D-Bus (optional — requires HAVE_QT_DBUS)
+#ifdef HAVE_QT_DBUS
     class QDBusInterface *m_btMediaPlayer = nullptr;
     QString m_btPlayerPath;
+#endif
 
     AudioSource m_source = Bluetooth;
     int    m_volume = 50;

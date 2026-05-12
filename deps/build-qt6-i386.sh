@@ -46,18 +46,13 @@ if [ ! -f "$HOSTINFO" ]; then
 fi
 echo "QT_HOST_PATH: $QT_HOST_PATH (Qt6HostInfo OK)"
 
-# Core i386 build deps (best-effort — ignore failures on missing packages)
+# Core i386 build deps
+# Note: xcb/x11 excluded — target uses Wayland+linuxfb, not X11
+# Note: wayland-dev added — target connects to Weston via Wayland client protocol
 PACKAGES=(
     libfontconfig1-dev:i386
     libfreetype6-dev:i386
-    libx11-dev:i386
-    libx11-xcb-dev:i386
-    libxext-dev:i386
-    libxfixes-dev:i386
-    libxi-dev:i386
-    libxrender-dev:i386
     libxkbcommon-dev:i386
-    libxkbcommon-x11-dev:i386
     libgl1-mesa-dev:i386
     libgles2-mesa-dev:i386
     libglib2.0-dev:i386
@@ -71,6 +66,8 @@ PACKAGES=(
     libicu-dev:i386
     libjpeg-dev:i386
     libpng-dev:i386
+    libwayland-dev:i386
+    libwayland-egl-backend-dev:i386
 )
 
 apt-get install -y --no-install-recommends "${PACKAGES[@]}" 2>&1 | \
@@ -108,8 +105,8 @@ cmake "$SRC" \
     \
     -DCMAKE_C_COMPILER=gcc \
     -DCMAKE_CXX_COMPILER=g++ \
-    -DCMAKE_C_FLAGS="-m32 -march=bonnell -mtune=bonnell" \
-    -DCMAKE_CXX_FLAGS="-m32 -march=bonnell -mtune=bonnell" \
+    -DCMAKE_C_FLAGS="-m32 -march=i686 -mtune=bonnell" \
+    -DCMAKE_CXX_FLAGS="-m32 -march=i686 -mtune=bonnell" \
     -DCMAKE_EXE_LINKER_FLAGS="-m32" \
     -DCMAKE_SHARED_LINKER_FLAGS="-m32" \
     -DCMAKE_MODULE_LINKER_FLAGS="-m32" \
@@ -133,10 +130,11 @@ cmake "$SRC" \
     -DFEATURE_opengles2=OFF \
     -DFEATURE_opengl_desktop=ON \
     \
-    -DQT_QPA_DEFAULT_PLATFORM=linuxfb \
+    -DQT_QPA_DEFAULT_PLATFORM=wayland \
     -DFEATURE_linuxfb=ON \
-    -DFEATURE_wayland=OFF \
-    -DFEATURE_xcb=ON \
+    -DFEATURE_wayland=ON \
+    -DFEATURE_xcb=OFF \
+    -DFEATURE_xkbcommon_x11=OFF \
     \
     -DFEATURE_network=ON \
     -DFEATURE_ssl=ON \
@@ -148,6 +146,13 @@ cmake "$SRC" \
     -DFEATURE_quickcontrols2=ON \
     \
     -DFEATURE_reduce_relocations=OFF \
+    \
+    -DFEATURE_quickcontrols2_fusion=OFF \
+    -DFEATURE_quickcontrols2_material=OFF \
+    -DFEATURE_quickcontrols2_universal=OFF \
+    -DFEATURE_quickcontrols2_imagine=OFF \
+    -DFEATURE_quickcontrols2_nativestyle=OFF \
+    -DFEATURE_qmlls=OFF \
     \
     -DBUILD_qtwebengine=OFF \
     -DBUILD_qtmultimedia=OFF \

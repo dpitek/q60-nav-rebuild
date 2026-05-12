@@ -74,7 +74,7 @@ private:
     void initMap();
     void render();
 
-    QGeoCoordinate m_center{35.7796, -78.6382}; // Raleigh default
+    QGeoCoordinate m_center{35.5, -79.0}; // default center — update to your region
     double m_zoom    = 12.0;
     double m_bearing = 0.0;
     double m_pitch   = 0.0;

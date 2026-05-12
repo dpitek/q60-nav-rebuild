@@ -3,6 +3,7 @@
 // Zero-copy signal relay: services emit → bridge re-emits to both QML windows
 #include <QObject>
 #include <QString>
+#include <QTimer>
 
 class NavigationService;
 class VehicleService;

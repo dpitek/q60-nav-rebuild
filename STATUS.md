@@ -1,13 +1,13 @@
 # Q60 Nav Rebuild — Build Status
-Last updated: 2026-05-11
+Last updated: 2026-05-12
 
 ---
 
 ## ✅ Completed
 
 ### Infrastructure
-- [x] Working image: `/Users/dpitek/q60-nav-rebuild.img` (7.2GB Q50 base)
-- [x] Docker toolchain: `q60-toolchain` (Ubuntu 22.04 amd64, GCC 11.4, `-m32 bonnell`)
+- [x] Working image: factory DCU image backup (slot A preserved, never written)
+- [x] Docker toolchain: `q60-toolchain` (Ubuntu 22.04 amd64, GCC 11.4, `-m32 i686`)
 - [x] Linux 4.19.0 bzImage built for i386/Bonnell — `output/bzImage-4.19-q60` (4.2MB, ELF 32-bit confirmed)
 - [x] Kernel config: `q60_atom_defconfig` (CAN/BT/DRM/MMC/EXT4/SND_HDA/iTCO_WDT/EFI_VARS)
 - [x] elilo.conf: `q60nav` entry added, `default=logan1` preserved (slot A never written)
@@ -22,8 +22,8 @@ Last updated: 2026-05-11
 ### C++ Services (all .h + .cpp complete)
 - [x] `VehicleService` — SocketCAN (can0/can1/can2), CAN frame parsing, full HVAC write, Bose wake
 - [x] `NavigationService` — GPSD TCP socket, Valhalla HTTP client, route parsing, rerouting
-- [x] `AudioService` — BlueZ D-Bus AVRCP, DENSO proxy IPC, ALSA volume
-- [x] `SearchService` — Valhalla geocode + reverse geocode
+- [x] `AudioService` — BlueZ D-Bus AVRCP (guarded with `HAVE_QT_DBUS`), DENSO proxy IPC, ALSA volume
+- [x] `SearchService` — offline geocoding on port 4000 (Nominatim/Photon, graceful if absent)
 - [x] `StatusBridge` — full signal wiring, clock, cross-screen coordination
 
 ### QML UI (all screens fully implemented)
@@ -39,57 +39,54 @@ Last updated: 2026-05-11
 - [x] `inittab` — SysV runlevel 5, watchdog respawn
 - [x] `rcS` — mount vfs, udev, kernel modules
 - [x] `S10-gpsd` — GPSD on ttyS0
-- [x] `S20-valhalla` — Valhalla HTTP service on port 8002
+- [x] `S20-valhalla` — valhalla-httpd wrapper + valhalla_service on port 8002
 - [x] `S30-weston` — Weston Wayland compositor (DRM + fbdev fallback)
 - [x] `S50-q60nav` — app launch via start.sh
 - [x] `weston.ini` — dual LVDS: LVDS-1 800×480 + LVDS-2 800×420
 - [x] `valhalla.json` — device config, tiles at /opt/valhalla/tiles
 
-### Map Data Pipeline
-- [x] CO OSM PBF: `/tmp/colorado-latest.osm.pbf` (401MB, 2026-05-10, 55.3M nodes)
-- [x] Valhalla config: `output/valhalla-config.json`
-- [x] Scripts: `build-tiles.sh`, `deploy-tiles.sh`, `build-valhalla-host.sh`
+### Target Binaries — ALL BUILT ✅
+- [x] **Qt 6.6.3 i386** — `output/qt6-i386/` — `libQt6Core.so.6.6.3` ELF 32-bit LSB Intel 80386 confirmed
+- [x] **q60nav app** — `output/app-build/bin/q60nav` — ELF 32-bit LSB pie executable, Intel 80386, 199KB stripped
+- [x] **valhalla-httpd** — `rootfs/opt/valhalla/bin/valhalla-httpd` — ELF 32-bit LSB, Intel 80386
+- [x] **Valhalla i386** — `valhalla_service` (11MB ELF 32-bit) + `valhalla_build_tiles` (16MB)
+- [x] **MapLibre GL Native i386** — `libmbgl-core.a` (20MB ELF 32-bit static)
+- [x] **Linux 4.19 bzImage** — ELF 32-bit, 4.2MB
+- [x] **Routing tiles** — `output/valhalla-tiles/` — 312 tile files, ~717MB
+
+### Support Files
+- [x] `rootfs/opt/valhalla/valhalla-httpd.c` — minimal C HTTP proxy for valhalla_service
+- [x] `rootfs/opt/nav/style/q60-dark.json` — MapLibre GL dark style
+- [x] `scripts/build-map-tiles.sh` — tilemaker Docker vector tile build from regional PBF
+- [x] `scripts/build-tiles.sh` — Valhalla routing tile build (official Valhalla Docker image)
+- [x] `deps/build-qt6-host.sh` — builds native amd64 Qt6.6.3 qtbase (provides QT_HOST_PATH)
+- [x] `scripts/build-app.sh` — compiles valhalla-httpd + q60nav for i686 inside Docker
 
 ### Build + Deploy Scripts
-- [x] `scripts/build-app.sh` — cross-compile q60nav for i686 inside Docker
 - [x] `scripts/deploy-to-image.sh` — write kernel to FAT32, flip elilo.conf for test
 - [x] `scripts/restore-logan1.sh` — emergency recovery from Mac
 - [x] `scripts/package-rootfs.sh` — build 1GB ext4 rootfs image from rootfs/
 
 ---
 
-## 🔄 In Progress (Docker builds running)
+## 🔄 In Progress
 
-| Build | Container | ETA |
-|---|---|---|
-| Qt 6.6.3 i386 from source | `beautiful_lichterman` | ~60-120 min total |
-| Valhalla host tools (for tile build) | `q60-host-build` | ~20-30 min |
-
----
-
-## ⏳ Blocked On
-
-| Item | Blocker |
+| Item | Status |
 |---|---|
-| `q60nav` binary | Qt 6.6 i386 must complete first |
-| MapLibre Qt wrapper (`libqmaplibregl.so`) | Qt 6.6 i386 must complete first |
-| CO routing tiles | Valhalla host build must complete first |
-| Valhalla i386 runtime | GEOS built + cmake re-run (script ready, needs container run) |
-| Phase 3: Full NavigationView map | MapLibre Qt wrapper + tiles |
+| Vector tiles (`.mbtiles`) | ⏳ Not yet built — run `./scripts/build-map-tiles.sh` |
 
 ---
 
-## 📋 Remaining Work
+## ⏳ Remaining Work (ordered)
 
-- [ ] Valhalla i386 cross-compile (GEOS now in script as step 7a — re-run build)
-- [ ] Build CO Valhalla routing tiles (~20-40 min after host tools ready)
-- [ ] Qt 6.6 i386 → MapLibre Qt wrapper (`libqmaplibregl.so`)
-- [ ] Phase 3: Replace NavigationView map placeholder with MapLibre QQuickItem
-- [ ] J2534 CAN sniff — replace all placeholder CAN IDs in VehicleService.h
-- [ ] GPS UART probe — confirm which ttyS* the Q60 GPS is on
-- [ ] Physical boot test on device hardware
-- [ ] Tune Weston DRM output to actual LVDS connector names (verify LVDS-1/LVDS-2)
-- [ ] SXM retry: C001T003L000V000.psv (504 error from previous session)
+1. **Vector tiles**: `./scripts/build-map-tiles.sh` — tilemaker Docker, ~30-60 min
+2. **Phase 3**: Build `libqmaplibregl.so` Qt/MapLibre GL wrapper
+3. **Phase 3**: Replace `NavigationView` Canvas placeholder with `MapLibreItem` (enable `-DWITH_MAPLIBRE=ON`)
+4. **[hardware]** J2534 CAN sniff — verify all `CAN_*` IDs in `VehicleService.h`
+5. **[hardware]** GPS UART probe — confirm ttyS device for GPSD
+6. **[hardware]** Verify Weston LVDS connector names (LVDS-1/LVDS-2)
+7. **[hardware]** Physical boot test — `deploy-to-image.sh --test`
+8. **[future]** Offline geocoder for SearchService (Nominatim-lite or Photon on port 4000)
 
 ---
 
@@ -101,15 +98,36 @@ the car until IDs are verified via J2534 capture.**
 
 ---
 
-## Key Paths
+## Key Architectural Notes
+
+| Issue | Resolution |
+|---|---|
+| valhalla_service has no HTTP server (ENABLE_HTTP=OFF) | valhalla-httpd.c wraps CLI binary → port 8002 |
+| Qt6 cross-compile needs QT_HOST_PATH | build-qt6-host.sh builds native qtbase first |
+| Qt6 xcb detection fails for i386 | `FEATURE_xcb=OFF`, `FEATURE_wayland=ON` |
+| Qt6 qtquick3dphysics depends on disabled qtquick3d | `BUILD_qtquick3dphysics=OFF` |
+| pkg-config finds amd64 libs for i386 build | `PKG_CONFIG_LIBDIR` set to i386 paths |
+| Qt6 GCC Bus error on `-march=bonnell` + QML files | Changed to `-march=i686 -mtune=bonnell` |
+| Qt6 QuickControls2 styles (Fusion/Material/etc) OOM on i386 | `FEATURE_quickcontrols2_{fusion,material,universal,imagine,nativestyle}=OFF` |
+| Qt6 `qmlcachegen` rejects dual top-level `Window` items | Wrapped in `QtObject` root with `property var` entries |
+| Qt6 QML module staging dir (`q60nav/`) collides with executable name | `RUNTIME_OUTPUT_DIRECTORY` → `bin/` |
+| Qt6 DBus not available in embedded build | `HAVE_QT_DBUS` compile guard; `AudioService` falls back gracefully |
+| MapLibre `mbgl/util/optional.hpp` → missing `optional.hpp` (mapbox-base legacy) | C++17 compatibility shim at `output/maplibre-i386/include/optional.hpp` |
+| MapLibre include path cascades to all TUs via `INTERFACE_INCLUDE_DIRECTORIES` | `WITH_MAPLIBRE=OFF` by default; Phase 3 opt-in via `-DWITH_MAPLIBRE=ON` |
+| Valhalla official Docker image is amd64-only (`valhalla/valhalla:run-latest`) | Use `ghcr.io/valhalla/valhalla:latest` — has native arm64 (v3.7.0) |
+| Valhalla config paths default to `/data/valhalla/` (not mounted) | Override all paths to `/tiles/` in generated config |
+
+---
+
+## Key Paths (in-container / on-device)
 
 | Path | Contents |
 |---|---|
-| `output/bzImage-4.19-q60` | Compiled kernel (4.2MB, ELF 32-bit i386) |
-| `output/maplibre-i386/lib/` | MapLibre core static lib (20MB) |
-| `output/qt6-i386/` | Qt 6.6 i386 (building…) |
-| `output/valhalla-i386/` | Valhalla i386 runtime (re-run needed) |
-| `output/valhalla-tiles/` | CO routing tiles (building…) |
-| `rootfs/` | Slot B rootfs skeleton (ready to package) |
-| `/Volumes/boot 1/elilo.conf` | Live boot config — q60nav entry added |
-| `/tmp/colorado-latest.osm.pbf` | CO OSM source (401MB) |
+| `output/bzImage-4.19-q60` | Kernel (4.2MB, ELF 32-bit i386) |
+| `output/qt6-i386/` | Qt 6.6.3 i386 — confirmed ELF 32-bit |
+| `output/maplibre-i386/lib/libmbgl-core.a` | MapLibre GL static lib (20MB ELF 32-bit) |
+| `output/valhalla-i386/bin/` | valhalla_service + valhalla_build_tiles (ELF 32-bit) |
+| `output/valhalla-tiles/` | Routing tiles (312 files, ~717MB) |
+| `output/app-build/bin/q60nav` | App binary (199KB ELF 32-bit stripped) |
+| `rootfs/` | Slot B rootfs skeleton |
+| `rootfs/opt/valhalla/bin/valhalla-httpd` | HTTP proxy binary (ELF 32-bit) |

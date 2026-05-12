@@ -6,7 +6,7 @@
  * returns the JSON response.
  *
  * Build:
- *   gcc -m32 -march=bonnell -O2 -o valhalla-httpd valhalla-httpd.c
+ *   gcc -m32 -march=i686 -mtune=bonnell -O2 -o valhalla-httpd valhalla-httpd.c
  *
  * Usage:
  *   ./valhalla-httpd /opt/valhalla/valhalla.json [port]
@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <sys/socket.h>
 #include <sys/wait.h>

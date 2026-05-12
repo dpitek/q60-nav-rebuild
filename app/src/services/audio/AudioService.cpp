@@ -6,18 +6,24 @@
 #include "AudioService.h"
 #include <QDebug>
 #include <QProcess>
+#ifdef HAVE_QT_DBUS
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusReply>
+#endif
 
-// BlueZ D-Bus paths
+// BlueZ D-Bus paths (used only when HAVE_QT_DBUS is defined)
 static const char *BT_SERVICE    = "org.bluez";
+#ifdef HAVE_QT_DBUS
 static const char *BT_MEDIA_CTRL = "org.bluez.MediaControl1";
 static const char *BT_MEDIA_PLYR = "org.bluez.MediaPlayer1";
+#endif
 
 AudioService::AudioService(QObject *parent)
     : QObject(parent)
+#ifdef HAVE_QT_DBUS
     , m_btMediaPlayer(nullptr)
+#endif
 {
 }
 
@@ -34,10 +40,12 @@ void AudioService::start()
     // won't work here — they're already running. Connect via named pipes or D-Bus.
     // For now: connect to their socket on /tmp/sxm.sock, /tmp/fm.sock if present.
 
+#ifdef HAVE_QT_DBUS
     // BlueZ D-Bus monitoring
     QDBusConnection bus = QDBusConnection::systemBus();
     bus.connect(BT_SERVICE, QString(), "org.freedesktop.DBus.Properties",
                 "PropertiesChanged", this, SLOT(onBluetoothProperties(QString,QVariantMap,QStringList)));
+#endif
 
     // Set ALSA card for A2DP output
     qputenv("PULSE_SINK", "bluez_sink.auto");
@@ -139,6 +147,7 @@ void AudioService::btPrev()
 
 void AudioService::blueZMediaCmd(const QString &method)
 {
+#ifdef HAVE_QT_DBUS
     if (!m_btMediaPlayer) {
         // Discover connected player
         QDBusInterface mgr(BT_SERVICE, "/", "org.freedesktop.DBus.ObjectManager",
@@ -164,6 +173,9 @@ void AudioService::blueZMediaCmd(const QString &method)
                                              QDBusConnection::systemBus(), this);
     }
     m_btMediaPlayer->asyncCall(method);
+#else
+    qWarning() << "[AudioService] BlueZ AVRCP not available (Qt DBus disabled):" << method;
+#endif
 }
 
 // ─── Bose wake ────────────────────────────────────────────────────────────
@@ -181,7 +193,12 @@ void AudioService::onBluetoothProperties(const QString &iface,
                                           const QStringList &invalidated)
 {
     Q_UNUSED(invalidated)
+#ifdef HAVE_QT_DBUS
     if (iface != BT_MEDIA_PLYR) return;
+#else
+    Q_UNUSED(iface)
+    return;  // DBus disabled — no BlueZ property monitoring
+#endif
 
     if (props.contains("Track")) {
         QVariantMap track = props["Track"].toMap();
