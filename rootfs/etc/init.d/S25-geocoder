@@ -1,0 +1,122 @@
+#!/bin/sh
+# S25-geocoder — Start offline geocoder (C+SQLite FTS5, i386-native)
+# Runs before Weston (S30) so geocoder is ready when the nav app starts.
+# Exposes a Pelias-compatible REST API on 127.0.0.1:4000.
+#
+# Replaces S25-photon (Photon/JVM dropped — Java 21+ has no i386/Linux builds).
+#
+# Endpoints:
+#   GET /search?text=QUERY&size=N   — forward geocode (FTS5 + LIKE fallback)
+#   GET /reverse?point.lat=L&point.lon=L&size=N — reverse geocode (R-tree)
+#   GET /status                     — readiness check
+#
+# If binary or DB is missing, logs a warning and exits 0 — nav app
+# operates without geocoder (SearchService fails gracefully on its own).
+
+BINARY=/opt/geocoder/bin/geocoder-server
+DB=/opt/geocoder/places.db
+PORT=4000
+LOG=/var/log/geocoder.log
+PIDFILE=/var/run/geocoder.pid
+READY_TIMEOUT=10   # seconds to wait for port 4000
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG"
+}
+
+port_open() {
+    if command -v nc >/dev/null 2>&1; then
+        nc -z 127.0.0.1 "$PORT" >/dev/null 2>&1
+    else
+        (echo > /dev/tcp/127.0.0.1/"$PORT") >/dev/null 2>&1
+    fi
+}
+
+wait_for_ready() {
+    i=0
+    while [ "$i" -lt "$READY_TIMEOUT" ]; do
+        port_open && return 0
+        sleep 1
+        i=$((i + 1))
+    done
+    return 1
+}
+
+# ── Actions ───────────────────────────────────────────────────────────────────
+
+case "$1" in
+start)
+    log "Starting geocoder-server..."
+
+    if [ ! -x "$BINARY" ]; then
+        log "WARNING: $BINARY not found or not executable — geocoder unavailable"
+        log "         Run scripts/build-geocoder-server.sh to build it"
+        exit 0
+    fi
+
+    if [ ! -f "$DB" ]; then
+        log "WARNING: $DB not found — geocoder unavailable"
+        log "         Run scripts/build-geocoder-db.sh to build the SQLite database"
+        exit 0
+    fi
+
+    # Prevent double-start
+    if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+        log "Geocoder already running (PID $(cat "$PIDFILE"))"
+        exit 0
+    fi
+
+    "$BINARY" --db "$DB" --port "$PORT" >> "$LOG" 2>&1 &
+    echo $! > "$PIDFILE"
+    log "Geocoder started (PID $!) — waiting up to ${READY_TIMEOUT}s for port ${PORT}..."
+
+    if wait_for_ready; then
+        log "Geocoder ready on 127.0.0.1:${PORT} (PID $(cat "$PIDFILE"))"
+    else
+        log "WARNING: Geocoder did not respond within ${READY_TIMEOUT}s — nav will continue without it"
+    fi
+    ;;
+
+stop)
+    log "Stopping geocoder-server..."
+    if [ -f "$PIDFILE" ]; then
+        PID=$(cat "$PIDFILE")
+        if kill "$PID" 2>/dev/null; then
+            # Wait up to 5s for clean SIGTERM shutdown
+            i=0
+            while kill -0 "$PID" 2>/dev/null && [ "$i" -lt 5 ]; do
+                sleep 1
+                i=$((i + 1))
+            done
+            kill -9 "$PID" 2>/dev/null || true
+            log "Geocoder stopped"
+        else
+            log "Geocoder was not running"
+        fi
+        rm -f "$PIDFILE"
+    else
+        log "Geocoder not running (no PID file)"
+    fi
+    ;;
+
+restart)
+    "$0" stop
+    "$0" start
+    ;;
+
+status)
+    if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+        echo "Geocoder running (PID $(cat "$PIDFILE"))"
+        port_open && echo "Port ${PORT}: open" || echo "Port ${PORT}: not responding"
+    else
+        echo "Geocoder stopped"
+    fi
+    ;;
+
+*)
+    echo "Usage: $0 {start|stop|restart|status}"
+    exit 1
+    ;;
+esac

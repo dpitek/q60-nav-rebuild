@@ -19,7 +19,7 @@ Confirm all of these before touching hardware (see [`STATUS.md`](../STATUS.md)):
 - [ ] elilo.conf entry verified: `q60nav` entry present, `default=logan1`
 
 **Not required for first boot** (graceful degradation):
-- Photon geocoder data (`scripts/download-photon.sh`) — `SearchService` degrades gracefully if absent
+- Geocoder DB + binary (`scripts/build-geocoder-db.sh` + `scripts/build-geocoder-server.sh`) — `SearchService` degrades gracefully if absent
 - MapLibre EGL wiring (Phase 3) — stub renders placeholder until EGL pbuffer is implemented
 - Bose wake ID (`CAN_BOSE_WAKE = 0x3B3`) — placeholder; won't kill the app
 
@@ -198,7 +198,7 @@ Turn ignition to ACC. The boot sequence is:
 
 1. elilo reads `elilo.conf` → boots `vmlinuz-4.19-q60` with `root=/dev/mmcblk0p3`
 2. Kernel hands off to SysV init → runs `rcS`, udev, kernel modules
-3. Init scripts run in order: `S10-gpsd` → `S20-valhalla` → `S25-photon` → `S30-weston` → `S50-q60nav`
+3. Init scripts run in order: `S10-gpsd` → `S20-valhalla` → `S25-geocoder` → `S30-weston` → `S50-q60nav`
 4. `S50-q60nav` calls `/opt/nav/start.sh`, which:
    - Increments `/boot/q60_boot_attempts`
    - Arms the iTCO hardware watchdog (30s timeout)

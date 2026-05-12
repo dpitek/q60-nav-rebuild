@@ -41,7 +41,7 @@ Last updated: 2026-05-12
 - [x] `rcS` — mount vfs, udev, kernel modules
 - [x] `S10-gpsd` — GPSD on ttyS0
 - [x] `S20-valhalla` — valhalla-httpd wrapper + valhalla_service on port 8002
-- [x] `S25-photon` — Photon offline geocoder on port 4000 (graceful if Java/JAR absent)
+- [x] `S25-geocoder` — C+SQLite offline geocoder on port 4000 (graceful if binary/DB absent; replaces Photon/JVM)
 - [x] `S30-weston` — Weston compositor; runs `gen-weston-ini.sh` to detect DRM connectors before launch
 - [x] `S50-q60nav` — app launch via start.sh
 - [x] `weston.ini` / `weston.ini.default` — static fallback; `gen-weston-ini.sh` writes live config at boot
@@ -69,8 +69,9 @@ Last updated: 2026-05-12
 ### Build + Deploy Scripts
 - [x] `scripts/deploy-to-image.sh` — write kernel to FAT32, flip elilo.conf for test; `--verify` / `--restore` modes
 - [x] `scripts/restore-logan1.sh` — emergency recovery from Mac
-- [x] `scripts/package-rootfs.sh` — build 3GB ext4 rootfs image; Photon-aware (skips gracefully if not indexed)
-- [x] `scripts/download-photon.sh` — download + index NC OSM data for Photon geocoder (~20 min on Mac)
+- [x] `scripts/package-rootfs.sh` — build 3GB ext4 rootfs image; geocoder-aware (skips gracefully if not built)
+- [x] `scripts/build-geocoder-db.sh` — build SQLite FTS5+rtree geocoder DB from NC JSONL dump (~5-10 min on Mac)
+- [x] `scripts/build-geocoder-server.sh` — compile geocoder-server for i386 inside q60-toolchain Docker
 
 ---
 
@@ -81,7 +82,7 @@ Last updated: 2026-05-12
 | Vector tiles (`.mbtiles`) | ✅ Built | `output/vector-tiles/nc.mbtiles` 464MB |
 | Rootfs image | ✅ Built | `output/q60nav-rootfs.img` 3GB ext4, 1.3GB used |
 | Phase 3: MapLibre EGL wiring | ⏳ Stub complete | `OffscreenBackend` needs EGL pbuffer impl; placeholder renders until then |
-| Photon geocoder data | ⏳ Not indexed | Run `scripts/download-photon.sh` (~20 min, needs Java 11 on Mac) |
+| Geocoder DB | ✅ Ready to build | Run `scripts/build-geocoder-db.sh` (~5-10 min, Python3 on Mac) |
 
 ---
 
@@ -89,10 +90,7 @@ Last updated: 2026-05-12
 
 ### Software
 1. **Phase 3 — EGL wiring**: Implement `OffscreenBackend::activate()` in `MapLibreItem.cpp` — create EGL pbuffer backed by Mesa swrast, wire `readPixels()` into frame callback. Rebuild with `-DWITH_MAPLIBRE=ON`.
-2. **Geocoder (Photon i386 blocker)**: Photon v1.1 requires Java 21+. Java 21+ has **no i386/Linux builds** — OpenJDK dropped 32-bit x86 after Java 8. Photon will fail silently; SearchService handles gracefully. Two options:
-   - **Option A**: Download Photon 0.4.x JAR (Java 11 compatible, Elasticsearch 7) + rebuild DB with old import format
-   - **Option B**: Replace with lightweight C++ SQLite geocoder (custom, ~500MB NC data as FTS5 table) — eliminates JVM entirely; 10-50ms queries; fits the embedded profile far better
-   - **Recommendation**: Option B — JVM on a 32-bit Atom for OpenSearch is a bad fit regardless of version
+2. **Geocoder (Photon i386 blocker)**: ✅ **RESOLVED** — Replaced Photon/JVM with native C+SQLite geocoder. `geocoder-server` is a single-file C99 binary compiled for i386/Bonnell. SQLite FTS5 full-text search + R-tree spatial index. No JVM, no Java, no Elasticsearch. ~10-50ms queries on Atom hardware. Run `scripts/build-geocoder-db.sh` + `scripts/build-geocoder-server.sh` to produce artifacts.
 3. **Bose wake frame**: Sniff AV-CAN at Bose amp connector (trunk). `CAN_BOSE_WAKE = 0x3B3` is a placeholder — see wakeBosse() in VehicleService.cpp.
 
 ### Hardware (boot test prerequisites)
@@ -182,6 +180,7 @@ Read IDs confirmed via opendbc/carhack/Leaf AZE0 DBC cross-reference. **Write pa
 
 | Issue | Resolution |
 |---|---|
+| Photon geocoder requires Java 21+; Java 21+ has no i386/Linux builds | Replaced with C+SQLite geocoder-server — FTS5+rtree, i386-native, no JVM |
 | valhalla_service has no HTTP server (ENABLE_HTTP=OFF) | valhalla-httpd.c wraps CLI binary → port 8002 |
 | Qt6 cross-compile needs QT_HOST_PATH | build-qt6-host.sh builds native qtbase first |
 | Qt6 xcb detection fails for i386 | `FEATURE_xcb=OFF`, `FEATURE_wayland=ON` |

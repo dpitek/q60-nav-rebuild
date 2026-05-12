@@ -1,5 +1,7 @@
 # Build outputs — large binaries and generated files not tracked
 output/
+# Geocoder SQLite DB — large binary built by scripts/build-geocoder-db.sh
+output/geocoder/places.db
 *.img
 *.tar.gz
 *.tar.xz

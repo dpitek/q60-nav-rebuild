@@ -8,9 +8,9 @@
 #   q60nav app binary + QML:          ~1MB
 #   Valhalla routing tiles:          ~717MB
 #   MapLibre vector tiles (mbtiles): ~464MB
-#   Photon geocoder JAR + index:     ~700MB  (NC region, optional)
+#   C+SQLite geocoder DB + binary:   ~400MB  (NC region, FTS5+rtree, i386 binary)
 #   Base rootfs + misc:              ~50MB
-#   Total (with Photon):            ~2.12GB  →  3GB image gives comfortable headroom
+#   Total (with geocoder):          ~1.82GB  →  3GB image gives comfortable headroom
 #
 # Usage:
 #   ./scripts/package-rootfs.sh          # default 3GB
@@ -51,8 +51,8 @@ check "$VALHALLA_BIN/valhalla_service"  "valhalla_service (run Valhalla i386 bui
 check "$QT6_LIBS/libQt6Core.so.6"       "Qt6 i386 libs (run deps/build-qt6-i386.sh)"
 check "$VECTOR_TILES"                   "vector tiles nc.mbtiles (run build-map-tiles.sh)"
 check "$ROUTING_TILES/admins.db"        "routing tiles (run build-tiles.sh)"
-check "$ROOT/output/photon-data/photon_data"       "Photon geocoder data (run scripts/build-photon-db.sh)"
-check "$ROOTFS_DIR/usr/bin/java"                  "Java JRE in rootfs (run scripts/install-jre-rootfs.sh)"
+check "$ROOT/output/geocoder/places.db"            "geocoder SQLite DB (run scripts/build-geocoder-db.sh)"
+check "$ROOTFS_DIR/opt/geocoder/bin/geocoder-server" "geocoder binary (run scripts/build-geocoder-server.sh)"
 check "$ROOTFS_DIR/opt/nav/lib/dri/swrast_dri.so" "Mesa swrast DRI driver (run scripts/install-mesa-rootfs.sh)"
 check "$ROOTFS_DIR/opt/nav/style/sprites/sprite.json" "MapLibre sprites (run scripts/download-map-assets.sh)"
 check "$ROOTFS_DIR/opt/nav/style/fonts/Noto Sans Bold" "MapLibre glyphs Noto Sans Bold (run scripts/download-map-assets.sh)"
@@ -122,15 +122,16 @@ docker run --rm --privileged \
             echo '  routing tiles copied'
         fi
 
-        # ── Photon offline geocoder ────────────────────────────────────────
-        if [ -d /build/output/photon-data/photon_data ] && [ -f /build/output/photon-data/photon.jar ]; then
-            mkdir -p \$MOUNT/opt/photon
-            cp /build/output/photon-data/photon.jar \$MOUNT/opt/photon/
-            cp -r /build/output/photon-data/photon_data/. \$MOUNT/opt/photon/photon_data/
-            echo '  Photon geocoder JAR + data copied'
+        # ── C+SQLite offline geocoder ──────────────────────────────────────
+        if [ -f /build/output/geocoder/places.db ] && \
+           [ -f /build/rootfs/opt/geocoder/bin/geocoder-server ]; then
+            mkdir -p \$MOUNT/opt/geocoder/bin
+            cp /build/output/geocoder/places.db \$MOUNT/opt/geocoder/places.db
+            cp /build/rootfs/opt/geocoder/bin/geocoder-server \$MOUNT/opt/geocoder/bin/
+            echo '  geocoder binary + SQLite DB copied'
         else
-            echo '  WARNING: Photon data not found — geocoder will be unavailable'
-            echo '           Run scripts/download-photon.sh to build it'
+            echo '  WARNING: geocoder artifacts not found — geocoder will be unavailable'
+            echo '           Run scripts/build-geocoder-db.sh + scripts/build-geocoder-server.sh'
         fi
 
         # ── MapLibre vector tiles ──────────────────────────────────────────
@@ -189,7 +190,7 @@ docker run --rm --privileged \
         du -sh \$MOUNT/opt/nav/bin    2>/dev/null || true
         du -sh \$MOUNT/opt/nav/tiles  2>/dev/null || true
         du -sh \$MOUNT/opt/valhalla   2>/dev/null || true
-        du -sh \$MOUNT/opt/photon     2>/dev/null || true
+        du -sh \$MOUNT/opt/geocoder   2>/dev/null || true
         du -sh \$MOUNT/usr/lib        2>/dev/null || true
         echo '--- Disk usage ---'
         df -h \$MOUNT
