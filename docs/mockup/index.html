@@ -1700,6 +1700,8 @@
   #sig-b3 { height: 10px; }
   #sig-b4 { height: 13px; }
 </style>
+<link href='https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.css' rel='stylesheet' />
+<script src='https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.js'></script>
 </head>
 <body>
 
@@ -1713,17 +1715,14 @@
     <div class="screen-label">Navigation Display</div>
     <div class="screen screen-upper" id="screen-upper" style="position:relative;">
 
-      <!-- MAP BACKGROUND -->
+      <!-- MAP BACKGROUND — MapLibre GL JS renders here -->
       <div class="map-bg">
-        <div class="map-grid" id="map-grid-upper" onmousedown="app._mapDragStart(event)" style="cursor:grab;">
-          <!-- Zoom controls (bottom-right) -->
-          <button onclick="app.zoomMap(0.25)" style="position:absolute;bottom:84px;right:14px;width:40px;height:40px;background:#1C1C1E;border:1px solid rgba(255,255,255,0.12);color:#FFFFFF;font-size:20px;border-radius:8px;cursor:pointer;z-index:15;display:flex;align-items:center;justify-content:center;line-height:1;">+</button>
-          <button onclick="app.zoomMap(-0.25)" style="position:absolute;bottom:40px;right:14px;width:40px;height:40px;background:#1C1C1E;border:1px solid rgba(255,255,255,0.12);color:#FFFFFF;font-size:20px;border-radius:8px;cursor:pointer;z-index:15;display:flex;align-items:center;justify-content:center;line-height:1;">−</button>
-          <!-- Recenter (bottom-left) -->
-          <button onclick="app.recenterMap()" style="position:absolute;bottom:40px;left:14px;width:40px;height:40px;background:#1C1C1E;border:1px solid rgba(255,255,255,0.12);color:#FFFFFF;font-size:18px;border-radius:8px;cursor:pointer;z-index:15;display:flex;align-items:center;justify-content:center;line-height:1;">⊕</button>
-        </div>
-        <div class="map-label">MAP</div>
-        <div class="position-dot" id="pos-dot"></div>
+        <div id="mlmap" style="position:absolute;top:0;left:0;right:0;bottom:0;"></div>
+        <!-- Zoom controls (bottom-right, float above map) -->
+        <button onclick="app.zoomMap(1)" style="position:absolute;bottom:84px;right:14px;width:40px;height:40px;background:rgba(28,28,30,0.92);border:1px solid rgba(255,255,255,0.12);color:#FFFFFF;font-size:20px;border-radius:8px;cursor:pointer;z-index:15;display:flex;align-items:center;justify-content:center;line-height:1;">+</button>
+        <button onclick="app.zoomMap(-1)" style="position:absolute;bottom:40px;right:14px;width:40px;height:40px;background:rgba(28,28,30,0.92);border:1px solid rgba(255,255,255,0.12);color:#FFFFFF;font-size:20px;border-radius:8px;cursor:pointer;z-index:15;display:flex;align-items:center;justify-content:center;line-height:1;">−</button>
+        <!-- Recenter (bottom-left) -->
+        <button onclick="app.recenterMap()" style="position:absolute;bottom:40px;left:14px;width:40px;height:40px;background:rgba(28,28,30,0.92);border:1px solid rgba(255,255,255,0.12);color:#FFFFFF;font-size:18px;border-radius:8px;cursor:pointer;z-index:15;display:flex;align-items:center;justify-content:center;line-height:1;">⊕</button>
       </div>
 
       <!-- STATUS BAR -->
@@ -4137,29 +4136,19 @@ const app = {
   },
 
   // ─ MAP ─
-  mapOffset: { x: 0, y: 0 },
-  mapZoom: 1.0,
+  _mlMap: null,
+  _mlCenter: [-78.781, 35.789],  // Cary, NC
 
   zoomMap(delta) {
-    this.mapZoom = Math.max(0.5, Math.min(3.0, this.mapZoom + delta));
-    const grid = document.getElementById('map-grid-upper');
-    if (grid) {
-      const size = Math.round(40 / this.mapZoom);
-      grid.style.backgroundSize = `${size}px ${size}px`;
-    }
+    if (this._mlMap) this._mlMap.zoomTo(this._mlMap.getZoom() + delta);
   },
 
   recenterMap() {
-    this.mapOffset = { x: 0, y: 0 };
-    const grid = document.getElementById('map-grid-upper');
-    if (grid) grid.style.backgroundPosition = '0 0';
+    if (this._mlMap) this._mlMap.flyTo({ center: this._mlCenter, zoom: 12 });
   },
 
   panMap(dx, dy) {
-    this.mapOffset.x += dx;
-    this.mapOffset.y += dy;
-    const grid = document.getElementById('map-grid-upper');
-    if (grid) grid.style.backgroundPosition = `${this.mapOffset.x}px ${this.mapOffset.y}px`;
+    // MapLibre handles drag natively — stub kept for joystick wiring compatibility
   },
 
   // ─ AUDIO EQ ─
@@ -4264,6 +4253,11 @@ const app = {
     document.documentElement.classList.toggle('day-mode', this.ui_dayMode);
     const btn = document.getElementById('mode-toggle-btn');
     if (btn) btn.textContent = this.ui_dayMode ? '☀️' : '🌙';
+    if (this._mlMap) {
+      this._mlMap.setStyle(this.ui_dayMode
+        ? 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json'
+        : 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json');
+    }
     this._applyBrightness();
     this._showDNBar();
   },
@@ -4678,28 +4672,7 @@ function toggleSimPanel() {
   body.classList.toggle('open', !isOpen);
 }
 
-// ─ Map drag ─
-(function(){
-  let dragging = false, lastX = 0, lastY = 0;
-  app._mapDragStart = function(e) {
-    dragging = true; lastX = e.clientX; lastY = e.clientY;
-    const grid = document.getElementById('map-grid-upper');
-    if (grid) grid.style.cursor = 'grabbing';
-    const up = () => {
-      dragging = false;
-      if (grid) grid.style.cursor = 'grab';
-      window.removeEventListener('mouseup', up);
-      window.removeEventListener('mousemove', move);
-    };
-    const move = (ev) => {
-      if (!dragging) return;
-      app.panMap(ev.clientX - lastX, ev.clientY - lastY);
-      lastX = ev.clientX; lastY = ev.clientY;
-    };
-    window.addEventListener('mousemove', move);
-    window.addEventListener('mouseup', up);
-  };
-})();
+// ─ Map drag — handled natively by MapLibre GL JS ─
 
 // ─ Clock ─
 function updateClock() {
@@ -4726,6 +4699,35 @@ setInterval(updateRPM, 2200);
 
 // ─ Init volume slider fill ─
 app.setVolume(65);
+
+// ─ MapLibre GL JS init ─
+(function() {
+  if (typeof maplibregl === 'undefined') { console.warn('[mockup] MapLibre GL JS not loaded'); return; }
+
+  const map = new maplibregl.Map({
+    container: 'mlmap',
+    style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+    center: [-78.781, 35.789],   // Cary, NC
+    zoom: 12,
+    attributionControl: false,
+    maxZoom: 18,
+    minZoom: 4
+  });
+
+  // Compact attribution bottom-left (won't conflict with UI overlays)
+  map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
+
+  // Position marker — pulsing blue dot (current location placeholder)
+  map.on('load', function() {
+    const el = document.createElement('div');
+    el.style.cssText = 'width:16px;height:16px;border-radius:50%;background:#0A84FF;box-shadow:0 0 0 0 rgba(10,132,255,0.6);animation:positionPulse 2s ease-out infinite;';
+    new maplibregl.Marker({ element: el, anchor: 'center' })
+      .setLngLat([-78.781, 35.789])
+      .addTo(map);
+  });
+
+  app._mlMap = map;
+})();
 
 // ─ Draw initial fuel arc ─
 window.addEventListener('load', () => {
