@@ -4,6 +4,7 @@
 #include <QSocketNotifier>
 #include <linux/can.h>
 #include <linux/can/raw.h>
+#include "ButtonLogger.h"
 
 class VehicleService : public QObject {
     Q_OBJECT
@@ -105,6 +106,9 @@ signals:
     void answerCall();
     void endCall();
     void voiceActivate();
+    void muteToggle();
+    // Ignition / session lifecycle
+    void ignitionOff();     // fired when ignition-off detected (speed=0 + gear=P + key event)
 
 private slots:
     void onVehicleCanData();
@@ -120,6 +124,9 @@ private:
     void hvacInit();           // send 0x540 init sequence on startup
     uint8_t hvacTempRaw(float tempF) const;  // °F → 0x540 byte encoding
     uint8_t hvacModeFlags() const;           // pack current state → byte 0 of 0x540
+
+    ButtonLogger m_buttonLog;        // hardware button diagnostic logger
+    bool m_ignitionOffSent = false;  // debounce: only emit ignitionOff() once per cycle
 
     int m_vehicleCanSock = -1;  // can0 — HS-CAN 500kbps (powertrain, BCM, HVAC)
     int m_avCanSock      = -1;  // can1 — AV-CAN 500kbps isolated (Bose, SXM, SW buttons)

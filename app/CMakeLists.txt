@@ -86,6 +86,7 @@ set(SOURCES
     src/main.cpp
     src/services/navigation/NavigationService.cpp
     src/services/vehicle/VehicleService.cpp
+    src/services/vehicle/ButtonLogger.cpp
     src/services/audio/AudioService.cpp
     src/services/search/SearchService.cpp
     src/ui/bridge/StatusBridge.cpp

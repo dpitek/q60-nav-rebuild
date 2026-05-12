@@ -8,6 +8,7 @@
 // HVAC write path and Bose wake ID require J2534 verification before relying on.
 
 #include "VehicleService.h"
+#include <QCoreApplication>
 #include <QDebug>
 
 #include <sys/socket.h>
@@ -31,6 +32,13 @@ VehicleService::~VehicleService()
 
 void VehicleService::start()
 {
+    // Open diagnostic button logger — rotates previous session log, starts fresh
+    m_buttonLog.open(QStringLiteral("/var/log/q60nav-buttons.log"));
+
+    // Connect ignition-off signal to logger to seal the session file
+    connect(this, &VehicleService::ignitionOff,
+            this, [this]() { m_buttonLog.signalSessionEnd(QStringLiteral("ignition_off")); });
+
     openCAN("can0", m_vehicleCanSock);
     openCAN("can1", m_avCanSock);
     openCAN("can2", m_can2Sock);
@@ -197,6 +205,17 @@ void VehicleService::parseVehicleFrame(const struct can_frame &f)
         }
         if (g   != m_gear)    { m_gear    = g;   emit gearChanged(g); }
         if (rev != m_reverse) { m_reverse = rev; emit reverseChanged(rev); }
+
+        // Ignition-off heuristic: gear=Park + speed < 1 mph + parking brake active.
+        // This seals the button log for the session. Not 100% reliable (no direct
+        // key-off CAN ID confirmed yet), but good enough for log lifecycle management.
+        // A future J2534 capture of key-off events can make this more precise.
+        if (g == 1 && m_speed < 1.0f && m_parkingBrake && !m_ignitionOffSent) {
+            m_ignitionOffSent = true;
+            emit ignitionOff();
+        } else if (g != 1 || m_speed >= 1.0f) {
+            m_ignitionOffSent = false;  // reset when car is moving again
+        }
         break;
     }
 
@@ -302,35 +321,79 @@ void VehicleService::parseVehicleFrame(const struct can_frame &f)
 // ─── AV-CAN parser (can1) ─────────────────────────────────────────────────
 // Handles steering wheel / panel button presses via 0x681
 // Source: Leaf AV-CAN DBC; Q50_LIKELY same bus topology
+//
+// All presses are logged to /var/log/q60nav-buttons.log via ButtonLogger.
+// Unknown button codes are logged as UNKNOWN for J2534 cross-reference.
 void VehicleService::parseAVFrame(const struct can_frame &f)
 {
-    if ((f.can_id & CAN_SFF_MASK) != CAN_AV_BTNS) return;
-    if (f.can_dlc < 5) return;
+    canid_t id = f.can_id & CAN_SFF_MASK;
 
-    // byte 0 = frame status (0x0F=idle, 0x04=button, 0x03=power)
-    // byte 4 = button code
-    if (f.data[0] != 0x04 && f.data[0] != 0x03) return;  // only fire on real press
+    // Log all AV-CAN frames that aren't the idle heartbeat (byte0=0x0F)
+    // This captures every button the car sends, even ones we don't act on yet.
+    if (id == CAN_AV_BTNS && f.can_dlc >= 1 && f.data[0] != 0x0F) {
+        // Determine action string for known button codes
+        QString action;
+        if (f.can_dlc >= 5) {
+            switch (f.data[4]) {
+            case 0xC9: action = QStringLiteral("VolumeUp");      break;
+            case 0xCA: action = QStringLiteral("VolumeDown");    break;
+            case 0x92: action = QStringLiteral("SeekForward");   break;
+            case 0x91: action = QStringLiteral("SeekBack");      break;
+            case 0xC5: action = QStringLiteral("AnswerCall");    break;
+            case 0xC6: action = QStringLiteral("EndCall");       break;
+            case 0xAD: action = QStringLiteral("Mute");          break;
+            case 0x90: action = QStringLiteral("VoiceActivate"); break;
+            case 0xA3: action = QStringLiteral("FmAmToggle");    break;
+            case 0xAC: action = QStringLiteral("AuxSelect");     break;
+            case 0xC4: action = QStringLiteral("Menu");          break;
+            case 0x80: action = QStringLiteral("CruiseOn");      break;
+            case 0x81: action = QStringLiteral("CruiseOff");     break;
+            case 0x82: action = QStringLiteral("CruiseSet");     break;
+            case 0x83: action = QStringLiteral("CruiseResume");  break;
+            case 0x84: action = QStringLiteral("CruiseCancel");  break;
+            case 0x85: action = QStringLiteral("CruiseAccel");   break;
+            case 0x86: action = QStringLiteral("CruiseDecel");   break;
+            case 0x00: action = QStringLiteral("ButtonRelease"); break;
+            default:   action = QStringLiteral("UNKNOWN_0x") +
+                                QString::number(f.data[4], 16).toUpper();
+            }
+        } else {
+            action = QStringLiteral("SHORT_FRAME");
+        }
+        m_buttonLog.logAction(QStringLiteral("AV-CAN"), id, f, action);
+    } else if (id != CAN_AV_BTNS) {
+        // Log all other non-idle AV-CAN frames for discovery
+        m_buttonLog.logDiscovery(QStringLiteral("AV-CAN"), id, f);
+        return;
+    }
+
+    // Only dispatch Qt signals on active press (byte0=0x04 press, 0x03=power key)
+    if (f.can_dlc < 5) return;
+    if (f.data[0] != 0x04 && f.data[0] != 0x03) return;
 
     switch (f.data[4]) {
-    case 0xC9: emit volUp();        break;
-    case 0xCA: emit volDown();      break;
-    case 0x92: emit seekFwd();      break;
-    case 0x91: emit seekBack();     break;
-    case 0xC5: emit answerCall();   break;
-    case 0xC6: emit endCall();      break;
-    case 0xAD: /* mute — wire to AudioService if needed */ break;
+    case 0xC9: emit volUp();         break;
+    case 0xCA: emit volDown();       break;
+    case 0x92: emit seekFwd();       break;
+    case 0x91: emit seekBack();      break;
+    case 0xC5: emit answerCall();    break;
+    case 0xC6: emit endCall();       break;
+    case 0xAD: emit muteToggle();    break;
+    case 0x90: emit voiceActivate(); break;  // steering wheel speech button
     default:   break;
     }
 }
 
 // ─── CAN2 parser (can2) ───────────────────────────────────────────────────
 // Bus topology on Q60 not confirmed. May be MS-CAN 125kbps for body controls,
-// or this interface may not exist. Log unknown frames for J2534 comparison.
+// or this interface may not exist.
+// ALL frames are logged for J2534 cross-reference and CAN discovery.
 void VehicleService::parseCAN2Frame(const struct can_frame &f)
 {
-    qDebug() << "[VehicleService] can2 frame id=" << Qt::hex << (f.can_id & CAN_SFF_MASK)
+    canid_t id = f.can_id & CAN_SFF_MASK;
+    m_buttonLog.logDiscovery(QStringLiteral("CAN2"), id, f);
+    qDebug() << "[VehicleService] can2 frame id=" << Qt::hex << id
              << "dlc=" << f.can_dlc;
-    (void)f;
 }
 
 // ─── CAN write helpers ─────────────────────────────────────────────────────

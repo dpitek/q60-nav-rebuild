@@ -132,10 +132,28 @@ Features staged for post-v1.0, ordered by impact. Surface these once hardware te
 
 ---
 
-### Other Backlog Items
+### 📡 Bluetooth Hotspot Connectivity + Deferred Sync *(post-v1.0)*
+
+The DCU has no cellular or Wi-Fi. When a phone hotspot is available (Bluetooth PAN or USB tethering), the system should opportunistically download pending items.
+
+**Architecture:**
+- `SyncService` (C++) — runs in background, tracks a **pending-downloads queue** persisted to `/var/lib/q60nav/sync-queue.json`
+- Items queued while offline: map tile updates, routing tile updates (NC only), album art (Bluetooth AVRCP metadata → cover art URL), firmware/app updates (rootfs slot B)
+- `NetworkMonitor` — polls BT PAN (`bnep0`) / USB-ETH (`usb0`) every 30s; on link-up, calls `SyncService::processQueue()`
+- Download priority: album art (KB) > routing updates (MB) > full rootfs (GB)
+- `start.sh` addition: `rfkill unblock bluetooth` + `bluetoothd` before q60nav launch
+- **BT PAN setup**: `scripts/setup-bt-pan.sh` — pairs trusted phone, brings up `bnep0`
+
+**Items to queue automatically:**
+- Album art: when AVRCP metadata has `trackTitle` + `artist` → enqueue cover art fetch from Last.fm/MusicBrainz
+- Map updates: check tile server for NC tiles newer than installed (weekly, not on every boot)
+- App updates: poll a configurable URL for new `q60nav` binary + rootfs image (slot B write)
+
+**Effort**: ~1 week. Implement SyncService skeleton + queue persistence first; add items incrementally.
+
 | Feature | Notes |
 |---|---|
-| OTA update mechanism | USB drive or phone hotspot → pull new rootfs image, write to slot B |
+| OTA update mechanism | Part of Bluetooth hotspot sync above — USB drive fallback also viable |
 | Android Auto | Same aasdk path as CarPlay — nearly free once CarPlay is done |
 | Rear camera integration | Reverse signal (CAN 0x421 gear=R) → switch display to camera feed; needs video capture path |
 | SiriusXM passthrough | `sxmcgs.out` / `sxmfc.out` DENSO proxies already started in start.sh — wire to AudioView |
