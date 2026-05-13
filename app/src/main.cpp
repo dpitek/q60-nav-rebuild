@@ -150,5 +150,9 @@ int main(int argc, char *argv[])
     tripSvc.start(&vehicleSvc, &navSvc);    // GPX traces + trip A/B accumulators
     parkingSvc.start(&vehicleSvc, &navSvc); // Save GPS on ignition-off
 
+    // AudioService depends on Settings (preset persistence) and Vehicle (SSV speed).
+    // Wire AFTER settingsSvc.start() so audioPresets blob is already loaded.
+    audioSvc.wireDependencies(&settingsSvc, &vehicleSvc);
+
     return app.exec();
 }
