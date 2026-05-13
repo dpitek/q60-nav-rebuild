@@ -11,6 +11,8 @@
 #include <QCoreApplication>
 #include <QDebug>
 #include <QDateTime>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 #include <sys/socket.h>
 #include <sys/ioctl.h>
@@ -521,6 +523,11 @@ void VehicleService::parseVehicleFrame(const struct can_frame &f)
     case CAN_DRIVE_MODE_STATUS: {
         if (f.can_dlc < 1) break;
         const uint8_t mode = f.data[0];
+        // Track mode (6) is a virtual composite — it writes Sport+ (2) to the
+        // powertrain, so the status frame will report back 2. Don't clobber
+        // our Track state when that happens; the user explicitly enters/exits
+        // Track from the UI.
+        if (m_driveMode == 6 && mode == 0x02) break;
         if (mode <= 5 && static_cast<int>(mode) != m_driveMode) {
             m_driveMode = static_cast<int>(mode);
             emit driveModeChanged(m_driveMode);
@@ -1046,16 +1053,98 @@ void VehicleService::setRainSensor(bool on)
 }
 
 // ─── Drive mode ────────────────────────────────────────────────────────────
+// Modes 0–5 = factory (Standard / Sport / Sport+ / Eco / Snow / Personal).
+// Mode 6 = Track (composite): writes Sport+ to powertrain, mutes ASC, applies
+//   track-specific preferences held in m_trackModePreferences.
+// When switching AWAY from Track, the previous ASC state is restored.
 void VehicleService::setDriveMode(int mode)
 {
     qWarning() << "[VehicleService] setDriveMode: Q50_LIKELY — verify via J2534";
-    m_driveMode = qBound(0, mode, 5);
+    const int newMode = qBound(0, mode, 6);
+    if (newMode == m_driveMode) return;
+
+    const bool wasTrack = (m_driveMode == 6);
+    const bool nowTrack = (newMode == 6);
+
+    m_driveMode = newMode;
     emit driveModeChanged(m_driveMode);
-    uint8_t d[1] = { static_cast<uint8_t>(m_driveMode) };
-    // J2534 trace: log the exact frame so post-drive log review can verify the bytes.
-    qInfo("[VehicleService] TX 0x%03X DLC=1 [%02X]  (drive mode=%d)",
-          CAN_DRIVE_MODE, d[0], m_driveMode);
-    sendCANFrame(m_vehicleCanSock, CAN_DRIVE_MODE, d, 1);
+
+    if (nowTrack) {
+        m_ascStateBeforeTrack = m_ascEnabled;
+
+        // Track maps to Sport+ (0x02) on the powertrain side — closest stock equivalent.
+        uint8_t d[1] = { 0x02 };
+        qInfo("[VehicleService] TX 0x%03X DLC=1 [%02X]  (Track → Sport+ powertrain)",
+              CAN_DRIVE_MODE, d[0]);
+        sendCANFrame(m_vehicleCanSock, CAN_DRIVE_MODE, d, 1);
+
+        if (m_trackModePreferences.ascOff)
+            setAscEnabled(false);
+
+        emit trackModeConfigChanged();
+        emit trackModeActiveChanged(true);
+    } else {
+        uint8_t d[1] = { static_cast<uint8_t>(m_driveMode) };
+        qInfo("[VehicleService] TX 0x%03X DLC=1 [%02X]  (drive mode=%d)",
+              CAN_DRIVE_MODE, d[0], m_driveMode);
+        sendCANFrame(m_vehicleCanSock, CAN_DRIVE_MODE, d, 1);
+
+        if (wasTrack) {
+            setAscEnabled(m_ascStateBeforeTrack);
+            emit trackModeActiveChanged(false);
+        }
+    }
+}
+
+// ─── Active Sound Control — Bose engine sound enhancement ────────────────────
+// Factory hides this in a deep diagnostic menu. UNVERIFIED PLACEHOLDER write.
+void VehicleService::setAscEnabled(bool on)
+{
+    if (m_ascEnabled == on) return;
+    qWarning() << "[VehicleService] setAscEnabled: CAN_ASC_TOGGLE=0xFFFF "
+                  "UNVERIFIED PLACEHOLDER — no CAN frame sent. "
+                  "Sniff during diagnostic menu toggle "
+                  "(Settings → Seek-up ×3 → hold below right-scroll-arrow ×5s).";
+    m_ascEnabled = on;
+    emit ascEnabledChanged(on);
+}
+
+// ─── Track-mode preference JSON blob ─────────────────────────────────────────
+// Schema mirrors SettingsService.trackModeConfig.
+void VehicleService::setTrackModeConfig(const QString &json)
+{
+    const QJsonDocument doc = QJsonDocument::fromJson(json.toUtf8());
+    if (doc.isNull() || !doc.isObject()) {
+        qWarning() << "[VehicleService] setTrackModeConfig: invalid JSON, ignored";
+        return;
+    }
+    const QJsonObject o = doc.object();
+
+    const QString tm = o.value(QStringLiteral("throttleMap")).toString();
+    if      (tm == QStringLiteral("stock")) m_trackModePreferences.throttleMap = TrackThrottle::Stock;
+    else if (tm == QStringLiteral("sport")) m_trackModePreferences.throttleMap = TrackThrottle::Sport;
+    else if (tm == QStringLiteral("max"))   m_trackModePreferences.throttleMap = TrackThrottle::Max;
+
+    const QString ab = o.value(QStringLiteral("atessaBias")).toString();
+    if      (ab == QStringLiteral("auto"))     m_trackModePreferences.atessaBias = TrackAtessa::Auto;
+    else if (ab == QStringLiteral("rwd_pref")) m_trackModePreferences.atessaBias = TrackAtessa::RwdPref;
+    else if (ab == QStringLiteral("rwd_only")) m_trackModePreferences.atessaBias = TrackAtessa::RwdOnly;
+
+    if (o.contains(QStringLiteral("ascOff")))
+        m_trackModePreferences.ascOff = o.value(QStringLiteral("ascOff")).toBool();
+
+    const QString ap = o.value(QStringLiteral("audioProfile")).toString();
+    if      (ap == QStringLiteral("stock")) m_trackModePreferences.audioProfile = TrackAudioProf::Stock;
+    else if (ap == QStringLiteral("sport")) m_trackModePreferences.audioProfile = TrackAudioProf::Sport;
+    else if (ap == QStringLiteral("dry"))   m_trackModePreferences.audioProfile = TrackAudioProf::Dry;
+
+    if (o.contains(QStringLiteral("gaugesSubTab")))
+        m_trackModePreferences.gaugesSubTab = o.value(QStringLiteral("gaugesSubTab")).toString();
+
+    emit trackModeConfigChanged();
+
+    if (m_driveMode == 6 && m_trackModePreferences.ascOff && m_ascEnabled)
+        setAscEnabled(false);
 }
 
 // ─── Driver aids helpers ───────────────────────────────────────────────────

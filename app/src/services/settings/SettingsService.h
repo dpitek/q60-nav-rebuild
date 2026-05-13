@@ -66,6 +66,12 @@ class SettingsService : public QObject
 
     // ── Vehicle ───────────────────────────────────────────────────────────
     Q_PROPERTY(bool vdcEnabled READ vdcEnabled WRITE setVdcEnabled NOTIFY vehicleChanged)
+    // Active Sound Control (Bose engine sound enhancement) — persisted mirror of
+    // VehicleService.ascEnabled. On boot, apply via VehicleService::setAscEnabled.
+    Q_PROPERTY(bool ascEnabled READ ascEnabled WRITE setAscEnabled NOTIFY ascEnabledChanged)
+    // Track-mode composite preferences JSON blob (schema documented in cpp).
+    // Same pattern as audioPresets / driveModePersonalConfig (manual setter).
+    Q_PROPERTY(QString trackModeConfig READ trackModeConfig WRITE setTrackModeConfig NOTIFY trackModeConfigChanged)
 
     // ── Speed alert ───────────────────────────────────────────────────────
     // Threshold (mph) added on top of the posted speed limit before the speed
@@ -199,6 +205,8 @@ public:
     bool clickSounds()           const { return m_clickSounds; }
     int  navPromptVolume()       const { return m_navPromptVolume; }
     bool vdcEnabled()            const { return m_vdcEnabled; }
+    bool ascEnabled()            const { return m_ascEnabled; }
+    QString trackModeConfig()    const { return m_trackModeConfig; }
     int  speedAlertThreshold()   const { return m_speedAlertThreshold; }
     int  lightShutoff()          const { return m_lightShutoff; }
     int  headlightSensitivity()  const { return m_headlightSensitivity; }
@@ -254,6 +262,8 @@ public:
     void setClickSounds(bool v);
     void setNavPromptVolume(int v);
     void setVdcEnabled(bool v);
+    void setAscEnabled(bool v);                       // manual setter — same pattern as audioPresets
+    void setTrackModeConfig(const QString &v);        // manual setter
     void setSpeedAlertThreshold(int v);
     void setLightShutoff(int v);
     void setHeadlightSensitivity(int v);
@@ -289,6 +299,8 @@ signals:
     void navChanged();
     void audioSettingsChanged();
     void vehicleChanged();
+    void ascEnabledChanged();
+    void trackModeConfigChanged();
     void lightsChanged();
     void locksChanged();
     void mirrorsChanged();
@@ -337,6 +349,15 @@ private:
     bool m_clickSounds           = true;
     int  m_navPromptVolume       = 80;
     bool m_vdcEnabled            = true;
+    // Active Sound Control — true matches factory default (engine sound ON).
+    bool m_ascEnabled            = true;
+    // Track-mode preferences JSON — defaults match VehicleService::TrackModePreferences.
+    QString m_trackModeConfig    = QStringLiteral(
+        "{\"throttleMap\":\"max\","
+        "\"atessaBias\":\"rwd_pref\","
+        "\"ascOff\":true,"
+        "\"audioProfile\":\"dry\","
+        "\"gaugesSubTab\":\"track\"}");
     int  m_speedAlertThreshold   = 5;
     int  m_lightShutoff          = 2;
     int  m_headlightSensitivity  = 1;

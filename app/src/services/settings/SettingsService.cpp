@@ -296,6 +296,9 @@ void SettingsService::loadFromDisk()
     m_clickSounds           = bget("clickSounds",         true);
     m_navPromptVolume       = iget("navPromptVolume",       80);
     m_vdcEnabled            = bget("vdcEnabled",          true);
+    m_ascEnabled            = bget("ascEnabled",          true);
+    if (root.contains("trackModeConfig"))
+        m_trackModeConfig   = root.value("trackModeConfig").toString(m_trackModeConfig);
     m_speedAlertThreshold   = iget("speedAlertThreshold",    5);
     m_lightShutoff          = iget("lightShutoff",           2);
     m_headlightSensitivity  = iget("headlightSensitivity",   1);
@@ -384,6 +387,8 @@ void SettingsService::saveToDisk()
     root["clickSounds"]           = m_clickSounds;
     root["navPromptVolume"]       = m_navPromptVolume;
     root["vdcEnabled"]            = m_vdcEnabled;
+    root["ascEnabled"]            = m_ascEnabled;
+    root["trackModeConfig"]       = m_trackModeConfig;
     root["speedAlertThreshold"]   = m_speedAlertThreshold;
     root["lightShutoff"]          = m_lightShutoff;
     root["headlightSensitivity"]  = m_headlightSensitivity;
@@ -741,5 +746,21 @@ void SettingsService::setDriveModePersonalConfig(const QString &json)
     if (m_driveModePersonalConfig == json) return;
     m_driveModePersonalConfig = json;
     emit driveModePersonalConfigChanged();
+    armSaveTimer();
+}
+
+void SettingsService::setAscEnabled(bool v)
+{
+    if (m_ascEnabled == v) return;
+    m_ascEnabled = v;
+    emit ascEnabledChanged();
+    armSaveTimer();
+}
+
+void SettingsService::setTrackModeConfig(const QString &v)
+{
+    if (m_trackModeConfig == v) return;
+    m_trackModeConfig = v;
+    emit trackModeConfigChanged();
     armSaveTimer();
 }

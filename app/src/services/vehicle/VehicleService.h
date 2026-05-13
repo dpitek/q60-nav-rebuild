@@ -72,8 +72,13 @@ class VehicleService : public QObject {
     Q_PROPERTY(float tripBAvgMPG   READ tripBAvgMPG   NOTIFY tripBChanged)
     Q_PROPERTY(int   tripBSeconds  READ tripBSeconds  NOTIFY tripBChanged)
     Q_PROPERTY(float tripBAvgSpeed READ tripBAvgSpeed NOTIFY tripBChanged)
-    // Drive mode (0=Std 1=Sport 2=Sport+ 3=Eco 4=Snow 5=Personal)
+    // Drive mode (0=Std 1=Sport 2=Sport+ 3=Eco 4=Snow 5=Personal 6=Track)
     Q_PROPERTY(int  driveMode      READ driveMode      NOTIFY driveModeChanged)
+    // Active Sound Control (Bose-synthesized engine sound through speakers)
+    // Default true to match factory state. Toggle exposed in AudioView Settings panel.
+    Q_PROPERTY(bool ascEnabled     READ ascEnabled     NOTIFY ascEnabledChanged)
+    // Track mode active (driveMode == 6) — composite "cool" mode
+    Q_PROPERTY(bool trackModeActive READ trackModeActive NOTIFY trackModeActiveChanged)
     // Commander joystick + adjacent buttons
     Q_PROPERTY(int joystickX READ joystickX NOTIFY joystickMoved)
     Q_PROPERTY(int joystickY READ joystickY NOTIFY joystickMoved)
@@ -188,6 +193,8 @@ public:
     float tripBAvgSpeed() const { return m_tripBAvgSpeed; }
     // Drive mode
     int  driveMode()      const { return m_driveMode; }
+    bool ascEnabled()      const { return m_ascEnabled; }
+    bool trackModeActive() const { return m_driveMode == 6; }
     // Commander joystick + adjacent buttons
     int joystickX() const { return m_joystickX; }
     int joystickY() const { return m_joystickY; }
@@ -255,6 +262,12 @@ public slots:
     Q_INVOKABLE void resetTripB();
     // Drive mode
     Q_INVOKABLE void setDriveMode(int mode);
+    // Active Sound Control toggle — hidden in factory diag menu; we expose directly.
+    // CAN write blocked until J2534 capture identifies the real ID (CAN_ASC_TOGGLE=0xFFFF).
+    Q_INVOKABLE void setAscEnabled(bool on);
+    // Track mode preference JSON blob — same pattern as audioPresets/driveModePersonalConfig.
+    // Updates internal m_trackModePreferences struct and emits signals.
+    Q_INVOKABLE void setTrackModeConfig(const QString &json);
     // Driver aids
     Q_INVOKABLE void setBSW(bool on);
     Q_INVOKABLE void setBSI(bool on);
@@ -320,6 +333,9 @@ signals:
     void tripBChanged();
     // Drive mode + driver aids + ATTESA
     void driveModeChanged(int);
+    void ascEnabledChanged(bool);
+    void trackModeActiveChanged(bool);
+    void trackModeConfigChanged();   // m_trackModePreferences struct updated
     void bswOnChanged(bool);
     void bsiOnChanged(bool);
     void ldwOnChanged(bool);
@@ -477,45 +493,44 @@ private:
     // ── Performance timer state ─────────────────────────────────────────────
     QTimer *m_perfTimer          = nullptr;
     bool   m_perfRunActive       = false;
-    bool   m_perfRunArmed        = false;   // crossed throttle threshold while stationary
-    qint64 m_perfRunStartMs      = 0;       // monotonic ms when run started
+    bool   m_perfRunArmed        = false;
+    qint64 m_perfRunStartMs      = 0;
     double m_perfRunElapsedSec   = 0.0;
-    double m_perfRunDistanceMi   = 0.0;     // wheel-speed integrated since start
-    double m_zeroToSixtySec      = 0.0;     // latched on hit; 0 = not yet
-    double m_quarterMileSec      = 0.0;     // latched on 1/4 mile
-    double m_quarterMileTrapMph  = 0.0;     // speed at 1/4 mile mark
+    double m_perfRunDistanceMi   = 0.0;
+    double m_zeroToSixtySec      = 0.0;
+    double m_quarterMileSec      = 0.0;
+    double m_quarterMileTrapMph  = 0.0;
+
+    // ── Active Sound Control (factory diag-menu hidden toggle) ────────────
+    bool m_ascEnabled            = true;
+    bool m_ascStateBeforeTrack   = true;
+
+    // ── Track mode composite preferences (mode 6) ─────────────────────────
+    // Only CAN write is 0x2DC (Sport+ encoding); rest is internal state + signals.
+    enum class TrackThrottle  { Stock, Sport, Max };
+    enum class TrackAtessa    { Auto, RwdPref, RwdOnly };
+    enum class TrackAudioProf { Stock, Sport, Dry };
+    struct TrackModePreferences {
+        TrackThrottle  throttleMap   = TrackThrottle::Max;
+        TrackAtessa    atessaBias    = TrackAtessa::RwdPref;
+        bool           ascOff        = true;
+        TrackAudioProf audioProfile  = TrackAudioProf::Dry;
+        QString        gaugesSubTab  = QStringLiteral("track");
+    };
+    TrackModePreferences m_trackModePreferences;
 
     // ── VR30 / chassis CAN IDs (Q50_LIKELY / UNVERIFIED) ────────────────────
-    // VR30DDTT telemetry frames. Most documented in EcuTek tuning literature,
-    // but Q60-specific verification still pending — treat as Q50_LIKELY.
-    //
-    // 0x551 carries cruise/coolant on body bus AND turbo data on powertrain bus:
-    //   byte 4-5: boost pressure raw (big-endian uint16, kPa absolute)
-    //             psi_gauge = (raw * 0.01) - 14.504 (approx; verify scale)
-    //   byte 7:   intake air temp raw, 0.75°C/LSB offset -48°C
-    static constexpr canid_t CAN_VR30_BOOST_IAT = 0x551;  // Q50_LIKELY (shared 0x551)
-
-    // 0x55D: VVT/Oil temp sensor — VR30 uses the VVT temp sensor as oil temp proxy.
-    //   byte 0: temp raw, 1°C/LSB offset -40°C
-    static constexpr canid_t CAN_VR30_OIL_TEMP  = 0x55D;  // Q50_LIKELY
-
-    // 0x59A: TCM transmission fluid temperature
-    //   byte 0: trans temp raw, 1°C/LSB offset -40°C
-    static constexpr canid_t CAN_VR30_TRANS_TEMP = 0x59A; // Q50_LIKELY
-
-    // 0x55C: Electronic wastegate position
-    //   byte 0: position % (0-100 direct)
-    static constexpr canid_t CAN_VR30_WASTEGATE = 0x55C;  // Q50_LIKELY
-
-    // Ignition advance / knock retard — VR30 proprietary frame not yet identified.
-    // Placeholder; handleVR30Frame() logs TODO when matched.
-    static constexpr canid_t CAN_VR30_IGN_KNOCK = 0xFFFF; // UNVERIFIED placeholder
-
-    // ── G-sensor (3-axis chassis sensor feeding ATTESA / ABS) ───────────────
-    // Frame ID UNVERIFIED — literature suggests 0x130-0x140 range. 0x132 placeholder.
-    //   byte 0-1: lateral G raw (signed 16-bit, big-endian, 0.001 G/LSB)
-    //   byte 2-3: longitudinal G raw (same scale)
-    static constexpr canid_t CAN_G_SENSOR       = 0x132;  // UNVERIFIED
+    // 0x551 carries cruise/coolant AND turbo data:
+    //   byte 4-5: boost raw (big-endian uint16, kPa absolute) → psi = (raw*0.01)-14.504
+    //   byte 7:   IAT raw, 0.75°C/LSB offset -48°C
+    static constexpr canid_t CAN_VR30_BOOST_IAT  = 0x551;  // Q50_LIKELY (shared)
+    static constexpr canid_t CAN_VR30_OIL_TEMP   = 0x55D;  // Q50_LIKELY (VVT proxy)
+    static constexpr canid_t CAN_VR30_TRANS_TEMP = 0x59A;  // Q50_LIKELY (TCM)
+    static constexpr canid_t CAN_VR30_WASTEGATE  = 0x55C;  // Q50_LIKELY
+    static constexpr canid_t CAN_VR30_IGN_KNOCK  = 0xFFFF; // UNVERIFIED placeholder
+    // G-sensor 3-axis (ATTESA + ABS): bytes 0-1 lateral, 2-3 longitudinal,
+    // signed 16-bit big-endian 0.001 G/LSB.
+    static constexpr canid_t CAN_G_SENSOR        = 0x132;  // UNVERIFIED
 
     // ─── CAN IDs ─────────────────────────────────────────────────────────────
     // Sources: opendbc nissan_common.dbc, opendbc X-Trail/Xterra, carhack 370Z,
@@ -675,6 +690,14 @@ private:
     // Seat heat write — no confirmed public ID for Q50/Q60.
     // BLOCKED until J2534 capture. Do not transmit.
     static constexpr canid_t CAN_SEAT_HEAT_WRITE = 0xFFFF; // UNVERIFIED PLACEHOLDER
+
+    // Active Sound Control (Bose engine sound enhancement) — factory hides this
+    // toggle in a deep diagnostic menu (Settings → Seek-up ×3 → hold below
+    // right-scroll-arrow ×5s). The CAN frame written by the diag menu has not
+    // been captured yet. BLOCKED until J2534 capture identifies the real ID.
+    // UNVERIFIED PLACEHOLDER — sniff during diagnostic menu toggle
+    //   (Settings→Seek-up×3→hold below right-scroll-arrow×5s)
+    static constexpr canid_t CAN_ASC_TOGGLE      = 0xFFFF; // UNVERIFIED PLACEHOLDER
 
     // ── UDS diagnostic addresses (HS-CAN) ────────────────────────────────────
     // Standard Nissan/Infiniti UDS addressing pattern — confirmed cross-platform.
