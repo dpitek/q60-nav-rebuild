@@ -83,6 +83,17 @@ check_file "STATUS.md"                 "$WORKTREE_ROOT/STATUS.md"
 check_file "Progress log"              "$WORKTREE_ROOT/.claude/progress/backlog-execution-2026-05-13.md"
 
 echo ""
+echo "── QML → C++ binding static check ────────────────────────"
+if "$WORKTREE_ROOT/scripts/qml-binding-check.sh" >/tmp/qml-check.log 2>&1; then
+    PASS=$((PASS+1))
+    echo "  ✓ All QML → C++ references resolve"
+else
+    FAIL=$((FAIL+1))
+    echo "  ✗ Unresolved QML bindings — see below"
+    sed 's/^/    /' /tmp/qml-check.log
+fi
+
+echo ""
 echo "── Rootfs image structural sanity ────────────────────────"
 IMG="$WORKTREE_ROOT/output/q60nav-rootfs.img"
 if [ -f "$IMG" ]; then

@@ -1002,14 +1002,16 @@ Item {
                     valueColor: VehicleService.ignitionOn ? "#30D158" : "#8E8E93"
                 }
 
-                // GPS fix — NavigationService.position.isValid() is the lock signal
+                // GPS fix — QGeoCoordinate::isValid() is a method, not a property.
+                // Without the parens it returns the function reference (always truthy)
+                // so the "No fix" branch never showed pre-2026-05-13 audit fix.
                 InfoRow {
                     label: "GPS Fix"
-                    value: NavigationService.position.isValid
+                    value: NavigationService.position.isValid()
                            ? (NavigationService.position.latitude.toFixed(4)
                               + ", " + NavigationService.position.longitude.toFixed(4))
                            : "No fix"
-                    valueColor: NavigationService.position.isValid ? "#30D158" : "#FF9F0A"
+                    valueColor: NavigationService.position.isValid() ? "#30D158" : "#FF9F0A"
                 }
 
                 InfoRow {

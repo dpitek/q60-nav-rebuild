@@ -76,6 +76,23 @@ public:
     // Vehicle tab button, or future CAN-driven gear=R + button-held trigger).
     Q_INVOKABLE void setAvmActive(bool active);
 
+    // ── Phone call controls ──────────────────────────────────────────────
+    // All BT HFP wiring is stubbed until BlueZ HFP profile lands (see
+    // AudioService backlog). These invocables update local call/mute state
+    // and emit the relevant signals so the PhoneView dial/end/mute/speaker
+    // buttons have working UX. DTMF tones route through AudioService's
+    // existing PCM path.
+    Q_INVOKABLE void answerCall();   // accept incoming call (sets callActive=true)
+    Q_INVOKABLE void endCall();      // terminate active call
+    Q_INVOKABLE void toggleMute();   // mic mute toggle (forwards to AudioService)
+    Q_INVOKABLE void toggleSpeaker();// route audio to handset/speaker
+    Q_INVOKABLE void sendDtmf(const QString &digit);  // DTMF tone "0"-"9","*","#"
+    Q_INVOKABLE void dial(const QString &number);     // initiate outgoing call (stub)
+    Q_PROPERTY(bool muted    READ muted    NOTIFY muteChanged)
+    Q_PROPERTY(bool speakerOn READ speakerOn NOTIFY speakerChanged)
+    bool muted()    const { return m_muted; }
+    bool speakerOn() const { return m_speakerOn; }
+
 signals:
     void navActiveChanged(bool);
     void navInstructionChanged();
@@ -92,6 +109,10 @@ signals:
     void positionChanged();
     void networkChanged();
     void avmActiveChanged(bool);
+    void muteChanged(bool);
+    void speakerChanged(bool);
+    void dtmfSent(QString digit);
+    void outgoingCallInitiated(QString number);
 
     // Cross-screen commands
     void showTurnBanner();      // Lower screen: flash turn arrow overlay
@@ -117,6 +138,8 @@ private:
     bool    m_networkOnline  = false;
     QString m_networkType    = QStringLiteral("none");
     int     m_signalStrength = 0;
+    bool    m_muted          = false;
+    bool    m_speakerOn      = false;
 
     bool    m_navActive = false;
     QString m_nextStreet;
