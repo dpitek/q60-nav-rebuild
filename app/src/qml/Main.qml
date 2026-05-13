@@ -8,6 +8,10 @@ import QtQuick.Window 6.6
 import "screens"
 import "components"
 
+// ── Rear camera on upper screen ───────────────────────────────────────────────
+// RearCameraView is loaded/unloaded on reverse rather than hidden in-place so that
+// the QtMultimedia camera feed is fully released when the car is not in reverse.
+
 QtObject {
 
     // ── Upper screen: 8" navigation display ──────────────────────────────────
@@ -28,6 +32,22 @@ QtObject {
             // Full-screen nav view
             NavigationView {
                 anchors.fill: parent
+            }
+
+            // ── Rear camera view — takes over upper screen in reverse ──────
+            // Loaded/unloaded on demand so the camera device is fully released
+            // when not in reverse. z:80 — above map/cruise/turn overlays,
+            // below welcome (z:50 is irrelevant here since camera shows first)
+            // and below incoming call overlay (z:100).
+            Loader {
+                id: rearCameraLoader
+                anchors.fill: parent
+                z: 80
+                active: StatusBridge.reverseActive
+                source: active ? "screens/RearCameraView.qml" : ""
+
+                opacity: active ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.InOutSine } }
             }
 
             // ── Welcome overlay (profile greeting on startup) ───────────────

@@ -404,37 +404,6 @@ Item {
         console.log("[NavView] Home — returning to idle map")
     }
 
-    // ── Reverse overlay ─────────────────────────────────────────────────────
-    Rectangle {
-        anchors.fill: parent
-        visible: StatusBridge.reverseActive
-        color: Qt.rgba(0.0392, 0.5176, 1, 0.18)
-        z: 20
-
-        Column {
-            anchors.centerIn: parent
-            spacing: 12
-
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: "R"
-                color: "#0A84FF"
-                font { pixelSize: 96; weight: Font.Black }
-                opacity: 0.9
-            }
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: "REVERSE"
-                color: "#0A84FF"
-                font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold; capitalization: Font.AllUppercase; letterSpacing: 5 }
-            }
-        }
-
-        Rectangle {
-            anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
-            height: 4
-            color: "#0A84FF"
-            opacity: 0.7
-        }
-    }
+    // Reverse camera handled by RearCameraView loaded from Main.qml (z:80).
+    // No overlay needed here — the camera Loader covers the full upper screen.
 }

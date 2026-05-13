@@ -699,9 +699,12 @@
   .tab-item.active { color: #0A84FF; }
   .tab-item.active::before { opacity: 1; }
   .tab-item:hover:not(.active) { color: #CCCCCC; }
+  /* Volume button uses amber accent when open */
+  .tab-item.vol-btn.active { color: #FF9F0A; }
+  .tab-item.vol-btn.active::before { background: #FF9F0A; opacity: 1; }
 
   .tab-icon { font-size: 20px; line-height: 1; }
-  .tab-label { font-size: 11px; font-weight: 500; letter-spacing: 0.04em; margin-top: 2px; }
+  .tab-label { font-size: 10px; font-weight: 500; letter-spacing: 0.04em; margin-top: 2px; }
 
   /* ── SHARED CARD STYLES ── */
   .card {
@@ -1914,6 +1917,18 @@
         </div>
       </div>
 
+      <!-- Cruise control bubble: left side, below turn card (mirrors speed badge right) -->
+      <div id="cruise-bubble" style="
+        position:absolute; top:144px; left:14px;
+        width:80px; height:68px;
+        background:rgba(28,28,30,0.92); backdrop-filter:blur(12px);
+        border-radius:16px; border:1px solid #0A84FF;
+        display:none; flex-direction:column; align-items:center; justify-content:center;
+        gap:2px; z-index:10;">
+        <div id="cruise-spd" style="font-size:26px;font-weight:700;color:#0A84FF;line-height:1;">55</div>
+        <div style="font-size:9px;color:#8E8E93;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;">Cruise</div>
+      </div>
+
       <!-- Speed badge: always visible, shows current speed and limit -->
       <!-- SPEED BADGE -->
       <div class="speed-badge" id="speed-badge-container-upper">
@@ -1944,10 +1959,45 @@
         </div>
       </div>
 
-      <!-- REVERSE OVERLAY -->
-      <div class="reverse-overlay" id="reverse-overlay-upper">
-        <div class="reverse-r">R</div>
-        <div class="reverse-label">REVERSE</div>
+      <!-- REAR CAMERA VIEW — replaces map on upper screen in reverse -->
+      <div class="reverse-overlay" id="reverse-overlay-upper" style="background:#050505;flex-direction:column;gap:0;">
+        <!-- Camera placeholder grid -->
+        <div style="position:absolute;top:0;left:0;right:0;bottom:0;
+          background-image:linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),
+            linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px);
+          background-size:80px 80px;"></div>
+        <!-- REVERSE badge -->
+        <div style="position:absolute;top:12px;left:14px;display:flex;align-items:center;gap:8px;z-index:5;">
+          <div style="width:44px;height:44px;border-radius:10px;background:rgba(10,132,255,0.15);
+            border:1.5px solid #0A84FF;display:flex;align-items:center;justify-content:center;
+            font-size:22px;font-weight:900;color:#0A84FF;">R</div>
+          <span style="font-size:11px;font-weight:600;letter-spacing:0.15em;color:#0A84FF;text-transform:uppercase;">Reverse</span>
+        </div>
+        <!-- Parking guidelines SVG overlay -->
+        <svg viewBox="0 0 800 480" width="800" height="480" style="position:absolute;top:0;left:0;pointer-events:none;">
+          <!-- Far zone fill (green) -->
+          <polygon points="180,200 620,200 700,400 100,400" fill="rgba(48,209,88,0.08)" stroke="none"/>
+          <!-- Mid zone fill (yellow) -->
+          <polygon points="240,290 560,290 620,400 180,400" fill="rgba(255,159,10,0.10)" stroke="none"/>
+          <!-- Close zone fill (red) -->
+          <polygon points="290,360 510,360 540,400 260,400" fill="rgba(255,69,58,0.14)" stroke="none"/>
+          <!-- Zone boundary lines -->
+          <line x1="180" y1="200" x2="620" y2="200" stroke="#30D158" stroke-width="1.5" stroke-dasharray="12,6" opacity="0.7"/>
+          <line x1="240" y1="290" x2="560" y2="290" stroke="#FF9F0A" stroke-width="1.5" stroke-dasharray="12,6" opacity="0.7"/>
+          <line x1="290" y1="360" x2="510" y2="360" stroke="#FF453A" stroke-width="1.5" stroke-dasharray="12,6" opacity="0.7"/>
+          <!-- Side rails -->
+          <line x1="180" y1="200" x2="100" y2="400" stroke="#30D158" stroke-width="1.5" opacity="0.5"/>
+          <line x1="620" y1="200" x2="700" y2="400" stroke="#30D158" stroke-width="1.5" opacity="0.5"/>
+          <!-- Centre guide -->
+          <line x1="400" y1="190" x2="400" y2="410" stroke="rgba(255,255,255,0.2)" stroke-width="1" stroke-dasharray="8,8"/>
+        </svg>
+        <!-- Distance markers -->
+        <div style="position:absolute;right:16px;top:198px;font-size:10px;color:#30D158;font-weight:600;letter-spacing:0.05em;">6 ft</div>
+        <div style="position:absolute;right:16px;top:288px;font-size:10px;color:#FF9F0A;font-weight:600;letter-spacing:0.05em;">3 ft</div>
+        <div style="position:absolute;right:16px;top:358px;font-size:10px;color:#FF453A;font-weight:600;letter-spacing:0.05em;">1 ft</div>
+        <!-- Camera placeholder label -->
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+          font-size:64px;font-weight:900;color:#1C1C1E;user-select:none;">CAM</div>
       </div>
 
       <!-- INCOMING CALL OVERLAY (UPPER) -->
@@ -2952,11 +3002,11 @@
         </div>
       </div><!-- /settings-overlay -->
 
-      <!-- TAB BAR -->
+      <!-- TAB BAR — 7 content tabs + 1 volume quick-action = 8 × 100px -->
       <div class="tab-bar">
         <button class="tab-item active" data-tab="0" onclick="app.switchTab(0)">
-          <span class="tab-icon">⬆</span>
-          <span class="tab-label">Nav</span>
+          <span class="tab-icon">⌂</span>
+          <span class="tab-label">Home</span>
         </button>
         <button class="tab-item" data-tab="1" onclick="app.switchTab(1)">
           <span class="tab-icon">♪</span>
@@ -2974,6 +3024,35 @@
           <span class="tab-icon">◈</span>
           <span class="tab-label">Vehicle</span>
         </button>
+        <button class="tab-item" data-tab="5" onclick="app.switchTab(5)">
+          <span class="tab-icon">ℹ</span>
+          <span class="tab-label">Info</span>
+        </button>
+        <button class="tab-item" data-tab="6" onclick="app.switchTab(6)">
+          <span class="tab-icon">⚙</span>
+          <span class="tab-label">Settings</span>
+        </button>
+        <button class="tab-item vol-btn" id="vol-tab-btn" onclick="app.toggleVolume()">
+          <span class="tab-icon" id="vol-icon">🔊</span>
+          <span class="tab-label">Volume</span>
+        </button>
+      </div>
+
+      <!-- VOLUME OVERLAY — slides up from nav bar -->
+      <div id="volume-overlay" style="
+        position:absolute; bottom:60px; left:0; right:0; height:64px;
+        background:#0D0D0D; border-top:1px solid rgba(255,255,255,0.1);
+        display:flex; align-items:center; padding:0 16px; gap:12px;
+        transform:translateY(20px); opacity:0; pointer-events:none;
+        transition:transform 180ms ease,opacity 180ms ease; z-index:30;">
+        <span style="font-size:20px;cursor:pointer;" onclick="app.toggleMute()">🔊</span>
+        <div style="flex:1;position:relative;height:40px;display:flex;align-items:center;" onclick="app.seekVolume(event,this)">
+          <div style="width:100%;height:8px;background:#2C2C2E;border-radius:4px;overflow:hidden;">
+            <div id="vol-fill" style="width:72%;height:100%;background:#0A84FF;border-radius:4px;transition:width 80ms;"></div>
+          </div>
+          <div id="vol-handle" style="position:absolute;width:24px;height:24px;border-radius:50%;background:#FFF;left:calc(72% - 12px);pointer-events:none;"></div>
+        </div>
+        <span id="vol-pct" style="font-size:13px;font-weight:600;width:40px;color:#FFF;">72%</span>
       </div>
 
       <!-- BRIGHTNESS OVERLAY -->
@@ -3341,7 +3420,17 @@ const app = {
 
   _applyReverse() {
     const rev = this.sim.reverse;
+    // Upper screen: camera view covers the map
     document.getElementById('reverse-overlay-upper').classList.toggle('visible', rev);
+    // Lower screen: switch to/from reverse tab (tab 7 not in nav bar)
+    if (rev) {
+      this._prevTabBeforeReverse = this.ui.activeTab;
+      const tabs = ['tab-nav','tab-audio','tab-phone','tab-climate','tab-vehicle','tab-info','tab-settings'];
+      tabs.forEach(id => { const el=document.getElementById(id); if(el) el.classList.remove('active'); });
+      document.querySelectorAll('.tab-item:not(.vol-btn)').forEach(b => b.classList.remove('active'));
+    } else {
+      this.switchTab(this._prevTabBeforeReverse ?? 0);
+    }
   },
 
   _applyRerouting() {
@@ -3513,14 +3602,42 @@ const app = {
 
   // ─ TABS ─
   switchTab(idx) {
-    const tabs = ['tab-nav','tab-audio','tab-phone','tab-climate','tab-vehicle'];
+    // 7 content panels: home=nav, audio, phone, climate, vehicle, info, settings
+    const tabs = ['tab-nav','tab-audio','tab-phone','tab-climate','tab-vehicle','tab-info','tab-settings'];
     tabs.forEach((id, i) => {
-      document.getElementById(id).classList.toggle('active', i === idx);
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('active', i === idx);
     });
-    document.querySelectorAll('.tab-item').forEach((btn, i) => {
+    // Tab buttons (first 7 only — volume button is index 7, handled separately)
+    document.querySelectorAll('.tab-item:not(.vol-btn)').forEach((btn, i) => {
       btn.classList.toggle('active', i === idx);
     });
     this.ui.activeTab = idx;
+    // Close volume overlay when switching content tabs
+    this._setVolumeOpen(false);
+  },
+
+  toggleVolume() {
+    this._setVolumeOpen(!this._volumeOpen);
+  },
+
+  _volumeOpen: false,
+  _setVolumeOpen(open) {
+    this._volumeOpen = open;
+    const ov = document.getElementById('volume-overlay');
+    const btn = document.getElementById('vol-tab-btn');
+    if (ov) { ov.style.opacity = open ? '1' : '0'; ov.style.transform = open ? 'translateY(0)' : 'translateY(20px)'; ov.style.pointerEvents = open ? 'auto' : 'none'; }
+    if (btn) btn.classList.toggle('active', open);
+    if (open) { clearTimeout(this._volTimer); this._volTimer = setTimeout(() => this._setVolumeOpen(false), 4000); }
+  },
+
+  seekVolume(e, el) {
+    const rect = el.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(100, Math.round(((e.clientX - rect.left) / rect.width) * 100)));
+    document.getElementById('vol-fill').style.width = pct + '%';
+    document.getElementById('vol-handle').style.left = `calc(${pct}% - 12px)`;
+    document.getElementById('vol-pct').textContent = pct + '%';
+    clearTimeout(this._volTimer); this._volTimer = setTimeout(() => this._setVolumeOpen(false), 4000);
   },
 
   // ─ AUDIO ─
@@ -3948,6 +4065,11 @@ const app = {
       el.classList.toggle('active-amber', this.ui.vehicleToggles[key]);
     } else {
       el.classList.toggle('active', this.ui.vehicleToggles[key]);
+    }
+    // Show/hide cruise bubble on upper screen
+    if (key === 'cruise') {
+      const bubble = document.getElementById('cruise-bubble');
+      if (bubble) bubble.style.display = this.ui.vehicleToggles.cruise ? 'flex' : 'none';
     }
   },
 
