@@ -210,11 +210,182 @@ Item {
         font { pixelSize: 28; weight: Font.Light; letterSpacing: 6 }
     }
 
-    // ── Top-right speed badge ───────────────────────────────────────────────
-    SpeedWidget {
+    // ── Top-right speed badge + over-limit alert pill ───────────────────────
+    // Threshold defaults to 5 mph over posted limit (configurable via
+    // SettingsService.speedAlertThreshold). The badge itself already turns
+    // red at any value over the limit (SpeedWidget logic) — the pill is the
+    // additional escalation when the driver is clearly speeding.
+    Row {
+        id: speedRow
         anchors { top: parent.top; right: parent.right; topMargin: 40; rightMargin: 16 }
-        speed: StatusBridge.speed
-        limit: StatusBridge.speedLimit > 0 ? StatusBridge.speedLimit : 45
+        spacing: 10
+
+        // Warning pill — animates in from the right of the speed widget.
+        // Sits left of SpeedWidget so the speed numerals always anchor to the
+        // top-right corner regardless of pill visibility.
+        Rectangle {
+            id: speedAlertPill
+
+            property int threshold: (typeof SettingsService !== "undefined")
+                                        ? SettingsService.speedAlertThreshold
+                                        : 5
+            property bool over: StatusBridge.speedLimit > 0
+                                && StatusBridge.speed > (StatusBridge.speedLimit + threshold)
+
+            width: over ? alertText.implicitWidth + 24 : 0
+            height: 36
+            radius: 18
+            color: "#FF3B30"
+            border { color: Qt.rgba(1, 1, 1, 0.20); width: 1 }
+            visible: width > 0
+            clip: true
+
+            Behavior on width { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
+
+            // Subtle pulse while the alert is active
+            SequentialAnimation on opacity {
+                running: speedAlertPill.over
+                loops: Animation.Infinite
+                NumberAnimation { to: 0.65; duration: 600; easing.type: Easing.InOutSine }
+                NumberAnimation { to: 1.00; duration: 600; easing.type: Easing.InOutSine }
+            }
+
+            Row {
+                anchors.centerIn: parent
+                spacing: 6
+                Text {
+                    text: "⚠"
+                    color: "#FFFFFF"
+                    font { pixelSize: 16 }
+                }
+                Text {
+                    id: alertText
+                    text: "SPEED"
+                    color: "#FFFFFF"
+                    font { family: "Roboto"; pixelSize: 12; weight: Font.Bold; letterSpacing: 2 }
+                }
+            }
+        }
+
+        SpeedWidget {
+            id: speedBadge
+            speed: StatusBridge.speed
+            limit: StatusBridge.speedLimit > 0 ? StatusBridge.speedLimit : 45
+        }
+    }
+
+    // ── Lane guidance — appears above bottom strip when within 0.5mi of turn
+    //    Lane data comes from NavigationService.laneInfo (currently stubbed by
+    //    maneuver direction; Phase 3 wires Valhalla maneuver["lanes"] JSON).
+    LaneGuidance {
+        id: laneGuidance
+        anchors {
+            bottom: bottomStrip.top; bottomMargin: 10
+            horizontalCenter: parent.horizontalCenter
+        }
+        // Width is driven by the inner pill; give it a generous canvas so the
+        // pill auto-sizes against the visible row of lane arrows.
+        width: 600
+        lanes: NavigationService.laneInfo
+        show: StatusBridge.navActive && StatusBridge.approachingTurn
+    }
+
+    // ── Junction view — slides in from right edge for complex interchanges
+    //    Heuristic: maneuver text mentions ramp / fork / exit / highway.
+    //    Visible during the approach window; auto-clears after the turn.
+    JunctionView {
+        id: junctionView
+        anchors { top: parent.top; topMargin: 56 }
+        // Active when approaching, route is live, and the maneuver looks
+        // interchange-y. The maneuver text is lower-cased once and reused.
+        property string mLower: StatusBridge.nextManeuver.toLowerCase()
+        property bool   complex: mLower.indexOf("ramp") >= 0
+                              || mLower.indexOf("fork") >= 0
+                              || mLower.indexOf("exit") >= 0
+                              || mLower.indexOf("highway") >= 0
+        show: StatusBridge.navActive && StatusBridge.approachingTurn && complex
+        preferredArm: mLower.indexOf("left") >= 0 ? "left" : "right"
+        label: mLower.indexOf("exit") >= 0 ? "EXIT"
+             : mLower.indexOf("ramp") >= 0 ? "RAMP"
+             : mLower.indexOf("fork") >= 0 ? "FORK"
+             :                                "JUNCTION"
+    }
+
+    // ── Corner AVM badge — manual activation tap target ─────────────────────
+    // The production system arms AVM when gear=R AND the AVM steering-wheel
+    // button is held. Until that CAN wiring lands, this badge lets the
+    // mockup driver toggle the overlay so the scaffold can be reviewed.
+    Rectangle {
+        id: avmBadge
+        anchors { bottom: bottomStrip.top; left: parent.left; bottomMargin: 10; leftMargin: 16 }
+        width: 56; height: 36; radius: 12
+        color: StatusBridge.avmActive ? "#0A84FF"
+                                       : Qt.rgba(0.0667, 0.0667, 0.0706, 0.88)
+        border { color: Qt.rgba(1, 1, 1, 0.18); width: 1 }
+        visible: !StatusBridge.avmActive   // hide once active — overlay has its own close
+        opacity: avmBadgeMouse.pressed ? 0.7 : 1.0
+        Behavior on color { ColorAnimation { duration: 180 } }
+
+        Text {
+            anchors.centerIn: parent
+            text: "AVM"
+            color: "#FFFFFF"
+            font { family: "Roboto"; pixelSize: 12; weight: Font.Bold; letterSpacing: 2 }
+        }
+
+        MouseArea {
+            id: avmBadgeMouse
+            anchors.fill: parent
+            onClicked: StatusBridge.setAvmActive(true)
+        }
+    }
+
+    // ── Reverse-gear sonar strip ────────────────────────────────────────────
+    // Thin overlay at the bottom of the nav map when the car is in reverse
+    // and the full AVM overlay is NOT taking over. Gives the driver an
+    // at-a-glance parking-sensor read without occluding the map.
+    Rectangle {
+        id: reverseSonar
+        anchors {
+            bottom: bottomStrip.top; left: parent.left; right: parent.right
+            bottomMargin: 0
+        }
+        height: 14
+        color: Qt.rgba(0, 0, 0, 0.65)
+        visible: StatusBridge.reverseActive && !StatusBridge.avmActive
+        opacity: visible ? 1.0 : 0.0
+        Behavior on opacity { NumberAnimation { duration: 200 } }
+
+        // Mock distance — animated so the colour ramp is visible in the demo.
+        // Real sensor data wires from VehicleService (parking-sensor CAN PID).
+        property real mockDist: 0.30
+        Timer {
+            running: reverseSonar.visible
+            interval: 700
+            repeat: true
+            onTriggered: {
+                const jitter = (Math.random() - 0.5) * 0.18
+                reverseSonar.mockDist = Math.max(0.05, Math.min(0.95,
+                                          reverseSonar.mockDist + jitter))
+            }
+        }
+
+        Rectangle {
+            anchors { left: parent.left; verticalCenter: parent.verticalCenter; leftMargin: 12 }
+            width: parent.width - 24
+            height: 6; radius: 3
+            color: Qt.rgba(1, 1, 1, 0.10)
+
+            Rectangle {
+                anchors { left: parent.left; verticalCenter: parent.verticalCenter }
+                width: parent.width * reverseSonar.mockDist
+                height: parent.height; radius: parent.radius
+                color: reverseSonar.mockDist > 0.70 ? "#FF3B30"
+                     : reverseSonar.mockDist > 0.40 ? "#FFCC00"
+                     :                                "#34C759"
+                Behavior on width { NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
+            }
+        }
     }
 
     // ── Bottom info strip ───────────────────────────────────────────────────
@@ -356,6 +527,21 @@ Item {
                 font { family: "Roboto"; pixelSize: 15; weight: Font.SemiBold }
             }
         }
+    }
+
+    // ── AVM overlay — full-screen 4-camera composite ───────────────────────
+    //    z:90 sits above the map, turn card, lane row, and junction view but
+    //    below the incoming-call overlay (z:100, defined in Main.qml). Per
+    //    the system contract this and RearCameraView (z:80, also in Main.qml)
+    //    are mutually exclusive — the rear-cam Loader is keyed off
+    //    StatusBridge.reverseActive while the AVM is keyed off
+    //    StatusBridge.avmActive, so the lower-screen Vehicle tab and the
+    //    corner badge above are the only paths that arm this scaffold.
+    AvmOverlay {
+        id: avmOverlay
+        anchors.fill: parent
+        z: 90
+        visible: StatusBridge.avmActive
     }
 
     // ── Commander joystick + button wiring ─────────────────────────────────
