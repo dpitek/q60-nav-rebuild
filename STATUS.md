@@ -19,17 +19,22 @@ Last updated: 2026-05-13
 - [x] `restore-logan1.sh` — 10-second recovery from Mac via USB adapter
 - [x] Watchdog: `watchdog-pet.sh` pets iTCO every 20s, init.d as respawn
 
-### C++ Services (11 total — all .h + .cpp complete)
+### C++ Services (13 total — all .h + .cpp complete)
+2026-05-13 P1/P2 sprint added: TripLoggerService + ParkingService.
+
+
 - [x] `VehicleService` (66 Q_PROPERTYs) — SocketCAN (can0/can1/can2); CAN parsing for ignition (0x292), doors (0x358), wipers (0x35D), cruise+coolant (0x551), BCM/battery (0x625), TPMS (0x385), oil life (0x54C), fuel economy (0x554), drive mode (0x2DC), ATTESA torque split (0x1CA), key slot (0x35B); HVAC write via r51-ecu path (0x540/0x541); UDS door lock/unlock via 0x745; ADAS aid frame (0x47D). ButtonLogger on all 3 buses
-- [x] `NavigationService` (10 Q_PROPERTYs) — GPSD TCP, Valhalla HTTP, route parsing, rerouting
-- [x] `AudioService` (28 Q_PROPERTYs) — BlueZ D-Bus AVRCP (guarded with `HAVE_QT_DBUS`), DENSO proxy IPC, ALSA volume
+- [x] `NavigationService` (11 Q_PROPERTYs) — GPSD TCP, Valhalla HTTP, route parsing, rerouting, upcoming lane-info stub for lane guidance widget
+- [x] `AudioService` (30 Q_PROPERTYs) — BlueZ D-Bus AVRCP (guarded with `HAVE_QT_DBUS`), DENSO proxy IPC, ALSA volume; SSV speed-gain consumer, RDS PS/RT decode (FM dual-line), per-source 6-preset memory persisted via SettingsService
 - [x] `SearchService` — offline geocoding on port 4000 (Photon/Pelias-compatible, graceful if absent)
 - [x] `ProfileService` (11 Q_PROPERTYs) — driver profile persistence; key-fob slot binding
-- [x] `SettingsService` (42 Q_PROPERTYs) — JSON persistence at `/opt/nav/config/settings.json`, atomic write, 5s debounce, profile sync
+- [x] `SettingsService` (53 Q_PROPERTYs) — JSON persistence, atomic write, 5s debounce, profile sync; added: per-screen brightness, day/night-auto, clock 12h/24h + timezone, units mph/kmh/°F/°C/MPG, BT device list (UI shell), language, software/map/build version, uptime, speed-alert threshold, audio presets blob, drive-mode personal config blob, factory reset
 - [x] `NetworkService` (5 Q_PROPERTYs) — Wi-Fi vs LTE TCU auto-detect, mode flag persistence
 - [x] `WeatherService` (10 Q_PROPERTYs) — open-API current + forecast, CAN ambient temp fallback
 - [x] `FuelService` (7 Q_PROPERTYs) — fuel level tracker, low-fuel banner trigger
-- [x] `StatusBridge` (20 Q_PROPERTYs) — full signal wiring, clock, cross-screen coordination, call routing
+- [x] `TripLoggerService` (15 Q_PROPERTYs) — per-ignition-cycle GPX writer; trip A/B meters; history index in `/data/q60nav/trips/`
+- [x] `ParkingService` (4 Q_PROPERTYs) — last-parked GPS coord + timestamp; `navigateToCar()` invokable
+- [x] `StatusBridge` (21 Q_PROPERTYs) — full signal wiring, clock, cross-screen coordination, call routing, AVM activation
 - [x] `MapLibreItem` (8 Q_PROPERTYs) — QQuickItem Phase 3 stub; `RendererFrontend` / `OffscreenBackend` API correct; EGL pbuffer wiring TODO
 
 ### QML UI (15 screens + 7 components — all implemented)

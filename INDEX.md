@@ -12,17 +12,19 @@ Quick map of what's where. For build status see [STATUS.md](STATUS.md). For feat
 | VehicleService | [VehicleService.h](app/src/services/vehicle/VehicleService.h) | [VehicleService.cpp](app/src/services/vehicle/VehicleService.cpp) | 66 | SocketCAN on can0/1/2; all read paths, HVAC write, UDS, ADAS frame |
 | ButtonLogger | [ButtonLogger.h](app/src/services/vehicle/ButtonLogger.h) | [ButtonLogger.cpp](app/src/services/vehicle/ButtonLogger.cpp) | — | CAN frame audit logger |
 | NavigationService | [NavigationService.h](app/src/services/navigation/NavigationService.h) | [NavigationService.cpp](app/src/services/navigation/NavigationService.cpp) | 10 | GPSD + Valhalla HTTP client |
-| AudioService | [AudioService.h](app/src/services/audio/AudioService.h) | [AudioService.cpp](app/src/services/audio/AudioService.cpp) | 28 | BlueZ AVRCP, DENSO IPC, ALSA |
+| AudioService | [AudioService.h](app/src/services/audio/AudioService.h) | [AudioService.cpp](app/src/services/audio/AudioService.cpp) | 30 | BlueZ AVRCP, DENSO IPC, ALSA, SSV, RDS, per-source presets |
 | SearchService | [SearchService.h](app/src/services/search/SearchService.h) | [SearchService.cpp](app/src/services/search/SearchService.cpp) | 0 | Offline geocoder on :4000 |
 | ProfileService | [ProfileService.h](app/src/services/profile/ProfileService.h) | [ProfileService.cpp](app/src/services/profile/ProfileService.cpp) | 11 | Driver profile + key-fob slot |
-| SettingsService | [SettingsService.h](app/src/services/settings/SettingsService.h) | [SettingsService.cpp](app/src/services/settings/SettingsService.cpp) | 42 | JSON persistence, atomic write, 5s debounce |
+| SettingsService | [SettingsService.h](app/src/services/settings/SettingsService.h) | [SettingsService.cpp](app/src/services/settings/SettingsService.cpp) | 53 | JSON persistence, atomic write, 5s debounce, factory-parity sub-pages |
 | NetworkService | [NetworkService.h](app/src/services/network/NetworkService.h) | [NetworkService.cpp](app/src/services/network/NetworkService.cpp) | 5 | Wi-Fi vs LTE TCU detect |
 | WeatherService | [WeatherService.h](app/src/services/weather/WeatherService.h) | [WeatherService.cpp](app/src/services/weather/WeatherService.cpp) | 10 | Open-API + CAN ambient fallback |
 | FuelService | [FuelService.h](app/src/services/fuel/FuelService.h) | [FuelService.cpp](app/src/services/fuel/FuelService.cpp) | 7 | Fuel level + low-fuel trigger |
-| StatusBridge | [StatusBridge.h](app/src/ui/bridge/StatusBridge.h) | [StatusBridge.cpp](app/src/ui/bridge/StatusBridge.cpp) | 20 | Cross-screen coordination |
+| TripLoggerService | [TripLoggerService.h](app/src/services/trip/TripLoggerService.h) | [TripLoggerService.cpp](app/src/services/trip/TripLoggerService.cpp) | 15 | GPX writer per ignition cycle + trip A/B meters |
+| ParkingService | [ParkingService.h](app/src/services/parking/ParkingService.h) | [ParkingService.cpp](app/src/services/parking/ParkingService.cpp) | 4 | Last-parked GPS coord; navigate-to-car |
+| StatusBridge | [StatusBridge.h](app/src/ui/bridge/StatusBridge.h) | [StatusBridge.cpp](app/src/ui/bridge/StatusBridge.cpp) | 21 | Cross-screen coordination + AVM activation |
 | MapLibreItem | [MapLibreItem.h](app/src/ui/map/MapLibreItem.h) | [MapLibreItem.cpp](app/src/ui/map/MapLibreItem.cpp) | 8 | Phase 3 stub; EGL TODO |
 
-**Total: 5,526 LOC across services + UI bridge.**
+**Total: 241 Q_PROPERTYs across 13 services; ~19,400 LOC across app/src.**
 
 ---
 
@@ -54,9 +56,9 @@ Quick map of what's where. For build status see [STATUS.md](STATUS.md). For feat
 | [InfoView.qml](app/src/qml/screens/InfoView.qml) | FW / CAN / GPS / uptime |
 
 ### Components (`app/src/qml/components/`)
-TurnArrow · SpeedWidget · FanControl · TempZone · TabBar · StatusBar · WelcomeOverlay · CameraFeed (isolated QtMultimedia)
+TurnArrow · SpeedWidget · FanControl · TempZone · TabBar · StatusBar · WelcomeOverlay · CameraFeed (isolated QtMultimedia) · **ContactsModel** (shared contact list, used by PhoneView + IncomingCallView) · **LaneGuidance** (upper-screen lane arrows) · **JunctionView** (interchange overlay) · **AvmOverlay** (4-camera scaffold with sonar arcs)
 
-**Total: 9,284 LOC across 22 QML files.**
+**Total: 26 QML files (24 + Main.qml registered in CMake; RearCameraView + CameraFeed loaded dynamically via Loader to fail gracefully if QtMultimedia absent).**
 
 ---
 
