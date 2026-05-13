@@ -2,8 +2,13 @@
 **Vehicle:** 2017 Infiniti Q60 Sport 3.0t AWD — Sensory + ProAssist packages  
 **Factory System:** Clarion QY5092 DCU, Intel Atom i686, Infiniti InTouch (dual-screen)  
 **Rebuild:** qt6nav / q60nav — Qt6/QML, same hardware  
-**Audit Date:** 2026-05-12  
-**Status:** Draft v1 — drives next development phase
+**Audit Date:** 2026-05-12 (revised 2026-05-13 — reflects already-wired CAN paths)
+**Status:** Draft v2 — drives next development phase
+
+> **2026-05-13 revision note:** Several P1 items marked ❌ in v1 already have CAN
+> parsing wired in `VehicleService.h` even if no QML surface exists yet. These are
+> re-graded as ⚠️ (data path ready, UI missing) so background agents don't redo
+> service work that's already done.
 
 ---
 
@@ -353,24 +358,24 @@ Legend: ✅ = done | ⚠️ = partial | ❌ = missing | N/A = not applicable to 
 | Parking brake indicator | ✅ | ✅ | — | Done |
 | Rear defrost toggle | ✅ | ✅ | — | Done |
 | Cruise control active/speed | ✅ | ✅ Partial | P1 | Add following distance indicator |
-| TPMS — individual tire pressures | ✅ | ❌ | P1 | 4-corner PSI display from CAN |
-| Oil life percentage | ✅ | ❌ | P1 | Maintenance reminder; CAN PID |
+| TPMS — individual tire pressures | ✅ | ⚠️ CAN wired (0x385); no QML | P1 | Need 4-corner PSI display in VehicleStatusView |
+| Oil life percentage | ✅ | ⚠️ CAN wired (0x54C); no QML | P1 | Need maintenance reminder UI |
 | Service interval countdown | ✅ | ❌ | P2 | Miles/time to next service |
 | Trip computer A/B | ✅ | ❌ | P1 | Trip distance, avg MPG, avg speed, time |
 | Instantaneous fuel economy | ✅ | ❌ | P2 | Live MPG readout |
-| Average fuel economy | ✅ | ❌ | P1 | Trip-average MPG |
+| Average fuel economy | ✅ | ⚠️ CAN wired (0x554); no QML | P1 | Need trip-average MPG widget |
 | Eco driving score | ✅ | ❌ | P3 | Driving efficiency rating |
-| ATTESA AWD torque split display | ✅ AWD models | ❌ | P1 | Front/rear torque %; CAN bus PID |
+| ATTESA AWD torque split display | ✅ AWD models | ⚠️ CAN wired (0x1CA); no QML | P1 | Need front/rear torque % graphic |
 | VDC on/off toggle | ✅ | ❌ | P1 | Vehicle Dynamic Control defeat switch |
-| Driving mode display (current mode) | ✅ | ❌ | P1 | Show active: Sport/Eco/Snow/etc. |
-| Driving mode selector screen | ✅ | ❌ | P1 | Full mode picker with Personal config |
-| PFCW sensitivity setting | ✅ | ❌ | P1 | Far/Normal/Near + on/off |
-| FEB on/off | ✅ | ❌ | P1 | Forward Emergency Braking toggle |
-| BSW on/off | ✅ | ❌ | P1 | Blind Spot Warning toggle |
-| BSI on/off | ✅ | ❌ | P2 | Blind Spot Intervention (separate) |
-| LDW on/off | ✅ | ❌ | P1 | Lane Departure Warning toggle |
-| LDP on/off | ✅ | ❌ | P1 | Lane Departure Prevention toggle |
-| BCI on/off | ✅ | ❌ | P1 | Back-Up Collision Intervention toggle |
+| Driving mode display (current mode) | ✅ | ⚠️ CAN wired (0x266 broadcast); no UI | P1 | Need active-mode badge |
+| Driving mode selector screen | ✅ | ⚠️ CAN write wired (0x2DC); no full picker | P1 | Need mode picker + Personal config |
+| PFCW sensitivity setting | ✅ | ⚠️ ADAS frame (0x47D) composable; no QML | P1 | Far/Normal/Near + on/off |
+| FEB on/off | ✅ | ⚠️ ADAS frame (0x47D); no QML | P1 | Forward Emergency Braking toggle |
+| BSW on/off | ✅ | ⚠️ ADAS frame (0x47D); no QML | P1 | Blind Spot Warning toggle |
+| BSI on/off | ✅ | ⚠️ ADAS frame (0x47D); no QML | P2 | Blind Spot Intervention (separate) |
+| LDW on/off | ✅ | ⚠️ ADAS frame (0x47D); no QML | P1 | Lane Departure Warning toggle |
+| LDP on/off | ✅ | ⚠️ ADAS frame (0x47D); no QML | P1 | Lane Departure Prevention toggle |
+| BCI on/off | ✅ | ⚠️ ADAS frame (0x47D); no QML | P1 | Back-Up Collision Intervention toggle |
 | Around View Monitor (AVM) | ✅ | ❌ | P1 | 4-camera top-down view; upper screen |
 | AVM view switching (bird/front/side) | ✅ | ❌ | P2 | Camera angle selector overlay |
 | Moving Object Detection alerts | ✅ | ❌ | P2 | Pedestrian/object alert in AVM |
