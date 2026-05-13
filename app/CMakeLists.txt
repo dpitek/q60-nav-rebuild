@@ -132,6 +132,7 @@ qt6_add_qml_module(q60nav
         src/qml/screens/VoiceCommandView.qml
         src/qml/components/WelcomeOverlay.qml
         src/qml/components/StatusBar.qml
+        src/qml/components/ContactsModel.qml
 )
 
 target_include_directories(q60nav PRIVATE

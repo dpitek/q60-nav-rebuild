@@ -1,16 +1,39 @@
 // IncomingCallView.qml — Full-screen incoming call modal overlay
 // Shown over upper or lower screen when an incoming call arrives
 import QtQuick 6.6
+import "../components"
 
 Item {
     id: root
     anchors.fill: parent
 
-    property string callerName:   ""
+    // Set callerNumber when the overlay is shown. If callerName is also
+    // provided by the caller it wins; otherwise the name is resolved from the
+    // shared ContactsModel (mock data today; PBAP-backed later).
     property string callerNumber: ""
+    property string callerName:   ""
 
     signal answered()
     signal declined()
+
+    // ── Caller ID lookup ─────────────────────────────────────────────────────
+    // Local ContactsModel instance — the model itself is a static mock until
+    // PBAP lands, so duplicating it across screens is cheap and keeps this
+    // overlay self-contained when invoked from anywhere in the QML tree.
+    ContactsModel { id: contacts }
+
+    // Display name: explicit callerName overrides, else look up by number.
+    // lookupCallerName() returns the raw number when no match is found, so we
+    // detect that and treat it as "unresolved" for the secondary number row.
+    readonly property string _lookupResult: callerNumber.length > 0
+                                            ? contacts.lookupCallerName(callerNumber)
+                                            : ""
+    readonly property bool   _hasContactMatch: callerNumber.length > 0
+                                               && _lookupResult !== callerNumber
+                                               && _lookupResult.length > 0
+    readonly property string displayName: callerName.length > 0
+                                          ? callerName
+                                          : (_hasContactMatch ? _lookupResult : callerNumber)
 
     // ── Dark scrim ──────────────────────────────────────────────────────────
     Rectangle {
@@ -37,8 +60,8 @@ Item {
 
             Text {
                 anchors.centerIn: parent
-                text: root.callerName.length > 0
-                      ? root.callerName.charAt(0).toUpperCase()
+                text: root.displayName.length > 0 && /[A-Za-z]/.test(root.displayName.charAt(0))
+                      ? root.displayName.charAt(0).toUpperCase()
                       : "?"
                 color: "#0A84FF"
                 font { family: "Roboto"; pixelSize: 32; weight: Font.Bold }
@@ -59,10 +82,10 @@ Item {
             }
         }
 
-        // Caller name
+        // Caller name (resolved from contacts when possible, else number)
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: root.callerName.length > 0 ? root.callerName : root.callerNumber
+            text: root.displayName.length > 0 ? root.displayName : "Unknown"
             color: "#FFFFFF"
             font { family: "Roboto"; pixelSize: 28; weight: Font.Bold }
             width: 320
@@ -70,13 +93,16 @@ Item {
             horizontalAlignment: Text.AlignHCenter
         }
 
-        // Caller number (only if we have a name)
+        // Caller number (shown beneath the name when we resolved to a contact
+        // or when an explicit callerName was supplied alongside the number)
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: root.callerNumber
             color: "#8E8E93"
             font { family: "Roboto"; pixelSize: 17 }
-            visible: root.callerName.length > 0 && root.callerNumber.length > 0
+            visible: root.callerNumber.length > 0
+                     && root.displayName !== root.callerNumber
+                     && root.displayName.length > 0
         }
     }
 
