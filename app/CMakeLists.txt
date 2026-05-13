@@ -93,6 +93,7 @@ set(SOURCES
     src/services/network/NetworkService.cpp
     src/services/weather/WeatherService.cpp
     src/services/fuel/FuelService.cpp
+    src/services/settings/SettingsService.cpp
     src/ui/bridge/StatusBridge.cpp
     src/ui/map/MapLibreItem.cpp
 )

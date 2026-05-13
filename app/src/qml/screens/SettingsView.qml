@@ -1,5 +1,5 @@
 // SettingsView — Full settings screen for lower 7" display
-// Scrollable, grouped sections; pure QML local state — C++ SettingsService bindings stubbed.
+// Scrollable, grouped sections; all settings backed by C++ SettingsService (JSON persistence).
 import QtQuick 6.6
 import QtQuick.Controls 6.6
 
@@ -9,81 +9,16 @@ Item {
 
     Rectangle { anchors.fill: parent; color: "#000000" }
 
-    // ── Local settings state (bind to C++ SettingsService when available) ─────
+    // ── Settings state — backed by C++ SettingsService (JSON persistence) ───────
+    // Local var alias keeps existing "settings.xyz" read/write syntax intact.
+    // Reads call Q_PROPERTY getters; writes call WRITE setters → 5s debounce → disk.
+    property var settings: SettingsService
+
+    // Bluetooth mock — no hardware persistence needed
     QtObject {
-        id: settings
-
-        // Display
-        property int upperBrightness: 80
-        property int lowerBrightness: 80
-        property int dayNightMode: 0   // 0=Auto 1=Day 2=Night
-
-        // Clock
-        property int timeFormat: 0    // 0=12h 1=24h
-        property bool gpsSync: true
-        property int clockHour: 12
-        property int clockMinute: 0
-
-        // Units
-        property int distanceUnit: 0  // 0=mi 1=km
-        property int tempUnit: 0      // 0=°F 1=°C
-        property int fuelUnit: 0      // 0=MPG 1=L/100km
-
-        // Navigation
-        property bool voiceGuidance: true
-        property int voiceVolume: 70
-        property int routePref: 0     // 0=Fastest 1=Shortest 2=Eco
-        property bool avoidTolls: false
-        property bool avoidHighways: false
-        property bool poiIconsOnMap: true
-
-        // Audio
-        property bool clickSounds: true
-        property int navPromptVolume: 80
-
-        // Bluetooth (mock)
+        id: btMock
         property string connectedDevice: "Doug's iPhone"
         property int connectedBattery: 82
-
-        // Vehicle
-        property bool vdcEnabled: true
-
-        // Lights
-        property int lightShutoff: 2         // index: 0=Off 1=30s 2=45s 3=60s 4=90s 5=2m 6=3m
-        property int headlightSensitivity: 1  // 0=Low 1=Med 2=High
-        property bool drlEnabled: true
-        property bool approachLighting: true
-        property int approachLightDuration: 1  // 0=30s 1=60s 2=90s
-        property bool welcomeLighting: true
-        property int interiorLightTimer: 1    // 0=15s 1=30s 2=45s 3=60s
-
-        // Door Locks
-        property int autoLockSpeed: 1         // 0=Off 1=15mph 2=25mph
-        property bool autoUnlockPark: true
-        property bool autoUnlockKeyRemoval: false
-        property bool fobLockAll: true
-
-        // Mirrors
-        property bool mirrorTiltReverse: true
-        property bool mirrorFoldLock: false
-
-        // Wipers
-        property int rainSensorSensitivity: 3  // 1-5
-        property int wiperDelay: 3             // 1-5
-
-        // Comfort
-        property bool seatMemoryOnUnlock: true
-        property bool powerWindowAutoOpen: true
-        property bool seatbeltReminder: true
-        property int parkAssistChimeVolume: 2   // 0=Off 1=Low 2=Med 3=High
-
-        // Map
-        property int mapOrientation: 0        // 0=Heading 1=North 2=3D
-        property bool speedLimitDisplay: true
-        property int mapDetailLevel: 1        // 0=Low 1=Med 2=High
-
-        // Maintenance
-        property int maintenanceInterval: 1    // 0=3k 1=5k 2=7.5k 3=10k
     }
 
     // Pairing sheet visible flag
@@ -404,12 +339,12 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 2
                         Text {
-                            text: settings.connectedDevice
+                            text: btMock.connectedDevice
                             color: "#FFFFFF"
                             font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
                         }
                         Text {
-                            text: "🔋 " + settings.connectedBattery + "%"
+                            text: "🔋 " + btMock.connectedBattery + "%"
                             color: "#8E8E93"
                             font { family: "Roboto"; pixelSize: 11 }
                         }
@@ -428,7 +363,7 @@ Item {
                     }
                     MouseArea {
                         anchors.fill: parent
-                        onClicked: settings.connectedDevice = ""
+                        onClicked: btMock.connectedDevice = ""
                     }
                 }
             }

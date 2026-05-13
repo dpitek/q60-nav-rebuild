@@ -19,6 +19,7 @@
 #include "services/network/NetworkService.h"
 #include "services/weather/WeatherService.h"
 #include "services/fuel/FuelService.h"
+#include "services/settings/SettingsService.h"
 #include "ui/bridge/StatusBridge.h"
 #include "ui/map/MapLibreItem.h"
 
@@ -57,6 +58,7 @@ int main(int argc, char *argv[])
     NetworkService  networkSvc;   // LTE modem — sysfs + mmcli polling
     WeatherService  weatherSvc;   // OpenWeatherMap current + 5-day forecast
     FuelService     fuelSvc;      // EIA weekly regional gas prices
+    SettingsService settingsSvc;  // System + vehicle preference persistence
 
     // StatusBridge — shared state between both screens
     StatusBridge bridge(&navSvc, &vehicleSvc, &audioSvc, &networkSvc);
@@ -73,6 +75,7 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("NetworkService",    &networkSvc);
     engine.rootContext()->setContextProperty("WeatherService",    &weatherSvc);
     engine.rootContext()->setContextProperty("FuelService",       &fuelSvc);
+    engine.rootContext()->setContextProperty("SettingsService",   &settingsSvc);
     engine.rootContext()->setContextProperty("StatusBridge",      &bridge);
 
     engine.load(QUrl(QStringLiteral("qrc:/Q60Nav/src/qml/Main.qml")));
@@ -137,6 +140,7 @@ int main(int argc, char *argv[])
     networkSvc.start();             // LTE polling — non-blocking sysfs + mmcli
     weatherSvc.start();             // OWM fetch; graceful no-op without API key
     fuelSvc.start();                // EIA fetch; hardcoded fallback if no API key
+    settingsSvc.start(&profileSvc); // JSON persistence + profile-linked overlay
 
     return app.exec();
 }

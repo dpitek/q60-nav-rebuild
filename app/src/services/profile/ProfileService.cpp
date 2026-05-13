@@ -99,7 +99,7 @@ void ProfileService::onKeySlotDetected(int slot)
                 // Found a match
                 if (i != m_activeProfileIndex) {
                     applyProfile(i);
-                    emit profileLoaded(slot);
+                    emit keySlotProfileMatched(slot);
                     emit profileSwitched();
                 }
                 // Show welcome overlay

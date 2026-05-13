@@ -100,7 +100,8 @@ signals:
     void welcomeVisibilityChanged();
 
     // Emitted when a CAN key slot is detected and a matching profile is found
-    void profileLoaded(int keySlot);
+    // NOTE: renamed from profileLoaded to avoid collision with bool profileLoaded Q_PROPERTY
+    void keySlotProfileMatched(int keySlot);
     // Emitted when a CAN key slot is detected but no matching profile exists
     void noProfileFound(int keySlot);
     // Emitted after profile switch completes
