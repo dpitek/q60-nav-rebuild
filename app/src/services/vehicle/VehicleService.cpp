@@ -10,6 +10,7 @@
 #include "VehicleService.h"
 #include <QCoreApplication>
 #include <QDebug>
+#include <QDateTime>
 
 #include <sys/socket.h>
 #include <sys/ioctl.h>
@@ -17,6 +18,7 @@
 #include <unistd.h>
 #include <cstring>
 #include <cerrno>
+#include <cmath>
 
 VehicleService::VehicleService(QObject *parent)
     : QObject(parent)
@@ -76,6 +78,27 @@ void VehicleService::start()
     m_tripTimer->setInterval(1000);
     connect(m_tripTimer, &QTimer::timeout, this, &VehicleService::onTripTimerTick);
     m_tripTimer->start();
+
+    // Performance timer 10Hz — runs continuously, gated by speed/throttle state
+    m_perfTimer = new QTimer(this);
+    m_perfTimer->setInterval(100);
+    connect(m_perfTimer, &QTimer::timeout, this, &VehicleService::onPerfTick);
+    m_perfTimer->start();
+
+    // Reset peak G + 0-60 latches on ignition cycle — per spec, in-memory only
+    connect(this, &VehicleService::ignitionOff, this, [this]() {
+        m_peakLateralG = 0.0;
+        m_peakLongitudinalG = 0.0;
+        m_zeroToSixtySec = 0.0;
+        m_quarterMileSec = 0.0;
+        m_quarterMileTrapMph = 0.0;
+        m_perfRunActive = false;
+        m_perfRunArmed = false;
+        m_perfRunElapsedSec = 0.0;
+        m_perfRunDistanceMi = 0.0;
+        emit gMeterChanged();
+        emit perfTimerChanged();
+    });
 }
 
 void VehicleService::openCAN(const char *iface, int &sock)
@@ -396,6 +419,30 @@ void VehicleService::parseVehicleFrame(const struct can_frame &f)
             m_coolantTemp = cool_f;
             emit coolantTempChanged(cool_f);
         }
+        // ── VR30 piggyback parse on 0x551 (Q50_LIKELY) ──────────────────────
+        // bytes 4-5 (big-endian uint16): manifold absolute pressure kPa × 0.1
+        //   psi_gauge = (kPa - 101.3) / 6.895     (subtract atm, kPa→psi)
+        // byte 7: intake air temp raw, 0.75°C/LSB offset -48°C
+        // Reference: VR30 EcuTek tuning guide MAP/IAT channel descriptions.
+        if (f.can_dlc >= 8) {
+            uint16_t boostRaw = (static_cast<uint16_t>(f.data[4]) << 8) | f.data[5];
+            double kpaAbs = boostRaw * 0.1;
+            double boostPsi = (kpaAbs - 101.3) / 6.895;
+            double mapPsi   = kpaAbs / 6.895;
+            if (boostPsi > -15.0 && boostPsi < 40.0
+                    && std::fabs(boostPsi - m_boostPressurePsi) > 0.05) {
+                m_boostPressurePsi    = boostPsi;
+                m_manifoldPressurePsi = mapPsi;
+                emit vr30TelemetryChanged();
+            }
+            double iatC = (f.data[7] * 0.75) - 48.0;
+            double iatF = iatC * 9.0 / 5.0 + 32.0;
+            if (iatF > -40.0 && iatF < 300.0
+                    && std::fabs(iatF - m_intakeAirTempF) > 0.5) {
+                m_intakeAirTempF = iatF;
+                emit vr30TelemetryChanged();
+            }
+        }
         break;
     }
 
@@ -480,6 +527,43 @@ void VehicleService::parseVehicleFrame(const struct can_frame &f)
             emit driveModeConfirmed(m_driveMode);
             qDebug("[CAN] Drive mode confirmed by status frame: %d (UNVERIFIED ID)", m_driveMode);
         }
+        break;
+    }
+
+    // ── VR30 telemetry frames (Q50_LIKELY — delegated to handler) ────────────
+    // 0x551 boost+IAT is parsed inside the CAN_CRUISE_COOLANT case above to avoid
+    // a duplicate switch label (same ID). Other VR30 IDs dispatched here.
+    case CAN_VR30_OIL_TEMP:
+    case CAN_VR30_TRANS_TEMP:
+    case CAN_VR30_WASTEGATE:
+        handleVR30Frame(f);
+        break;
+
+    // ── G-sensor (chassis 3-axis accel — UNVERIFIED ID 0x132) ────────────────
+    // byte 0-1 (signed 16-bit BE): lateral G   × 0.001 G/LSB
+    // byte 2-3 (signed 16-bit BE): longitudinal G × 0.001 G/LSB
+    // Values for the same physical sensor that feeds ATTESA — frame ID is the
+    // unknown variable. Parser is enabled but treat results as Q50_LIKELY.
+    case CAN_G_SENSOR: {
+        if (f.can_dlc < 4) break;
+        int16_t latRaw = static_cast<int16_t>(
+            (static_cast<uint16_t>(f.data[0]) << 8) | f.data[1]);
+        int16_t lonRaw = static_cast<int16_t>(
+            (static_cast<uint16_t>(f.data[2]) << 8) | f.data[3]);
+        double lat = latRaw * 0.001;
+        double lon = lonRaw * 0.001;
+        bool changed = false;
+        if (std::fabs(lat - m_lateralG) > 0.005) {
+            m_lateralG = lat;
+            if (std::fabs(lat) > std::fabs(m_peakLateralG)) m_peakLateralG = lat;
+            changed = true;
+        }
+        if (std::fabs(lon - m_longitudinalG) > 0.005) {
+            m_longitudinalG = lon;
+            if (std::fabs(lon) > std::fabs(m_peakLongitudinalG)) m_peakLongitudinalG = lon;
+            changed = true;
+        }
+        if (changed) emit gMeterChanged();
         break;
     }
 
@@ -1042,6 +1126,157 @@ void VehicleService::setPFCWSensitivity(int level)
     m_pfcwSensitivity = qBound(0, level, 3);
     emit pfcwSensitivityChanged(m_pfcwSensitivity);
     sendADASFrame();
+}
+
+// ─── VR30DDTT track telemetry frame handler ────────────────────────────────
+// Parses Q50_LIKELY frames for oil temp, trans temp, and electronic wastegate.
+// UNVERIFIED frames (ignition advance, knock retard) log TODO — no value is
+// fabricated. The 0x551 boost+IAT piggyback is parsed inline in the cruise
+// case to avoid a duplicate switch label.
+//
+// Scale formulas sourced from VR30 EcuTek tuning literature; treat as
+// reasonable defaults until J2534 capture confirms. Values bounded to plausible
+// physical ranges before emitting to prevent spurious UI flicker.
+void VehicleService::handleVR30Frame(const struct can_frame &f)
+{
+    const canid_t id = f.can_id & CAN_SFF_MASK;
+    bool changed = false;
+
+    switch (id) {
+
+    // 0x55D — VVT temp sensor doubles as oil temp on VR30.
+    // byte 0: temp raw, 1°C/LSB offset -40°C (per EcuTek channel definition)
+    case CAN_VR30_OIL_TEMP: {
+        if (f.can_dlc < 1) break;
+        double tC = static_cast<double>(f.data[0]) - 40.0;
+        double tF = tC * 9.0 / 5.0 + 32.0;
+        if (tF > -40.0 && tF < 400.0 && std::fabs(tF - m_oilTempF) > 0.5) {
+            m_oilTempF = tF;
+            changed = true;
+        }
+        break;
+    }
+
+    // 0x59A — TCM trans fluid temp.
+    // byte 0: temp raw, 1°C/LSB offset -40°C
+    case CAN_VR30_TRANS_TEMP: {
+        if (f.can_dlc < 1) break;
+        double tC = static_cast<double>(f.data[0]) - 40.0;
+        double tF = tC * 9.0 / 5.0 + 32.0;
+        if (tF > -40.0 && tF < 400.0 && std::fabs(tF - m_transTempF) > 0.5) {
+            m_transTempF = tF;
+            changed = true;
+        }
+        break;
+    }
+
+    // 0x55C — Electronic wastegate position.
+    // byte 0: position % (0-100 direct)
+    case CAN_VR30_WASTEGATE: {
+        if (f.can_dlc < 1) break;
+        double pct = qBound(0.0, static_cast<double>(f.data[0]), 100.0);
+        if (std::fabs(pct - m_wastegatePercent) > 0.5) {
+            m_wastegatePercent = pct;
+            changed = true;
+        }
+        break;
+    }
+
+    // 0xFFFF — UNVERIFIED placeholder for ignition advance / knock retard.
+    // No real frame ID known yet. Log only — DO NOT fabricate values.
+    case CAN_VR30_IGN_KNOCK:
+        qDebug() << "[VehicleService] VR30 ign/knock frame UNVERIFIED — TODO J2534 capture";
+        break;
+
+    default:
+        break;
+    }
+
+    if (changed) emit vr30TelemetryChanged();
+}
+
+// ─── Performance timer (0-60 + 1/4 mile) ────────────────────────────────────
+// State machine ticks at 10Hz. Detects launch (stationary → throttle > 50% with
+// speed crossing 2 mph), then integrates wheel speed to track distance for the
+// 1/4 mile and watches for the target speed (60 mph / 100 km/h based on
+// SettingsService.distanceUnit — but VehicleService is unit-agnostic, so we
+// always trigger at 60 mph and let the QML layer relabel). Quarter-mile time
+// and trap speed latched on first crossing.
+//
+// Per spec: in-memory only; cleared on ignition off (handled by the lambda
+// in start()). No persistence.
+void VehicleService::onPerfTick()
+{
+    if (!m_ignitionOn) return;
+    updatePerformanceTimer();
+}
+
+void VehicleService::updatePerformanceTimer()
+{
+    const float speed = m_speed;       // mph (already converted in CAN parser)
+    const double throttle = m_throttlePct;  // 0-100; stub until pedal ID confirmed
+    const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+
+    // Arm condition: throttle high while ~stationary
+    if (!m_perfRunActive) {
+        if (speed < 2.0f && throttle > 50.0) {
+            m_perfRunArmed = true;
+        }
+        // Trigger: speed crosses 2 mph while armed
+        if (m_perfRunArmed && speed >= 2.0f) {
+            m_perfRunActive      = true;
+            m_perfRunArmed       = false;
+            m_perfRunStartMs     = nowMs;
+            m_perfRunElapsedSec  = 0.0;
+            m_perfRunDistanceMi  = 0.0;
+            m_zeroToSixtySec     = 0.0;
+            m_quarterMileSec     = 0.0;
+            m_quarterMileTrapMph = 0.0;
+            emit perfTimerChanged();
+        }
+        return;
+    }
+
+    // Active run — accumulate
+    const double elapsed = (nowMs - m_perfRunStartMs) / 1000.0;
+    m_perfRunElapsedSec = elapsed;
+    // Integrate mph * dt_hours → miles (10Hz tick: dt = 0.1s = 1/36000 hr)
+    m_perfRunDistanceMi += speed / 36000.0;
+
+    // 0-60 trigger (60 mph hardcoded — QML layer relabels for metric users)
+    if (m_zeroToSixtySec <= 0.0 && speed >= 60.0f) {
+        m_zeroToSixtySec = elapsed;
+        qDebug("[VehicleService] 0-60: %.2fs", m_zeroToSixtySec);
+    }
+
+    // 1/4 mile trigger (0.25 mi)
+    if (m_quarterMileSec <= 0.0 && m_perfRunDistanceMi >= 0.25) {
+        m_quarterMileSec     = elapsed;
+        m_quarterMileTrapMph = speed;
+        qDebug("[VehicleService] 1/4 mile: %.2fs @ %.1f mph",
+               m_quarterMileSec, m_quarterMileTrapMph);
+    }
+
+    // End run: either both targets hit, or driver lifted (speed dropped below 2)
+    if ((m_zeroToSixtySec > 0.0 && m_quarterMileSec > 0.0)
+            || (elapsed > 1.0 && speed < 2.0f)
+            || elapsed > 60.0) {
+        m_perfRunActive = false;
+    }
+
+    emit perfTimerChanged();
+}
+
+void VehicleService::resetPerformanceTimer()
+{
+    m_perfRunActive      = false;
+    m_perfRunArmed       = false;
+    m_perfRunElapsedSec  = 0.0;
+    m_perfRunDistanceMi  = 0.0;
+    m_zeroToSixtySec     = 0.0;
+    m_quarterMileSec     = 0.0;
+    m_quarterMileTrapMph = 0.0;
+    emit perfTimerChanged();
 }
 
 // ─── Bose wake ─────────────────────────────────────────────────────────────

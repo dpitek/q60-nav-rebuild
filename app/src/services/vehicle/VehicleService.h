@@ -92,6 +92,31 @@ class VehicleService : public QObject {
     Q_PROPERTY(float atessaFront   READ atessaFront    NOTIFY atessaChanged)  // % front torque 0-100
     Q_PROPERTY(float atessaRear    READ atessaRear     NOTIFY atessaChanged)  // % rear torque 0-100
 
+    // ── VR30DDTT track telemetry (Q60 3.0L twin-turbo) ──────────────────────
+    // Most read paths Q50_LIKELY or UNVERIFIED — see VR30 EcuTek tuning guide.
+    Q_PROPERTY(double boostPressurePsi   READ boostPressurePsi   NOTIFY vr30TelemetryChanged)  // 0x551 byte 4-5 Q50_LIKELY
+    Q_PROPERTY(double oilTempF           READ oilTempF           NOTIFY vr30TelemetryChanged)  // 0x55D Q50_LIKELY
+    Q_PROPERTY(double transTempF         READ transTempF         NOTIFY vr30TelemetryChanged)  // 0x59A Q50_LIKELY
+    Q_PROPERTY(double intakeAirTempF     READ intakeAirTempF     NOTIFY vr30TelemetryChanged)  // 0x551 byte 7 Q50_LIKELY
+    Q_PROPERTY(double ignitionAdvanceDeg READ ignitionAdvanceDeg NOTIFY vr30TelemetryChanged)  // UNVERIFIED
+    Q_PROPERTY(double knockRetardDeg     READ knockRetardDeg     NOTIFY vr30TelemetryChanged)  // UNVERIFIED
+    Q_PROPERTY(double wastegatePercent   READ wastegatePercent   NOTIFY vr30TelemetryChanged)  // 0x55C Q50_LIKELY
+    Q_PROPERTY(double manifoldPressurePsi READ manifoldPressurePsi NOTIFY vr30TelemetryChanged)  // OBD2 PID 0x0B (calc)
+    Q_PROPERTY(double airFuelRatio       READ airFuelRatio       NOTIFY vr30TelemetryChanged)  // calc from MAF
+
+    // ── G-meter (chassis sensor — frame ID UNVERIFIED) ──────────────────────
+    Q_PROPERTY(double lateralG           READ lateralG           NOTIFY gMeterChanged)
+    Q_PROPERTY(double longitudinalG      READ longitudinalG      NOTIFY gMeterChanged)
+    Q_PROPERTY(double peakLateralG       READ peakLateralG       NOTIFY gMeterChanged)
+    Q_PROPERTY(double peakLongitudinalG  READ peakLongitudinalG  NOTIFY gMeterChanged)
+
+    // ── Performance timer (0-60 / quarter-mile) ────────────────────────────
+    Q_PROPERTY(double zeroToSixtySec     READ zeroToSixtySec     NOTIFY perfTimerChanged)
+    Q_PROPERTY(double quarterMileSec     READ quarterMileSec     NOTIFY perfTimerChanged)
+    Q_PROPERTY(double quarterMileTrapMph READ quarterMileTrapMph NOTIFY perfTimerChanged)
+    Q_PROPERTY(bool   perfRunActive      READ perfRunActive      NOTIFY perfTimerChanged)
+    Q_PROPERTY(double perfRunElapsedSec  READ perfRunElapsedSec  NOTIFY perfTimerChanged)
+
 public:
     explicit VehicleService(QObject *parent = nullptr);
     ~VehicleService();
@@ -180,6 +205,27 @@ public:
     // ATTESA
     float atessaFront()   const { return m_atessaFront; }
     float atessaRear()    const { return m_atessaRear; }
+    // VR30 track telemetry
+    double boostPressurePsi()    const { return m_boostPressurePsi; }
+    double oilTempF()            const { return m_oilTempF; }
+    double transTempF()          const { return m_transTempF; }
+    double intakeAirTempF()      const { return m_intakeAirTempF; }
+    double ignitionAdvanceDeg()  const { return m_ignitionAdvanceDeg; }
+    double knockRetardDeg()      const { return m_knockRetardDeg; }
+    double wastegatePercent()    const { return m_wastegatePercent; }
+    double manifoldPressurePsi() const { return m_manifoldPressurePsi; }
+    double airFuelRatio()        const { return m_airFuelRatio; }
+    // G-meter
+    double lateralG()            const { return m_lateralG; }
+    double longitudinalG()       const { return m_longitudinalG; }
+    double peakLateralG()        const { return m_peakLateralG; }
+    double peakLongitudinalG()   const { return m_peakLongitudinalG; }
+    // Performance timer
+    double zeroToSixtySec()      const { return m_zeroToSixtySec; }
+    double quarterMileSec()      const { return m_quarterMileSec; }
+    double quarterMileTrapMph()  const { return m_quarterMileTrapMph; }
+    bool   perfRunActive()       const { return m_perfRunActive; }
+    double perfRunElapsedSec()   const { return m_perfRunElapsedSec; }
 
 public slots:
     // Climate writes — CAUTION: Q50/Q60 HVAC write path not publicly documented.
@@ -223,6 +269,8 @@ public slots:
     // Single-frame UDS request; BCM must be on the active CAN bus (can0 HS-CAN).
     Q_INVOKABLE void lockDoors();
     Q_INVOKABLE void unlockDoors();
+    // Performance timer
+    Q_INVOKABLE void resetPerformanceTimer();
 
 signals:
     void driverTempChanged(float);
@@ -300,12 +348,17 @@ signals:
     void muteToggle();
     // Ignition / session lifecycle
     void ignitionOff();     // fired when ignition-off detected (speed=0 + gear=P + key event)
+    // VR30 telemetry + G-meter + performance timer
+    void vr30TelemetryChanged();
+    void gMeterChanged();
+    void perfTimerChanged();
 
 private slots:
     void onVehicleCanData();
     void onAVCanData();
     void onCAN2Data();
     void onTripTimerTick();  // 1Hz trip computer accumulator
+    void onPerfTick();        // ~10Hz performance timer state machine
 
 private:
     void openCAN(const char *iface, int &sock);
@@ -317,6 +370,10 @@ private:
     uint8_t hvacTempRaw(float tempF) const;  // °F → 0x540 byte encoding
     uint8_t hvacModeFlags() const;           // pack current state → byte 0 of 0x540
     void sendADASFrame();     // rebuild and send CAN_ADAS_CTRL (0x47D) from current aid state
+    // VR30 telemetry: parses Q50_LIKELY frames; UNVERIFIED frames log TODO.
+    void handleVR30Frame(const struct can_frame &f);
+    // Performance timer state machine — drives 0-60, quarter mile, peak G tracking.
+    void updatePerformanceTimer();
 
     ButtonLogger m_buttonLog;        // hardware button diagnostic logger
     bool m_ignitionOffSent = false;  // debounce: only emit ignitionOff() once per cycle
@@ -396,6 +453,69 @@ private:
     // ATTESA (rear-biased default)
     float m_atessaFront   = 50.0f;
     float m_atessaRear    = 50.0f;
+
+    // ── VR30 telemetry state ────────────────────────────────────────────────
+    double m_boostPressurePsi    = 0.0;
+    double m_oilTempF            = 0.0;
+    double m_transTempF          = 0.0;
+    double m_intakeAirTempF      = 0.0;
+    double m_ignitionAdvanceDeg  = 0.0;
+    double m_knockRetardDeg      = 0.0;
+    double m_wastegatePercent    = 0.0;
+    double m_manifoldPressurePsi = 0.0;
+    double m_airFuelRatio        = 0.0;
+    // Throttle 0-100% — derived from existing 0x551 cruise/coolant byte if available
+    // (used by performance timer start detection). Currently a stub.
+    double m_throttlePct         = 0.0;
+
+    // ── G-meter state ───────────────────────────────────────────────────────
+    double m_lateralG            = 0.0;
+    double m_longitudinalG       = 0.0;
+    double m_peakLateralG        = 0.0;
+    double m_peakLongitudinalG   = 0.0;
+
+    // ── Performance timer state ─────────────────────────────────────────────
+    QTimer *m_perfTimer          = nullptr;
+    bool   m_perfRunActive       = false;
+    bool   m_perfRunArmed        = false;   // crossed throttle threshold while stationary
+    qint64 m_perfRunStartMs      = 0;       // monotonic ms when run started
+    double m_perfRunElapsedSec   = 0.0;
+    double m_perfRunDistanceMi   = 0.0;     // wheel-speed integrated since start
+    double m_zeroToSixtySec      = 0.0;     // latched on hit; 0 = not yet
+    double m_quarterMileSec      = 0.0;     // latched on 1/4 mile
+    double m_quarterMileTrapMph  = 0.0;     // speed at 1/4 mile mark
+
+    // ── VR30 / chassis CAN IDs (Q50_LIKELY / UNVERIFIED) ────────────────────
+    // VR30DDTT telemetry frames. Most documented in EcuTek tuning literature,
+    // but Q60-specific verification still pending — treat as Q50_LIKELY.
+    //
+    // 0x551 carries cruise/coolant on body bus AND turbo data on powertrain bus:
+    //   byte 4-5: boost pressure raw (big-endian uint16, kPa absolute)
+    //             psi_gauge = (raw * 0.01) - 14.504 (approx; verify scale)
+    //   byte 7:   intake air temp raw, 0.75°C/LSB offset -48°C
+    static constexpr canid_t CAN_VR30_BOOST_IAT = 0x551;  // Q50_LIKELY (shared 0x551)
+
+    // 0x55D: VVT/Oil temp sensor — VR30 uses the VVT temp sensor as oil temp proxy.
+    //   byte 0: temp raw, 1°C/LSB offset -40°C
+    static constexpr canid_t CAN_VR30_OIL_TEMP  = 0x55D;  // Q50_LIKELY
+
+    // 0x59A: TCM transmission fluid temperature
+    //   byte 0: trans temp raw, 1°C/LSB offset -40°C
+    static constexpr canid_t CAN_VR30_TRANS_TEMP = 0x59A; // Q50_LIKELY
+
+    // 0x55C: Electronic wastegate position
+    //   byte 0: position % (0-100 direct)
+    static constexpr canid_t CAN_VR30_WASTEGATE = 0x55C;  // Q50_LIKELY
+
+    // Ignition advance / knock retard — VR30 proprietary frame not yet identified.
+    // Placeholder; handleVR30Frame() logs TODO when matched.
+    static constexpr canid_t CAN_VR30_IGN_KNOCK = 0xFFFF; // UNVERIFIED placeholder
+
+    // ── G-sensor (3-axis chassis sensor feeding ATTESA / ABS) ───────────────
+    // Frame ID UNVERIFIED — literature suggests 0x130-0x140 range. 0x132 placeholder.
+    //   byte 0-1: lateral G raw (signed 16-bit, big-endian, 0.001 G/LSB)
+    //   byte 2-3: longitudinal G raw (same scale)
+    static constexpr canid_t CAN_G_SENSOR       = 0x132;  // UNVERIFIED
 
     // ─── CAN IDs ─────────────────────────────────────────────────────────────
     // Sources: opendbc nissan_common.dbc, opendbc X-Trail/Xterra, carhack 370Z,
