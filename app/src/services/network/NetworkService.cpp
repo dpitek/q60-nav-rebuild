@@ -60,10 +60,17 @@ void NetworkService::start()
 
     connect(&m_pollTimer, &QTimer::timeout, this, &NetworkService::pollInterface);
     m_pollTimer.setInterval(POLL_INTERVAL_MS);
-    m_pollTimer.start();
 
-    // Poll immediately on start
-    pollInterface();
+    // Boot grace — defer the first poll for 15 seconds on cold boot so we
+    // don't fire downstream `online` signals (Weather, Fuel) while the rest
+    // of the system is still initializing. Air-gap first boots stay offline
+    // for the whole session anyway; this just smooths the warm-boot case
+    // where the phone hotspot might be reachable instantly.
+    QTimer::singleShot(15000, this, [this]() {
+        m_pollTimer.start();
+        pollInterface();
+    });
+    qCInfo(lcNetwork) << "Network monitor scheduled (15s grace period)";
 }
 
 void NetworkService::pollInterface()

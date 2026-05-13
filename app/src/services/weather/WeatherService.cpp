@@ -130,7 +130,9 @@ void WeatherService::fetchWeather()
     q.addQueryItem(QStringLiteral("units"), QStringLiteral("imperial"));
     currentUrl.setQuery(q);
 
-    QNetworkReply *currentReply = m_nam->get(QNetworkRequest(currentUrl));
+    QNetworkRequest currentReq(currentUrl);
+    currentReq.setTransferTimeout(5000);   // 5s; fail-fast prevents hot socket pile-up
+    QNetworkReply *currentReply = m_nam->get(currentReq);
     connect(currentReply, &QNetworkReply::finished, this, [this, currentReply]() {
         onCurrentWeatherReply(currentReply);
     });
@@ -145,7 +147,9 @@ void WeatherService::fetchWeather()
     fq.addQueryItem(QStringLiteral("cnt"),   QStringLiteral("32"));
     forecastUrl.setQuery(fq);
 
-    QNetworkReply *forecastReply = m_nam->get(QNetworkRequest(forecastUrl));
+    QNetworkRequest forecastReq(forecastUrl);
+    forecastReq.setTransferTimeout(5000);
+    QNetworkReply *forecastReply = m_nam->get(forecastReq);
     connect(forecastReply, &QNetworkReply::finished, this, [this, forecastReply]() {
         onForecastReply(forecastReply);
     });

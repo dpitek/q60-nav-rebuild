@@ -1,22 +1,48 @@
 #!/bin/sh
-# S50-q60nav — Start the Q60 navigation application
-# Delegates to /opt/nav/start.sh which handles boot counter, CAN, DENSO daemons
+# S50-q60nav — Start the Q60 navigation application.
+# Delegates to /opt/nav/start.sh which handles boot counter, CAN, DENSO
+# daemons, and finally exec's q60nav. start.sh runs in foreground via exec;
+# we background the wrapper so subsequent init steps proceed, then a short
+# monitor probe logs loudly if start.sh dies before q60nav exec'd (typical
+# cause: Wayland not ready, missing libs, or boot-counter restore in flight).
 
 LOG=/var/log/nav-init.log
+START=/opt/nav/start.sh
+PIDFILE=/var/run/q60nav-launcher.pid
 
 case "$1" in
 start)
     echo -n "Starting q60nav... "
-    if [ ! -f /opt/nav/start.sh ]; then
-        echo "MISSING (/opt/nav/start.sh)"
+    if [ ! -x "$START" ]; then
+        echo "MISSING ($START not executable)"
+        echo "[$(date)] S50-q60nav: $START missing or not executable" >> "$LOG"
         exit 1
     fi
-    /opt/nav/start.sh >> "$LOG" 2>&1 &
-    echo "OK (PID $!)"
+
+    "$START" >> "$LOG" 2>&1 &
+    PID=$!
+    echo "$PID" > "$PIDFILE"
+    echo "OK (PID $PID)"
+
+    # Liveness probe — if start.sh dies in the first 3s, surface the failure
+    # to the log so the next boot's diagnostician (or our watchdog/cycle
+    # counter) sees the cause without having to scroll a tail.
+    (
+        sleep 3
+        if ! kill -0 "$PID" 2>/dev/null; then
+            {
+                echo "[$(date)] S50-q60nav: start.sh (PID $PID) exited within 3s — boot will likely fail"
+                echo "[$(date)] Last 20 lines of $LOG follow:"
+                tail -20 "$LOG"
+                echo "[$(date)] —— end of tail ——"
+            } >> "$LOG"
+        fi
+    ) &
     ;;
 stop)
     echo -n "Stopping q60nav... "
     killall q60nav 2>/dev/null && echo "OK" || echo "not running"
+    [ -f "$PIDFILE" ] && rm -f "$PIDFILE"
     ;;
 restart)
     $0 stop
@@ -24,10 +50,15 @@ restart)
     $0 start
     ;;
 status)
-    pgrep -x q60nav > /dev/null && echo "q60nav running" || echo "q60nav stopped"
+    if pgrep -x q60nav > /dev/null; then
+        echo "q60nav running"
+    else
+        echo "q60nav stopped"
+    fi
     ;;
 *)
     echo "Usage: $0 {start|stop|restart|status}"
     exit 1
     ;;
 esac
+exit 0

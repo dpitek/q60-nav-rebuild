@@ -157,6 +157,55 @@ void NavigationService::cancelRoute()
     qDebug() << "[NavigationService] Route cancelled";
 }
 
+// ─── QML-facing API (DestinationSearch / RoutePreview) ─────────────────────
+void NavigationService::startRoute(const QString &label)
+{
+    // If we have a recent preview destination, route to it. Otherwise this is
+    // a no-op + warning so QML doesn't crash, just doesn't start nav.
+    if (!m_previewDestination.isValid()) {
+        qWarning() << "[NavigationService] startRoute(" << label
+                   << ") called without a preview destination — ignoring";
+        return;
+    }
+    routeTo(m_previewDestination.latitude(), m_previewDestination.longitude(),
+            label.isEmpty() ? m_destinationLabel : label);
+}
+
+void NavigationService::previewRoute(double lat, double lon)
+{
+    m_previewDestination = QGeoCoordinate(lat, lon);
+
+    // Quick haversine estimate so the UI has something to show immediately
+    // while the (optional) live Valhalla preview call returns.
+    if (m_position.isValid() && m_previewDestination.isValid()) {
+        const double miles = m_position.distanceTo(m_previewDestination) / 1609.344;
+        const int    durMin = static_cast<int>(miles * 1.6);   // ~37 mph blended avg
+        m_previewDistance = miles;
+        m_previewDuration = durMin;
+        const QDateTime arrive = QDateTime::currentDateTime().addSecs(durMin * 60);
+        m_previewEta = arrive.toString("h:mm AP");
+    } else {
+        m_previewDistance = 0.0;
+        m_previewDuration = 0;
+        m_previewEta = QStringLiteral("--:--");
+    }
+    emit previewChanged();
+    // A live Valhalla preview could be wired here later — for now the estimate
+    // is enough to populate the RoutePreview card and respond instantly.
+}
+
+void NavigationService::requestReroute(int routeType)
+{
+    if (routeType == m_routeTypePref) return;
+    m_routeTypePref = qBound(0, routeType, 2);
+    qDebug() << "[NavigationService] route pref →"
+             << (m_routeTypePref == 0 ? "Fastest"
+              : m_routeTypePref == 1 ? "Shortest" : "Eco");
+    // Full reroute via Valhalla costing model is a Phase 3 task. For now the
+    // preference is stored and re-emitted; existing route is untouched.
+    emit previewChanged();
+}
+
 void NavigationService::updateSpeed(float mph)
 {
     m_currentSpeed = mph;

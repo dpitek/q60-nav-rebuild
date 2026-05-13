@@ -111,6 +111,56 @@ if [ -f "$IMG" ]; then
                     EXIT=1
                 fi
             done
+
+            echo ''
+            echo '── Air-gap first-boot prerequisites ─────────────────'
+
+            # Inittab points to /etc/init.d/rc (post-audit fix). Verify
+            # that file exists and is executable.
+            if grep -q '/etc/init.d/rc 5' /mnt/img/etc/inittab; then
+                echo \"  ✓ inittab uses /etc/init.d/rc\"
+            else
+                echo \"  ✗ inittab path mismatch\"; EXIT=1
+            fi
+            if [ -x /mnt/img/etc/init.d/rc ]; then
+                echo \"  ✓ /etc/init.d/rc is executable\"
+            else
+                echo \"  ✗ /etc/init.d/rc missing or not executable\"; EXIT=1
+            fi
+
+            # /data fstab nofail
+            if grep -q 'nofail' /mnt/img/etc/fstab; then
+                echo \"  ✓ fstab uses nofail for /data\"
+            else
+                echo \"  ✗ /data is not marked nofail — missing partition blocks boot\"; EXIT=1
+            fi
+
+            # rcS creates fallback dirs
+            if grep -q 'mkdir -p /data/q60nav' /mnt/img/etc/init.d/rcS; then
+                echo \"  ✓ rcS pre-creates /data/q60nav subdirs\"
+            else
+                echo \"  ✗ rcS does not bootstrap /data/q60nav\"; EXIT=1
+            fi
+            if grep -q '/var/lib/q60nav-data' /mnt/img/etc/init.d/rcS; then
+                echo \"  ✓ rcS has /data fallback to /var/lib/q60nav-data\"
+            else
+                echo \"  ✗ rcS lacks /data fallback path\"; EXIT=1
+            fi
+
+            # S50-q60nav liveness probe
+            if grep -q 'kill -0' /mnt/img/etc/init.d/S50-q60nav; then
+                echo \"  ✓ S50-q60nav has start.sh liveness monitor\"
+            else
+                echo \"  ✗ S50-q60nav lacks liveness probe\"; EXIT=1
+            fi
+
+            # No remote URLs in mapstyle
+            if grep -qE 'http(s)?://' /mnt/img/opt/nav/style/q60-dark.json 2>/dev/null; then
+                echo \"  ✗ MapLibre style contains remote URL\"; EXIT=1
+            else
+                echo \"  ✓ MapLibre style uses only local resources\"
+            fi
+
             umount /mnt/img
             exit \$EXIT
         " && IMG_OK=1 || IMG_OK=0
