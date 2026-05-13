@@ -230,7 +230,7 @@ Item {
 
         // ── Center controls card ──────────────────────────────────────────────
         Rectangle {
-            width: 168; height: 218; radius: 16
+            width: 168; height: 164; radius: 16
             color: "#1C1C1E"
             border { color: Qt.rgba(1, 1, 1, 0.15); width: 1 }
 
@@ -269,52 +269,6 @@ Item {
                             MouseArea {
                                 anchors.fill: parent
                                 onClicked: VehicleService.setClimateMode(modelData.mode)
-                            }
-                        }
-                    }
-                }
-
-                // Fan speed
-                Column {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    spacing: 6
-
-                    Text {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: "FAN"
-                        color: "#8E8E93"
-                        font { family: "Roboto"; pixelSize: 10; capitalization: Font.AllUppercase; letterSpacing: 1 }
-                    }
-
-                    Row {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        spacing: 5
-
-                        Rectangle {
-                            width: 24; height: 24; radius: 12
-                            color: VehicleService.fanSpeed === 0 ? "#FF453A" : "#2C2C2E"
-                            border { color: VehicleService.fanSpeed === 0 ? "#FF453A" : "#3A3A3C"; width: 1 }
-                            Behavior on color { ColorAnimation { duration: 150 } }
-                            Text {
-                                anchors.centerIn: parent; text: "0"
-                                color: VehicleService.fanSpeed === 0 ? "#FFFFFF" : "#8E8E93"
-                                font { pixelSize: 9; weight: Font.Bold }
-                            }
-                            MouseArea { anchors.fill: parent; onClicked: VehicleService.setFanSpeed(0) }
-                        }
-
-                        Repeater {
-                            model: 5
-                            delegate: Rectangle {
-                                width: 22; height: 22 + index * 3; radius: 4
-                                anchors.bottom: parent ? parent.bottom : undefined
-                                color: VehicleService.fanSpeed > index ? "#0A84FF" : "#2C2C2E"
-                                border { color: VehicleService.fanSpeed > index ? "#0A84FF" : "#3A3A3C"; width: 1 }
-                                Behavior on color { ColorAnimation { duration: 150 } }
-                                MouseArea {
-                                    anchors.fill: parent
-                                    onClicked: VehicleService.setFanSpeed(index + 1)
-                                }
                             }
                         }
                     }
@@ -443,11 +397,66 @@ Item {
         }
     }
 
+    // ── Full-width fan speed row ──────────────────────────────────────────────
+    // 6 large buttons (OFF + 1–5) spread across the full screen width.
+    Row {
+        id: fanSpeedRow
+        anchors {
+            top: zoneRow.bottom
+            left: parent.left; right: parent.right
+            topMargin: 8; leftMargin: 8; rightMargin: 8
+        }
+        height: 52
+        spacing: 6
+
+        // Computed width per button: fill row evenly across 6 slots
+        property real btnW: (parent.width - anchors.leftMargin - anchors.rightMargin - 5 * spacing) / 6
+
+        // OFF
+        Rectangle {
+            width: fanSpeedRow.btnW; height: 46; radius: 12
+            anchors.verticalCenter: parent.verticalCenter
+            color: VehicleService.fanSpeed === 0 ? "#FF453A" : "#1C1C1E"
+            border { color: VehicleService.fanSpeed === 0 ? "#FF453A" : "#3A3A3C"; width: 1.5 }
+            Behavior on color { ColorAnimation { duration: 150 } }
+            Text {
+                anchors.centerIn: parent; text: "OFF"
+                color: VehicleService.fanSpeed === 0 ? "#FFFFFF" : "#8E8E93"
+                font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+            }
+            MouseArea { anchors.fill: parent; onClicked: VehicleService.setFanSpeed(0) }
+        }
+
+        // Speeds 1–5
+        Repeater {
+            model: 5
+            delegate: Rectangle {
+                width: fanSpeedRow.btnW; height: 46; radius: 12
+                anchors.verticalCenter: parent.verticalCenter
+                color: VehicleService.fanSpeed === index + 1 ? "#0A84FF"
+                     : VehicleService.fanSpeed > index      ? Qt.rgba(0.0392, 0.5176, 1, 0.25)
+                     : "#1C1C1E"
+                border {
+                    color: VehicleService.fanSpeed >= index + 1 ? "#0A84FF" : "#3A3A3C"
+                    width: 1.5
+                }
+                Behavior on color { ColorAnimation { duration: 150 } }
+                Text {
+                    anchors.centerIn: parent
+                    text: (index + 1).toString()
+                    color: VehicleService.fanSpeed >= index + 1 ? "#FFFFFF" : "#8E8E93"
+                    font { family: "Roboto"; pixelSize: 16; weight: Font.Bold }
+                }
+                MouseArea { anchors.fill: parent; onClicked: VehicleService.setFanSpeed(index + 1) }
+            }
+        }
+    }
+
     // ── Bottom extras row ─────────────────────────────────────────────────────
     Row {
         id: extrasRow
         anchors {
-            top: zoneRow.bottom
+            top: fanSpeedRow.bottom
             horizontalCenter: parent.horizontalCenter
             topMargin: 8
         }

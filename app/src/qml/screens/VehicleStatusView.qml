@@ -19,6 +19,10 @@ Item {
     property int personalTrace:    2   // 0=Off 1=Light 2=Normal
     property int personalSound:    0   // 0=Off 1=Low 2=High
 
+    // ── Vehicle body config ────────────────────────────────────────────────────
+    // Q60 is a 2-door coupe. Set true when VIN detection identifies a 4-door model.
+    property bool fourDoorModel:   false
+
     // ── Button log (last 5 entries) ────────────────────────────────────────────
     property var buttonLog: []
 
@@ -118,126 +122,198 @@ Item {
                 anchors { top: parent.top; horizontalCenter: parent.horizontalCenter; topMargin: 8 }
                 spacing: 12
 
-                // ── TPMS Card ────────────────────────────────────────────────
+                // ── TPMS Card — Q60 coupe rendering, PSI outside wheels ──────
                 Rectangle {
-                    width: 155; height: 145; radius: 16
+                    id: tpmsCard
+                    width: 364; height: 160; radius: 16
                     color: "#1C1C1E"
 
-                    Text {
-                        id: tpmsHeader
-                        anchors { top: parent.top; horizontalCenter: parent.horizontalCenter; topMargin: 8 }
-                        text: "TIRES"
-                        color: "#8E8E93"
-                        font { family: "Roboto"; pixelSize: 10; capitalization: Font.AllUppercase; letterSpacing: 1 }
-                    }
-
-                    // Helper function: PSI color
+                    // Helper functions
                     function psiColor(psi) {
                         if (psi <= 0.0) return "#8E8E93"
                         if (psi < 25)   return "#FF453A"
                         if (psi < 30)   return "#FF9F0A"
                         return "#30D158"
                     }
-                    function psiText(psi) {
-                        return psi <= 0.0 ? "—" : psi.toFixed(0)
+                    function psiText(psi) { return psi <= 0.0 ? "—" : psi.toFixed(0) }
+
+                    Text {
+                        anchors { top: parent.top; horizontalCenter: parent.horizontalCenter; topMargin: 6 }
+                        text: "TIRES"
+                        color: "#8E8E93"
+                        font { family: "Roboto"; pixelSize: 10; capitalization: Font.AllUppercase; letterSpacing: 1 }
                     }
 
-                    // Car top-view silhouette
-                    Rectangle {
-                        anchors.centerIn: parent; anchors.verticalCenterOffset: 4
-                        width: 52; height: 76; radius: 8
-                        color: "#2C2C2E"
-                        border { color: Qt.rgba(1, 1, 1, 0.12); width: 1 }
+                    // ── Q60 coupe top-down silhouette ─────────────────────────
+                    Canvas {
+                        id: coupeCanvas
+                        width: 108; height: 124
+                        anchors { centerIn: parent; verticalCenterOffset: 4 }
 
-                        // Windshield
-                        Rectangle {
-                            anchors { top: parent.top; horizontalCenter: parent.horizontalCenter; topMargin: 6 }
-                            width: 32; height: 14; radius: 3
-                            color: "#3A3A3C"
-                        }
-                        // Rear window
-                        Rectangle {
-                            anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: 6 }
-                            width: 32; height: 12; radius: 3
-                            color: "#3A3A3C"
+                        onPaint: {
+                            var ctx = getContext("2d")
+                            ctx.clearRect(0, 0, width, height)
+                            var cx = width / 2, cy = height / 2
+                            var bW = 42, bH = 96
+                            var bx = cx - bW / 2, by = cy - bH / 2
+
+                            // Body outline — coupe proportions (longer hood, tapered rear)
+                            ctx.beginPath()
+                            ctx.moveTo(cx, by)
+                            ctx.bezierCurveTo(cx + 9, by, bx + bW, by + 10, bx + bW, by + 18)
+                            ctx.lineTo(bx + bW, by + bH - 20)
+                            ctx.bezierCurveTo(bx + bW, by + bH - 10, cx + 8, by + bH, cx, by + bH)
+                            ctx.bezierCurveTo(cx - 8, by + bH, bx, by + bH - 10, bx, by + bH - 20)
+                            ctx.lineTo(bx, by + 18)
+                            ctx.bezierCurveTo(bx, by + 10, cx - 9, by, cx, by)
+                            ctx.closePath()
+                            ctx.fillStyle = "#2C2C2E"
+                            ctx.fill()
+                            ctx.strokeStyle = "rgba(255,255,255,0.22)"
+                            ctx.lineWidth = 1.5; ctx.stroke()
+
+                            // Windshield (raked — Q60 characteristic)
+                            ctx.beginPath()
+                            ctx.moveTo(cx - 15, by + 18)
+                            ctx.lineTo(cx + 15, by + 18)
+                            ctx.lineTo(cx + 13, by + 35)
+                            ctx.lineTo(cx - 13, by + 35)
+                            ctx.closePath()
+                            ctx.fillStyle = "rgba(80,150,215,0.3)"
+                            ctx.fill()
+
+                            // Roof panel
+                            ctx.beginPath()
+                            ctx.moveTo(cx - 13, by + 35)
+                            ctx.lineTo(cx + 13, by + 35)
+                            ctx.lineTo(cx + 10, by + bH - 32)
+                            ctx.lineTo(cx - 10, by + bH - 32)
+                            ctx.closePath()
+                            ctx.fillStyle = "#181818"
+                            ctx.fill()
+
+                            // Rear window (fastback — shallow angle)
+                            ctx.beginPath()
+                            ctx.moveTo(cx - 10, by + bH - 32)
+                            ctx.lineTo(cx + 10, by + bH - 32)
+                            ctx.lineTo(cx + 7,  by + bH - 20)
+                            ctx.lineTo(cx - 7,  by + bH - 20)
+                            ctx.closePath()
+                            ctx.fillStyle = "rgba(80,150,215,0.22)"
+                            ctx.fill()
+
+                            // Side mirrors (Q60 prominent mirrors)
+                            ctx.beginPath(); ctx.arc(bx - 4, by + 23, 3.5, 0, Math.PI * 2)
+                            ctx.fillStyle = "rgba(255,255,255,0.28)"; ctx.fill()
+                            ctx.beginPath(); ctx.arc(bx + bW + 4, by + 23, 3.5, 0, Math.PI * 2)
+                            ctx.fillStyle = "rgba(255,255,255,0.28)"; ctx.fill()
                         }
                     }
 
-                    // FL tire
-                    Rectangle {
-                        x: 10; y: 30; width: 28; height: 28; radius: 14
-                        color: parent.psiColor(VehicleService.tirePSI_FL)
-                        border { color: Qt.rgba(0, 0, 0, 0.3); width: 1 }
-                        Text {
-                            anchors.centerIn: parent
-                            text: parent.parent.psiText(VehicleService.tirePSI_FL)
-                            color: "#FFFFFF"; font { pixelSize: 9; weight: Font.Bold }
+                    // ── FL — top-left ─────────────────────────────────────────
+                    Column {
+                        anchors { left: parent.left; top: parent.top; leftMargin: 10; topMargin: 22 }
+                        spacing: 3
+
+                        Text { text: "FL"; color: "#636366"; font { family: "Roboto"; pixelSize: 9; weight: Font.SemiBold } }
+                        Row {
+                            spacing: 5
+                            Rectangle {
+                                width: 14; height: 14; radius: 7
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: tpmsCard.psiColor(VehicleService.tirePSI_FL)
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: tpmsCard.psiText(VehicleService.tirePSI_FL)
+                                color: tpmsCard.psiColor(VehicleService.tirePSI_FL)
+                                font { family: "Roboto"; pixelSize: 16; weight: Font.Bold }
+                            }
                         }
-                        Text {
-                            anchors { bottom: parent.top; horizontalCenter: parent.horizontalCenter; bottomMargin: 1 }
-                            text: "FL"; color: "#8E8E93"; font.pixelSize: 8
-                        }
+                        Text { text: "psi"; color: "#636366"; font { family: "Roboto"; pixelSize: 9 } }
                     }
 
-                    // FR tire
-                    Rectangle {
-                        x: 117; y: 30; width: 28; height: 28; radius: 14
-                        color: parent.psiColor(VehicleService.tirePSI_FR)
-                        border { color: Qt.rgba(0, 0, 0, 0.3); width: 1 }
-                        Text {
-                            anchors.centerIn: parent
-                            text: parent.parent.psiText(VehicleService.tirePSI_FR)
-                            color: "#FFFFFF"; font { pixelSize: 9; weight: Font.Bold }
+                    // ── FR — top-right ────────────────────────────────────────
+                    Column {
+                        anchors { right: parent.right; top: parent.top; rightMargin: 10; topMargin: 22 }
+                        spacing: 3
+
+                        Text { text: "FR"; color: "#636366"; font { family: "Roboto"; pixelSize: 9; weight: Font.SemiBold } }
+                        Row {
+                            spacing: 5
+                            Rectangle {
+                                width: 14; height: 14; radius: 7
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: tpmsCard.psiColor(VehicleService.tirePSI_FR)
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: tpmsCard.psiText(VehicleService.tirePSI_FR)
+                                color: tpmsCard.psiColor(VehicleService.tirePSI_FR)
+                                font { family: "Roboto"; pixelSize: 16; weight: Font.Bold }
+                            }
                         }
-                        Text {
-                            anchors { bottom: parent.top; horizontalCenter: parent.horizontalCenter; bottomMargin: 1 }
-                            text: "FR"; color: "#8E8E93"; font.pixelSize: 8
-                        }
+                        Text { text: "psi"; color: "#636366"; font { family: "Roboto"; pixelSize: 9 } }
                     }
 
-                    // RL tire
-                    Rectangle {
-                        x: 10; y: 88; width: 28; height: 28; radius: 14
-                        color: parent.psiColor(VehicleService.tirePSI_RL)
-                        border { color: Qt.rgba(0, 0, 0, 0.3); width: 1 }
-                        Text {
-                            anchors.centerIn: parent
-                            text: parent.parent.psiText(VehicleService.tirePSI_RL)
-                            color: "#FFFFFF"; font { pixelSize: 9; weight: Font.Bold }
+                    // ── RL — bottom-left ──────────────────────────────────────
+                    Column {
+                        anchors { left: parent.left; bottom: parent.bottom; leftMargin: 10; bottomMargin: 12 }
+                        spacing: 3
+
+                        Row {
+                            spacing: 5
+                            Rectangle {
+                                width: 14; height: 14; radius: 7
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: tpmsCard.psiColor(VehicleService.tirePSI_RL)
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: tpmsCard.psiText(VehicleService.tirePSI_RL)
+                                color: tpmsCard.psiColor(VehicleService.tirePSI_RL)
+                                font { family: "Roboto"; pixelSize: 16; weight: Font.Bold }
+                            }
                         }
-                        Text {
-                            anchors { top: parent.bottom; horizontalCenter: parent.horizontalCenter; topMargin: 1 }
-                            text: "RL"; color: "#8E8E93"; font.pixelSize: 8
-                        }
+                        Text { text: "psi"; color: "#636366"; font { family: "Roboto"; pixelSize: 9 } }
+                        Text { text: "RL"; color: "#636366"; font { family: "Roboto"; pixelSize: 9; weight: Font.SemiBold } }
                     }
 
-                    // RR tire
-                    Rectangle {
-                        x: 117; y: 88; width: 28; height: 28; radius: 14
-                        color: parent.psiColor(VehicleService.tirePSI_RR)
-                        border { color: Qt.rgba(0, 0, 0, 0.3); width: 1 }
-                        Text {
-                            anchors.centerIn: parent
-                            text: parent.parent.psiText(VehicleService.tirePSI_RR)
-                            color: "#FFFFFF"; font { pixelSize: 9; weight: Font.Bold }
+                    // ── RR — bottom-right ─────────────────────────────────────
+                    Column {
+                        anchors { right: parent.right; bottom: parent.bottom; rightMargin: 10; bottomMargin: 12 }
+                        spacing: 3
+
+                        Row {
+                            spacing: 5
+                            Rectangle {
+                                width: 14; height: 14; radius: 7
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: tpmsCard.psiColor(VehicleService.tirePSI_RR)
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: tpmsCard.psiText(VehicleService.tirePSI_RR)
+                                color: tpmsCard.psiColor(VehicleService.tirePSI_RR)
+                                font { family: "Roboto"; pixelSize: 16; weight: Font.Bold }
+                            }
                         }
-                        Text {
-                            anchors { top: parent.bottom; horizontalCenter: parent.horizontalCenter; topMargin: 1 }
-                            text: "RR"; color: "#8E8E93"; font.pixelSize: 8
-                        }
+                        Text { text: "psi"; color: "#636366"; font { family: "Roboto"; pixelSize: 9 } }
+                        Text { text: "RR"; color: "#636366"; font { family: "Roboto"; pixelSize: 9; weight: Font.SemiBold } }
                     }
                 }
 
-                // ── Door/Fuel Card ───────────────────────────────────────────
+                // ── Doors + Fuel Card — 2-door coupe by default ───────────────
                 Rectangle {
-                    width: 155; height: 145; radius: 16
+                    id: doorFuelCard
+                    width: 240; height: 160; radius: 16
                     color: "#1C1C1E"
 
-                    // Top half: compact door diagram
+                    // Door section (top ~112px)
                     Item {
-                        id: compactDoors
-                        anchors { top: parent.top; left: parent.left; right: parent.right; topMargin: 6 }
-                        height: 72
+                        id: doorSection
+                        anchors { top: parent.top; left: parent.left; right: parent.right
+                                  bottom: doorFuelDivider.top; topMargin: 6 }
 
                         Text {
                             anchors { top: parent.top; horizontalCenter: parent.horizontalCenter }
@@ -246,105 +322,120 @@ Item {
                             font { family: "Roboto"; pixelSize: 9; capitalization: Font.AllUppercase; letterSpacing: 1 }
                         }
 
-                        // Car body
+                        function doorOn(open)  { return open ? "#FF453A" : "#30D158" }
+                        function doorOff(open) { return open ? "#FF453A" : "#2C2C2E" }
+
+                        // Car body (coupe — centered)
                         Rectangle {
-                            anchors { top: parent.top; horizontalCenter: parent.horizontalCenter; topMargin: 12 }
-                            width: 44; height: 50; radius: 6; color: "#2C2C2E"
-                            border { color: Qt.rgba(1, 1, 1, 0.1); width: 1 }
+                            id: doorCarBody
+                            anchors { top: parent.top; horizontalCenter: parent.horizontalCenter; topMargin: 16 }
+                            width: 36
+                            height: root.fourDoorModel ? 72 : 54
+                            radius: 6; color: "#2C2C2E"
+                            border { color: Qt.rgba(1, 1, 1, 0.15); width: 1 }
+                            Behavior on height { NumberAnimation { duration: 200 } }
                         }
 
-                        function doorColor(open) { return open ? "#FF453A" : "#1C1C1E" }
-                        function doorBorder(open) { return open ? "#FF453A" : "#3A3A3C" }
+                        // FL door (driver — left side)
+                        Rectangle {
+                            x: 70; y: 16
+                            width: 24; height: root.fourDoorModel ? 30 : 38; radius: 4
+                            color: doorSection.doorOff(VehicleService.doorDriver)
+                            border { color: doorSection.doorOn(VehicleService.doorDriver); width: 1.5 }
+                            Behavior on color { ColorAnimation { duration: 100 } }
+                            Text { anchors.centerIn: parent; text: "FL"; color: "#FFFFFF"; font { pixelSize: 8; weight: Font.Bold } }
+                        }
 
-                        // FL
+                        // FR door (passenger — right side)
                         Rectangle {
-                            x: 38; y: 14; width: 20; height: 16; radius: 3
-                            color: compactDoors.doorColor(VehicleService.doorDriver)
-                            border { color: compactDoors.doorBorder(VehicleService.doorDriver); width: 1 }
-                            Text { anchors.centerIn: parent; text: "FL"; color: "#FFFFFF"; font.pixelSize: 7; font.weight: Font.Bold }
+                            x: 148; y: 16
+                            width: 24; height: root.fourDoorModel ? 30 : 38; radius: 4
+                            color: doorSection.doorOff(VehicleService.doorPassenger)
+                            border { color: doorSection.doorOn(VehicleService.doorPassenger); width: 1.5 }
+                            Behavior on color { ColorAnimation { duration: 100 } }
+                            Text { anchors.centerIn: parent; text: "FR"; color: "#FFFFFF"; font { pixelSize: 8; weight: Font.Bold } }
                         }
-                        // FR
+
+                        // RL door — 4-door only
                         Rectangle {
-                            x: 97; y: 14; width: 20; height: 16; radius: 3
-                            color: compactDoors.doorColor(VehicleService.doorPassenger)
-                            border { color: compactDoors.doorBorder(VehicleService.doorPassenger); width: 1 }
-                            Text { anchors.centerIn: parent; text: "FR"; color: "#FFFFFF"; font.pixelSize: 7; font.weight: Font.Bold }
+                            x: 70; y: 50
+                            width: 24; height: 26; radius: 4
+                            visible: root.fourDoorModel
+                            color: doorSection.doorOff(VehicleService.doorRearLeft)
+                            border { color: doorSection.doorOn(VehicleService.doorRearLeft); width: 1.5 }
+                            Behavior on color { ColorAnimation { duration: 100 } }
+                            Text { anchors.centerIn: parent; text: "RL"; color: "#FFFFFF"; font { pixelSize: 8; weight: Font.Bold } }
                         }
-                        // RL
+
+                        // RR door — 4-door only
                         Rectangle {
-                            x: 38; y: 36; width: 20; height: 16; radius: 3
-                            color: compactDoors.doorColor(VehicleService.doorRearLeft)
-                            border { color: compactDoors.doorBorder(VehicleService.doorRearLeft); width: 1 }
-                            Text { anchors.centerIn: parent; text: "RL"; color: "#FFFFFF"; font.pixelSize: 7; font.weight: Font.Bold }
+                            x: 148; y: 50
+                            width: 24; height: 26; radius: 4
+                            visible: root.fourDoorModel
+                            color: doorSection.doorOff(VehicleService.doorRearRight)
+                            border { color: doorSection.doorOn(VehicleService.doorRearRight); width: 1.5 }
+                            Behavior on color { ColorAnimation { duration: 100 } }
+                            Text { anchors.centerIn: parent; text: "RR"; color: "#FFFFFF"; font { pixelSize: 8; weight: Font.Bold } }
                         }
-                        // RR
+
+                        // Trunk (hatch bar below body)
                         Rectangle {
-                            x: 97; y: 36; width: 20; height: 16; radius: 3
-                            color: compactDoors.doorColor(VehicleService.doorRearRight)
-                            border { color: compactDoors.doorBorder(VehicleService.doorRearRight); width: 1 }
-                            Text { anchors.centerIn: parent; text: "RR"; color: "#FFFFFF"; font.pixelSize: 7; font.weight: Font.Bold }
-                        }
-                        // Trunk
-                        Rectangle {
-                            anchors { top: parent.top; horizontalCenter: parent.horizontalCenter; topMargin: 58 }
-                            width: 32; height: 10; radius: 2
-                            color: compactDoors.doorColor(VehicleService.trunkOpen)
-                            border { color: compactDoors.doorBorder(VehicleService.trunkOpen); width: 1 }
-                            Text { anchors.centerIn: parent; text: "TR"; color: "#FFFFFF"; font.pixelSize: 7; font.weight: Font.Bold }
+                            anchors { top: doorCarBody.bottom; horizontalCenter: parent.horizontalCenter; topMargin: 3 }
+                            width: 30; height: 10; radius: 2
+                            color: doorSection.doorOff(VehicleService.trunkOpen)
+                            border { color: doorSection.doorOn(VehicleService.trunkOpen); width: 1.5 }
+                            Behavior on color { ColorAnimation { duration: 100 } }
+                            Text { anchors.centerIn: parent; text: "TR"; color: "#FFFFFF"; font { pixelSize: 7; weight: Font.Bold } }
                         }
                     }
 
-                    // Divider
                     Rectangle {
-                        anchors { top: compactDoors.bottom; left: parent.left; right: parent.right; topMargin: 2 }
+                        id: doorFuelDivider
+                        anchors { left: parent.left; right: parent.right; bottom: fuelBarSection.top }
                         height: 1; color: "#2C2C2E"
                     }
 
-                    // Bottom half: small fuel arc
+                    // Fuel level — horizontal bar (no canvas arc)
                     Item {
-                        anchors { top: compactDoors.bottom; bottom: parent.bottom; left: parent.left; right: parent.right; topMargin: 4 }
+                        id: fuelBarSection
+                        anchors { bottom: parent.bottom; left: parent.left; right: parent.right
+                                  leftMargin: 10; rightMargin: 10 }
+                        height: 42
 
-                        Canvas {
-                            id: smallFuelArc
-                            anchors.fill: parent
-                            property real fuelLevel: VehicleService.fuelLevel
-
-                            onPaint: {
-                                var ctx = getContext("2d")
-                                ctx.clearRect(0, 0, width, height)
-                                var cx = width / 2
-                                var cy = height / 2 + 4
-                                var r  = 26
-                                ctx.beginPath()
-                                ctx.arc(cx, cy, r, Math.PI * 0.75, Math.PI * 2.25, false)
-                                ctx.strokeStyle = "#2C2C2E"
-                                ctx.lineWidth = 6; ctx.lineCap = "round"; ctx.stroke()
-
-                                var sweep = fuelLevel * Math.PI * 1.5
-                                if (sweep > 0.01) {
-                                    ctx.beginPath()
-                                    ctx.arc(cx, cy, r, Math.PI * 0.75, Math.PI * 0.75 + sweep, false)
-                                    ctx.strokeStyle = fuelLevel > 0.25 ? "#30D158"
-                                                    : fuelLevel > 0.1  ? "#FF9F0A" : "#FF453A"
-                                    ctx.lineWidth = 6; ctx.lineCap = "round"; ctx.stroke()
-                                }
-                            }
-                            onFuelLevelChanged: requestPaint()
-                            Component.onCompleted: requestPaint()
+                        Text {
+                            id: fuelWordLabel
+                            anchors { left: parent.left; verticalCenter: parent.verticalCenter }
+                            text: "FUEL"
+                            color: "#8E8E93"
+                            font { family: "Roboto"; pixelSize: 10; capitalization: Font.AllUppercase; letterSpacing: 1 }
                         }
 
                         Text {
-                            anchors.centerIn: parent; anchors.verticalCenterOffset: 2
+                            id: fuelPctLabel
+                            anchors { right: parent.right; verticalCenter: parent.verticalCenter }
                             text: Math.round(VehicleService.fuelLevel * 100) + "%"
                             color: VehicleService.fuelLevel > 0.25 ? "#FFFFFF"
                                  : VehicleService.fuelLevel > 0.1  ? "#FF9F0A" : "#FF453A"
-                            font { family: "Roboto"; pixelSize: 13; weight: Font.Bold }
+                            font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
                         }
-                        Text {
-                            anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: 2 }
-                            text: "FUEL"
-                            color: "#8E8E93"
-                            font { family: "Roboto"; pixelSize: 9; capitalization: Font.AllUppercase; letterSpacing: 1 }
+
+                        // Bar background
+                        Rectangle {
+                            anchors {
+                                left: fuelWordLabel.right; right: fuelPctLabel.left
+                                verticalCenter: parent.verticalCenter
+                                leftMargin: 8; rightMargin: 8
+                            }
+                            height: 8; radius: 4; color: "#2C2C2E"
+
+                            // Fill
+                            Rectangle {
+                                width: parent.width * VehicleService.fuelLevel
+                                height: parent.height; radius: 4
+                                color: VehicleService.fuelLevel > 0.25 ? "#30D158"
+                                     : VehicleService.fuelLevel > 0.1  ? "#FF9F0A" : "#FF453A"
+                                Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+                            }
                         }
                     }
                 }

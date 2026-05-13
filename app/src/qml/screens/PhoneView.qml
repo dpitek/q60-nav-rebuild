@@ -54,7 +54,7 @@ Item {
         anchors {
             top: tabRow.bottom
             bottom: btFooter.top
-            left: parent.left; right: parent.right
+            left: parent.left; right: callPanel.left
             topMargin: 6; bottomMargin: 4
         }
 
@@ -525,7 +525,7 @@ Item {
     // ── BT device footer bar ─────────────────────────────────────────────────
     Rectangle {
         id: btFooter
-        anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
+        anchors { bottom: parent.bottom; left: parent.left; right: callPanel.left }
         height: 28; color: "#0D0D0D"
 
         // Top separator
@@ -568,6 +568,104 @@ Item {
                     anchors.bottom: parent.bottom
                     color: index < (AudioService.btConnected ? 3 : 0) ? "#8E8E93" : "#3A3A3C"
                     Behavior on color { ColorAnimation { duration: 150 } }
+                }
+            }
+        }
+    }
+
+    // ── Persistent call controls (right panel) ────────────────────────────────
+    // Always visible — answer, end, and mute regardless of active call state.
+    Rectangle {
+        id: callPanel
+        anchors { top: parent.top; right: parent.right; bottom: parent.bottom }
+        width: 88
+        color: "#080808"
+
+        // Left separator
+        Rectangle {
+            anchors { top: parent.top; bottom: parent.bottom; left: parent.left }
+            width: 1; color: Qt.rgba(1, 1, 1, 0.1)
+        }
+
+        Column {
+            anchors.centerIn: parent
+            spacing: 14
+
+            // Answer button
+            Column {
+                spacing: 5
+                anchors.horizontalCenter: parent.horizontalCenter
+
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 54; height: 54; radius: 27
+                    color: answerPanelArea.pressed ? "#228B22" : "#30D158"
+                    Behavior on color { ColorAnimation { duration: 100 } }
+                    Text {
+                        anchors.centerIn: parent; text: "✆"
+                        color: "#FFFFFF"; font.pixelSize: 24
+                    }
+                    MouseArea {
+                        id: answerPanelArea; anchors.fill: parent; onClicked: {}
+                    }
+                }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "Answer"
+                    color: "#30D158"
+                    font { family: "Roboto"; pixelSize: 10; weight: Font.Medium }
+                }
+            }
+
+            // End call button
+            Column {
+                spacing: 5
+                anchors.horizontalCenter: parent.horizontalCenter
+
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 54; height: 54; radius: 27
+                    color: endPanelArea.pressed ? "#CC1A1A" : "#FF453A"
+                    Behavior on color { ColorAnimation { duration: 100 } }
+                    Text {
+                        anchors.centerIn: parent; text: "✆"
+                        color: "#FFFFFF"; font.pixelSize: 24; rotation: 135
+                    }
+                    MouseArea {
+                        id: endPanelArea; anchors.fill: parent; onClicked: {}
+                    }
+                }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "End"
+                    color: "#FF453A"
+                    font { family: "Roboto"; pixelSize: 10; weight: Font.SemiBold }
+                }
+            }
+
+            // Mute button
+            Column {
+                spacing: 5
+                anchors.horizontalCenter: parent.horizontalCenter
+
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 54; height: 54; radius: 27
+                    color: mutePanelArea.pressed ? "#2C2C2E" : "#1C1C1E"
+                    border { color: Qt.rgba(1, 1, 1, 0.2); width: 1.5 }
+                    Behavior on color { ColorAnimation { duration: 100 } }
+                    Text {
+                        anchors.centerIn: parent; text: "🎤"; font.pixelSize: 20
+                    }
+                    MouseArea {
+                        id: mutePanelArea; anchors.fill: parent; onClicked: {}
+                    }
+                }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "Mute"
+                    color: "#8E8E93"
+                    font { family: "Roboto"; pixelSize: 10 }
                 }
             }
         }

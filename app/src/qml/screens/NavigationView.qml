@@ -160,6 +160,47 @@ Item {
         }
     }
 
+    // ── Cruise control bubble — left side, mirrors SpeedWidget on right ────────
+    Rectangle {
+        id: cruiseWidget
+        anchors {
+            top: turnCard.bottom; left: parent.left
+            topMargin: 14; leftMargin: 16
+        }
+        width: 80; height: 68; radius: 16
+        color: Qt.rgba(0.1098, 0.1098, 0.1176, 0.92)
+        border { color: "#0A84FF"; width: 1 }
+        visible: VehicleService.cruiseActive
+
+        Behavior on opacity { NumberAnimation { duration: 200 } }
+
+        Column {
+            anchors.centerIn: parent
+            spacing: 2
+
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: VehicleService.cruiseSpeed > 0 ? VehicleService.cruiseSpeed.toString() : "—"
+                color: "#0A84FF"
+                font { family: "Roboto"; pixelSize: 26; weight: Font.Bold }
+            }
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "CRUISE"
+                color: "#8E8E93"
+                font { family: "Roboto"; pixelSize: 9; capitalization: Font.AllUppercase; letterSpacing: 1 }
+            }
+        }
+
+        // Subtle blue pulse ring when active
+        SequentialAnimation on border.width {
+            running: VehicleService.cruiseActive
+            loops: Animation.Infinite
+            NumberAnimation { to: 2; duration: 1200; easing.type: Easing.InOutSine }
+            NumberAnimation { to: 1; duration: 1200; easing.type: Easing.InOutSine }
+        }
+    }
+
     // Idle state label (no route)
     Text {
         anchors { top: parent.top; left: parent.left; topMargin: 48; leftMargin: 24 }
