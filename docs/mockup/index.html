@@ -4472,9 +4472,14 @@ const app = {
     document.getElementById('settings-overlay').classList.add('open');
     document.getElementById('cog-btn-lower').classList.add('open');
     document.getElementById('cog-btn-lower').textContent = '✕';
-    // Reset to home
-    document.getElementById('settings-home').style.transform = 'translateX(0)';
-    document.getElementById('settings-sub').className = 'settings-screen offscreen-right';
+    // Reset to home — always use inline styles so we override any leftover inline
+    // transforms from a previous settingsOpen() animation (className alone loses to inline style).
+    const home = document.getElementById('settings-home');
+    const sub  = document.getElementById('settings-sub');
+    home.style.transition = 'none';
+    home.style.transform  = 'translateX(0)';
+    sub.style.transition  = 'none';
+    sub.style.transform   = 'translateX(100%)';
     document.getElementById('settings-back-btn').style.display = 'none';
     document.getElementById('settings-breadcrumb').textContent = 'Settings';
     this._settingsCurrent = null;
@@ -4506,10 +4511,12 @@ const app = {
   },
 
   settingsBack() {
-    document.getElementById('settings-home').style.transform = 'translateX(0)';
-    const sub = document.getElementById('settings-sub');
-    sub.style.transition = 'transform 0.2s ease';
-    sub.style.transform = 'translateX(100%)';
+    const home = document.getElementById('settings-home');
+    const sub  = document.getElementById('settings-sub');
+    home.style.transition = 'transform 0.2s ease';
+    home.style.transform  = 'translateX(0)';
+    sub.style.transition  = 'transform 0.2s ease';
+    sub.style.transform   = 'translateX(100%)';
     document.getElementById('settings-back-btn').style.display = 'none';
     document.getElementById('settings-breadcrumb').textContent = 'Settings';
     this._settingsCurrent = null;
