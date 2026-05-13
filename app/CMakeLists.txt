@@ -138,6 +138,8 @@ qt6_add_qml_module(q60nav
         src/qml/components/LaneGuidance.qml
         src/qml/components/JunctionView.qml
         src/qml/components/AvmOverlay.qml
+        src/qml/components/MiniGauge.qml
+        src/qml/components/GPad.qml
 )
 
 target_include_directories(q60nav PRIVATE

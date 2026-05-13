@@ -1,5 +1,5 @@
 // VehicleStatusView.qml — Vehicle information center
-// 5 sub-tabs: Info | Drive | ADAS | ATTESA | Diag
+// 6 sub-tabs: Info | Drive | ADAS | ATTESA | Diag | Track
 // Content area: 800×360 (800×420 minus 60px nav bar)
 import QtQuick 6.6
 
@@ -11,7 +11,7 @@ Item {
     Rectangle { anchors.fill: parent; color: "#000000" }
 
     // ── Sub-tab state ──────────────────────────────────────────────────────────
-    property int activeTab: 0   // 0=Info 1=Drive 2=ADAS 3=ATTESA 4=Diag
+    property int activeTab: 0   // 0=Info 1=Drive 2=ADAS 3=ATTESA 4=Diag 5=Track
 
     // ── Drive-mode personal config (Q60 "Personal" mode 5-axis tuning) ────────
     // Loaded from SettingsService.driveModePersonalConfig (JSON) on construction;
@@ -158,10 +158,10 @@ Item {
             spacing: 4
 
             Repeater {
-                model: ["Info", "Drive", "ADAS", "ATTESA", "Diag"]
+                model: ["Info", "Drive", "ADAS", "ATTESA", "Diag", "Track"]
 
                 Rectangle {
-                    width: 140; height: 36; radius: 18
+                    width: 116; height: 36; radius: 18
                     color: root.activeTab === index ? "#0A84FF" : "transparent"
 
                     Behavior on color {
@@ -1856,6 +1856,230 @@ Item {
                                 font { family: "Roboto"; pixelSize: 11 }
                                 height: 18
                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ────────────────────────────────────────────────────────────────────
+        // TAB 5 — TRACK (VR30 telemetry + G-pad + 0-60 timer)
+        // ────────────────────────────────────────────────────────────────────
+        Item {
+            id: tabTrack
+            anchors.fill: parent
+            visible: root.activeTab === 5
+
+            // Display unit (0=imperial / 1=metric) — informs 0-60 vs 0-100 km/h label.
+            // Logic is in the VehicleService (always 60 mph trigger); QML relabels.
+            property int distUnit: typeof SettingsService !== "undefined" ? SettingsService.distanceUnit : 0
+            property string speedTargetLabel: distUnit === 1 ? "0-100 km/h" : "0-60 mph"
+
+            // ── Top half: 7-element mini-gauge grid (2 rows × 4 cols) ────────
+            Grid {
+                id: gaugeGrid
+                anchors { top: parent.top; horizontalCenter: parent.horizontalCenter; topMargin: 6 }
+                columns: 4; rows: 2
+                columnSpacing: 6
+                rowSpacing: 4
+
+                MiniGauge {
+                    label: "Boost"; units: "psi"
+                    value: VehicleService.boostPressurePsi
+                    minValue: 0; maxValue: 25; decimals: 1
+                    arcColor: "#0A84FF"
+                    warning: value > 20
+                }
+                MiniGauge {
+                    label: "Oil"; units: "°F"
+                    value: VehicleService.oilTempF
+                    minValue: 180; maxValue: 280
+                    arcColor: "#FF9F0A"
+                    warning: value > 260
+                }
+                MiniGauge {
+                    label: "Trans"; units: "°F"
+                    value: VehicleService.transTempF
+                    minValue: 160; maxValue: 260
+                    arcColor: "#FF9F0A"
+                    warning: value > 240
+                }
+                MiniGauge {
+                    label: "IAT"; units: "°F"
+                    value: VehicleService.intakeAirTempF
+                    minValue: 60; maxValue: 180
+                    arcColor: "#30D158"
+                    warning: value > 150
+                }
+                MiniGauge {
+                    label: "Ign Adv"; units: "°"
+                    value: VehicleService.ignitionAdvanceDeg
+                    minValue: -10; maxValue: 30
+                    arcColor: "#0A84FF"
+                }
+                MiniGauge {
+                    label: "Knock"; units: "°"
+                    value: VehicleService.knockRetardDeg
+                    minValue: 0; maxValue: 10
+                    arcColor: "#FF453A"
+                    warning: value > 2
+                }
+                MiniGauge {
+                    label: "WG"; units: "%"
+                    value: VehicleService.wastegatePercent
+                    minValue: 0; maxValue: 100
+                    arcColor: "#30D158"
+                }
+                // Reserved 8th cell — empty for future (AFR / lambda)
+                Item { width: 92; height: 86 }
+            }
+
+            // ── Middle: G-pad + readouts row ─────────────────────────────────
+            Item {
+                id: gPadRow
+                anchors { top: gaugeGrid.bottom; left: parent.left; right: parent.right; topMargin: 4 }
+                height: 80
+
+                GPad {
+                    id: gPad
+                    width: 76; height: 76
+                    anchors { verticalCenter: parent.verticalCenter; horizontalCenter: parent.horizontalCenter }
+                }
+
+                // Lateral G readout — left of pad
+                Column {
+                    anchors { right: gPad.left; verticalCenter: gPad.verticalCenter; rightMargin: 14 }
+                    spacing: 0
+                    Text {
+                        anchors.right: parent.right
+                        text: VehicleService.lateralG.toFixed(2) + " g"
+                        color: "#FFFFFF"
+                        font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                    }
+                    Text {
+                        anchors.right: parent.right
+                        text: "LAT"
+                        color: "#8E8E93"
+                        font { family: "Roboto"; pixelSize: 9; capitalization: Font.AllUppercase; letterSpacing: 1 }
+                    }
+                    Text {
+                        anchors.right: parent.right
+                        text: "peak " + Math.abs(VehicleService.peakLateralG).toFixed(2)
+                        color: "#FF9F0A"
+                        font { family: "Roboto"; pixelSize: 10 }
+                    }
+                }
+
+                // Longitudinal G readout — right of pad
+                Column {
+                    anchors { left: gPad.right; verticalCenter: gPad.verticalCenter; leftMargin: 14 }
+                    spacing: 0
+                    Text {
+                        text: VehicleService.longitudinalG.toFixed(2) + " g"
+                        color: "#FFFFFF"
+                        font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                    }
+                    Text {
+                        text: "LONG"
+                        color: "#8E8E93"
+                        font { family: "Roboto"; pixelSize: 9; capitalization: Font.AllUppercase; letterSpacing: 1 }
+                    }
+                    Text {
+                        text: "peak " + Math.abs(VehicleService.peakLongitudinalG).toFixed(2)
+                        color: "#30D158"
+                        font { family: "Roboto"; pixelSize: 10 }
+                    }
+                }
+            }
+
+            // ── Bottom: Performance timer card ───────────────────────────────
+            Rectangle {
+                anchors { bottom: parent.bottom; left: parent.left; right: parent.right
+                          bottomMargin: 4; leftMargin: 8; rightMargin: 8 }
+                height: 76; radius: 12; color: "#1C1C1E"
+
+                Row {
+                    anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
+                    spacing: 12
+
+                    // 0-60 / 0-100 main readout
+                    Column {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 150; spacing: 2
+
+                        Text {
+                            text: tabTrack.speedTargetLabel
+                            color: "#8E8E93"
+                            font { family: "Roboto"; pixelSize: 9; capitalization: Font.AllUppercase; letterSpacing: 1 }
+                        }
+                        Text {
+                            text: VehicleService.zeroToSixtySec > 0
+                                  ? VehicleService.zeroToSixtySec.toFixed(2) + "s"
+                                  : VehicleService.perfRunActive
+                                      ? VehicleService.perfRunElapsedSec.toFixed(2) + "s"
+                                      : "—"
+                            color: VehicleService.zeroToSixtySec > 0 ? "#30D158"
+                                 : VehicleService.perfRunActive       ? "#0A84FF" : "#FFFFFF"
+                            font { family: "Roboto"; pixelSize: 28; weight: Font.Bold }
+                        }
+                    }
+
+                    // Divider
+                    Rectangle { width: 1; height: parent.height * 0.6; anchors.verticalCenter: parent.verticalCenter; color: "#2C2C2E" }
+
+                    // Quarter-mile time
+                    Column {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 110; spacing: 2
+                        Text {
+                            text: "1/4 MILE"
+                            color: "#8E8E93"
+                            font { family: "Roboto"; pixelSize: 9; capitalization: Font.AllUppercase; letterSpacing: 1 }
+                        }
+                        Text {
+                            text: VehicleService.quarterMileSec > 0
+                                  ? VehicleService.quarterMileSec.toFixed(2) + "s" : "—"
+                            color: VehicleService.quarterMileSec > 0 ? "#30D158" : "#FFFFFF"
+                            font { family: "Roboto"; pixelSize: 18; weight: Font.SemiBold }
+                        }
+                    }
+
+                    // Divider
+                    Rectangle { width: 1; height: parent.height * 0.6; anchors.verticalCenter: parent.verticalCenter; color: "#2C2C2E" }
+
+                    // Trap speed
+                    Column {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 110; spacing: 2
+                        Text {
+                            text: "TRAP"
+                            color: "#8E8E93"
+                            font { family: "Roboto"; pixelSize: 9; capitalization: Font.AllUppercase; letterSpacing: 1 }
+                        }
+                        Text {
+                            text: VehicleService.quarterMileTrapMph > 0
+                                  ? VehicleService.quarterMileTrapMph.toFixed(0) + " mph" : "—"
+                            color: VehicleService.quarterMileTrapMph > 0 ? "#30D158" : "#FFFFFF"
+                            font { family: "Roboto"; pixelSize: 18; weight: Font.SemiBold }
+                        }
+                    }
+
+                    // Reset button
+                    Rectangle {
+                        width: 70; height: 32; radius: 16
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: "#2C2C2E"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "Reset"
+                            color: "#FFFFFF"
+                            font { family: "Roboto"; pixelSize: 11; weight: Font.SemiBold }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: VehicleService.resetPerformanceTimer()
                         }
                     }
                 }
