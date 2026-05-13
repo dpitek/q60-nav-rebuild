@@ -968,6 +968,9 @@ void VehicleService::setDriveMode(int mode)
     m_driveMode = qBound(0, mode, 5);
     emit driveModeChanged(m_driveMode);
     uint8_t d[1] = { static_cast<uint8_t>(m_driveMode) };
+    // J2534 trace: log the exact frame so post-drive log review can verify the bytes.
+    qInfo("[VehicleService] TX 0x%03X DLC=1 [%02X]  (drive mode=%d)",
+          CAN_DRIVE_MODE, d[0], m_driveMode);
     sendCANFrame(m_vehicleCanSock, CAN_DRIVE_MODE, d, 1);
 }
 
@@ -989,6 +992,12 @@ void VehicleService::sendADASFrame()
         adasFlags(m_bswOn, m_bsiOn, m_ldwOn, m_ldpOn, m_febOn, m_bciOn, m_vdcOn),
         static_cast<uint8_t>(m_pfcwSensitivity)
     };
+    // J2534 trace — full aid bitmap + PFCW sensitivity, both bytes.
+    qInfo("[VehicleService] TX 0x%03X DLC=2 [%02X %02X]  "
+          "(BSW=%d BSI=%d LDW=%d LDP=%d FEB=%d BCI=%d VDC=%d PFCW=%d)",
+          CAN_ADAS_CTRL, d[0], d[1],
+          m_bswOn, m_bsiOn, m_ldwOn, m_ldpOn, m_febOn, m_bciOn, m_vdcOn,
+          m_pfcwSensitivity);
     sendCANFrame(m_vehicleCanSock, CAN_ADAS_CTRL, d, 2);
 }
 

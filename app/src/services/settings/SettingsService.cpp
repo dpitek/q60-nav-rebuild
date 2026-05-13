@@ -271,6 +271,9 @@ void SettingsService::loadFromDisk()
 
     auto iget  = [&](const QString &k, int  def)  { return root.contains(k) ? root.value(k).toInt(def)  : def; };
     auto bget  = [&](const QString &k, bool def)  { return root.contains(k) ? root.value(k).toBool(def) : def; };
+    auto sget  = [&](const QString &k, const QString &def) {
+        return root.contains(k) ? root.value(k).toString(def) : def;
+    };
 
     m_upperBrightness       = iget("upperBrightness",       80);
     m_lowerBrightness       = iget("lowerBrightness",       80);
@@ -318,6 +321,7 @@ void SettingsService::loadFromDisk()
     m_mapDetailLevel        = iget("mapDetailLevel",         1);
     m_maintenanceInterval   = iget("maintenanceInterval",    1);
     m_language              = iget("language",               0);
+    m_driveModePersonalConfig = sget("driveModePersonalConfig", QString());
 
     // Bluetooth — replace seeded list if persisted one is present
     if (root.contains(QStringLiteral("btDevices")) && root.value(QStringLiteral("btDevices")).isArray()) {
@@ -403,8 +407,9 @@ void SettingsService::saveToDisk()
     root["mapOrientation"]        = m_mapOrientation;
     root["speedLimitDisplay"]     = m_speedLimitDisplay;
     root["mapDetailLevel"]        = m_mapDetailLevel;
-    root["maintenanceInterval"]   = m_maintenanceInterval;
-    root["language"]              = m_language;
+    root["maintenanceInterval"]     = m_maintenanceInterval;
+    root["language"]                = m_language;
+    root["driveModePersonalConfig"] = m_driveModePersonalConfig;
 
     // Bluetooth list
     QJsonArray bt;
@@ -726,5 +731,15 @@ void SettingsService::setAudioPresets(const QString &v)
     if (m_audioPresets == v) return;
     m_audioPresets = v;
     emit audioPresetsChanged();
+    armSaveTimer();
+}
+
+// ── Drive mode (Personal config) ──────────────────────────────────────────
+// QString setter (JSON blob — opaque to this class).
+void SettingsService::setDriveModePersonalConfig(const QString &json)
+{
+    if (m_driveModePersonalConfig == json) return;
+    m_driveModePersonalConfig = json;
+    emit driveModePersonalConfigChanged();
     armSaveTimer();
 }

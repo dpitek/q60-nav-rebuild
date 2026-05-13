@@ -140,6 +140,15 @@ class SettingsService : public QObject
     // JSON-encoded blob owned by AudioService; this is the persistence handle.
     Q_PROPERTY(QString audioPresets READ audioPresets WRITE setAudioPresets NOTIFY audioPresetsChanged)
 
+    // ── Drive mode (Personal config) ──────────────────────────────────────
+    // JSON-encoded sliders for the 6th drive mode ("Personal"). Schema:
+    //   { "throttle": 0-100, "steering": 0-100,
+    //     "trace":    0-100, "engineBrake": 0-100, "asm": 0-100 }
+    Q_PROPERTY(QString driveModePersonalConfig
+               READ driveModePersonalConfig
+               WRITE setDriveModePersonalConfig
+               NOTIFY driveModePersonalConfigChanged)
+
 public:
     explicit SettingsService(QObject *parent = nullptr);
     ~SettingsService() override = default;
@@ -213,14 +222,15 @@ public:
     int  mapOrientation()        const { return m_mapOrientation; }
     bool speedLimitDisplay()     const { return m_speedLimitDisplay; }
     int  mapDetailLevel()        const { return m_mapDetailLevel; }
-    int  maintenanceInterval()   const { return m_maintenanceInterval; }
-    int  language()              const { return m_language; }
-    QVariantList btDevices()     const { return m_btDevices; }
-    QString softwareVersion()    const { return m_softwareVersion; }
-    QString mapDataVersion()     const { return m_mapDataVersion; }
-    QString buildDate()          const { return m_buildDate; }
-    qint64  uptimeMs()           const;
-    QString audioPresets()       const { return m_audioPresets; }
+    int     maintenanceInterval()       const { return m_maintenanceInterval; }
+    int     language()                  const { return m_language; }
+    QVariantList btDevices()            const { return m_btDevices; }
+    QString softwareVersion()           const { return m_softwareVersion; }
+    QString mapDataVersion()            const { return m_mapDataVersion; }
+    QString buildDate()                 const { return m_buildDate; }
+    qint64  uptimeMs()                  const;
+    QString audioPresets()              const { return m_audioPresets; }
+    QString driveModePersonalConfig()   const { return m_driveModePersonalConfig; }
 
     // ── Setters (each arms the save debounce) ───────────────────────────
     void setUpperBrightness(int v);
@@ -270,6 +280,7 @@ public:
     void setMaintenanceInterval(int v);
     void setLanguage(int v);
     void setAudioPresets(const QString &v);
+    void setDriveModePersonalConfig(const QString &json);
 
 signals:
     void displayChanged();
@@ -289,6 +300,7 @@ signals:
     void languageChanged();
     void uptimeChanged();
     void audioPresetsChanged();
+    void driveModePersonalConfigChanged();
 
 private slots:
     void onSaveTimerFired();
@@ -352,6 +364,7 @@ private:
     int  m_language              = 0;
     QVariantList m_btDevices;             // seeded in ctor
     QString m_audioPresets;               // JSON blob — empty = use AudioService compiled defaults
+    QString m_driveModePersonalConfig;    // JSON; empty == defaults (50 across all 5 axes)
 
     // System metadata (set in ctor, never mutates after)
     QString m_softwareVersion;
