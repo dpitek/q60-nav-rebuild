@@ -1,0 +1,21 @@
+[Unit]
+Description=Q60 LTE Modem Connection
+# tcu-detect.service runs first and may update config.json to tcu_mode=true,
+# in which case this script skips ModemManager entirely.
+After=tcu-detect.service ModemManager.service network-pre.target
+Wants=tcu-detect.service
+# ModemManager is only needed in non-TCU mode — pull it in conditionally.
+# ConditionPathExists check not needed: modem-connect.sh handles both modes.
+Before=q60nav.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/nav/bin/modem-connect.sh
+Restart=on-failure
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

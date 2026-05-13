@@ -90,6 +90,9 @@ set(SOURCES
     src/services/audio/AudioService.cpp
     src/services/search/SearchService.cpp
     src/services/profile/ProfileService.cpp
+    src/services/network/NetworkService.cpp
+    src/services/weather/WeatherService.cpp
+    src/services/fuel/FuelService.cpp
     src/ui/bridge/StatusBridge.cpp
     src/ui/map/MapLibreItem.cpp
 )

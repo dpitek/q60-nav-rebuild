@@ -6,6 +6,7 @@
 #include "../../services/navigation/NavigationService.h"
 #include "../../services/vehicle/VehicleService.h"
 #include "../../services/audio/AudioService.h"
+#include "../../services/network/NetworkService.h"
 
 #include <QTimer>
 #include <QDateTime>
@@ -14,11 +15,13 @@
 StatusBridge::StatusBridge(NavigationService *nav,
                             VehicleService   *vehicle,
                             AudioService     *audio,
+                            NetworkService   *network,
                             QObject *parent)
     : QObject(parent)
     , m_nav(nav)
     , m_vehicle(vehicle)
     , m_audio(audio)
+    , m_network(network)
     , m_clockTimer(new QTimer(this))
 {
     // ── Navigation ──────────────────────────────────────────────────────
@@ -128,6 +131,21 @@ StatusBridge::StatusBridge(NavigationService *nav,
     connect(m_clockTimer, &QTimer::timeout, this, &StatusBridge::onClockTick);
     m_clockTimer->start();
     onClockTick(); // populate immediately
+
+    // ── Network ──────────────────────────────────────────────────────────
+    if (m_network) {
+        connect(m_network, &NetworkService::onlineChanged, this, [this](bool online) {
+            if (online != m_networkOnline) {
+                m_networkOnline = online;
+                emit networkChanged();
+            }
+        });
+        connect(m_network, &NetworkService::signalChanged, this, [this]() {
+            m_signalStrength = m_network->signalStrength();
+            m_networkType    = m_network->networkType();
+            emit networkChanged();
+        });
+    }
 }
 
 // ─── Clock ─────────────────────────────────────────────────────────────────

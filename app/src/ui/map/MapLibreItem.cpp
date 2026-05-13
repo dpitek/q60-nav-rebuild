@@ -37,6 +37,8 @@
 #include <mbgl/util/geo.hpp>
 #include <mbgl/util/image.hpp>
 #include <mbgl/style/style.hpp>         // mbgl::style::Style — needed for Map::getStyle() calls
+#include <mbgl/style/layer.hpp>         // mbgl::style::Layer base — getLayer(), setVisibility()
+#include <mbgl/style/types.hpp>         // mbgl::style::VisibilityType
 
 #if __has_include(<mbgl/style/sources/geojson_source.hpp>)
 #  include <mbgl/style/sources/geojson_source.hpp>
@@ -380,6 +382,28 @@ void MapLibreItem::setStyle(const QString &url)
     if (m_map) {
         m_map->getStyle().loadURL(url.toStdString());
         scheduleRender();
+    }
+#endif
+}
+
+// ─── setTrafficVisible ────────────────────────────────────────────────────────
+void MapLibreItem::setTrafficVisible(bool visible)
+{
+    if (visible == m_trafficVisible) return;
+    m_trafficVisible = visible;
+    emit trafficVisibleChanged(visible);
+#ifdef MAPLIBRE_AVAILABLE
+    if (m_map) {
+        // Layer::setVisibility() is on the base class — no cast needed.
+        mbgl::style::Layer *layer = m_map->getStyle().getLayer("q60-traffic");
+        if (layer) {
+            layer->setVisibility(visible
+                ? mbgl::style::VisibilityType::Visible
+                : mbgl::style::VisibilityType::None);
+            scheduleRender();
+        } else {
+            qWarning() << "[MapLibre] setTrafficVisible: layer q60-traffic not in style";
+        }
     }
 #endif
 }

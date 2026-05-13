@@ -48,7 +48,8 @@ class MapLibreItem : public QQuickItem {
     Q_PROPERTY(double          bearing READ bearing  WRITE setBearing  NOTIFY bearingChanged)
     Q_PROPERTY(double          pitch   READ pitch    WRITE setPitch    NOTIFY pitchChanged)
     Q_PROPERTY(QString         style   READ style    WRITE setStyle    NOTIFY styleChanged)
-    Q_PROPERTY(bool            ready   READ ready                      NOTIFY readyChanged)
+    Q_PROPERTY(bool            ready          READ ready                           NOTIFY readyChanged)
+    Q_PROPERTY(bool            trafficVisible READ trafficVisible WRITE setTrafficVisible NOTIFY trafficVisibleChanged)
 
 public:
     explicit MapLibreItem(QQuickItem *parent = nullptr);
@@ -66,6 +67,8 @@ public:
     void setBearing(double b);
     void setPitch(double p);
     void setStyle(const QString &url);
+    void setTrafficVisible(bool visible);
+    bool trafficVisible() const { return m_trafficVisible; }
 
 public slots:
     Q_INVOKABLE void flyTo(double lat, double lon, double zoom = -1);
@@ -84,6 +87,7 @@ signals:
     void pitchChanged(double);
     void styleChanged(QString);
     void readyChanged(bool);
+    void trafficVisibleChanged(bool);
     void mapClicked(double lat, double lon);
 
 protected:
@@ -104,7 +108,8 @@ private:
     double  m_bearing = 0.0;
     double  m_pitch   = 0.0;
     QString m_style   = QStringLiteral("file:///opt/nav/style/q60-dark.json");
-    bool    m_ready   = false;
+    bool    m_ready          = false;
+    bool    m_trafficVisible = false;
 
     QImage      m_rendered;      // Latest rendered frame (updated from scheduleRender)
     QStringList m_markerIds;    // Track active marker layer IDs for removeMarker()

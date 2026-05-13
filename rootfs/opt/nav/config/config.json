@@ -1,0 +1,48 @@
+{
+  "_comment": "Q60 Nav runtime config — copy to /opt/nav/config/config.json on target",
+
+  "openweathermap": {
+    "api_key": "",
+    "_comment_key": "Register free at https://openweathermap.org/api — Current Weather + 5 Day Forecast",
+    "update_interval_minutes": 15
+  },
+
+  "eia": {
+    "api_key": "",
+    "_comment_key": "Register free at https://www.eia.gov/opendata/ — no credit card required",
+    "padd_region": "R1X",
+    "_comment_region": "PADD regions: R1X=Southeast, R10=New England, R1Y=Central Atlantic, R20=Midwest, R30=Gulf Coast, R40=Rocky Mountain, R50=West Coast"
+  },
+
+  "traffic": {
+    "provider": "none",
+    "_comment_provider": "Supported: none | here | tomtom | mapbox",
+    "api_key": "",
+    "tile_url": "",
+    "_comment_tile_url": "Leave empty — auto-populated from provider + api_key. Or set manually.",
+    "enabled": false
+  },
+
+  "modem": {
+    "_comment_mode": "Set tcu_mode=true for 2021-2022 Q60 (Continental BL28NA003). Set false for 2017-2020 or external aftermarket modem.",
+
+    "tcu_mode": false,
+    "tcu_interface": "usb0",
+    "_comment_tcu": "TCU mode: Continental BL28NA003 self-manages LTE. DCU sees it as RNDIS USB adapter (usb0). No APN/PIN needed. Run 'ip link' after boot to confirm interface name.",
+
+    "interface": "wwan0",
+    "_comment_interface": "External modem interface (ignored in tcu_mode). wwan0=QMI/MBIM, ppp0=PPP. Check 'ip link' after modem attaches.",
+    "apn": "",
+    "_comment_apn": "Carrier APN (external modem only): AT&T=broadband, T-Mobile=fast.t-mobile.com, Verizon=vzwinternet",
+    "pin": "",
+    "_comment_pin": "SIM PIN if required (external modem only). Leave empty if SIM is unlocked.",
+    "auto_connect": true,
+    "reconnect_interval_seconds": 30
+  },
+
+  "location": {
+    "default_lat": 35.789,
+    "default_lon": -78.781,
+    "_comment": "Cary NC — used before GPS lock and for weather/fuel area defaults"
+  }
+}

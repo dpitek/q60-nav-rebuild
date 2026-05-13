@@ -1,0 +1,54 @@
+# Q60 Nav — LTE udev rules
+#
+# ── Q60 2021-2022: Continental BL28NA003 TCU (built-in 4G LTE) ───────────────
+# The TCU presents as a USB RNDIS network adapter — it self-manages the LTE
+# connection and acts as a router. DCU just does DHCP on the RNDIS interface.
+#
+# VID:PID is not publicly documented for the BL28NA003.
+# After first boot, identify with: dmesg | grep -i "rndis\|usb.*net\|cdc"
+# Then uncomment and fill in the specific rule below.
+#
+# Generic RNDIS trigger (fires on any USB RNDIS net interface — covers TCU):
+SUBSYSTEM=="net", ENV{ID_USB_DRIVER}=="rndis_host", \
+  TAG+="systemd", ENV{SYSTEMD_WANTS}="modem-connect.service"
+
+# CDC-NCM fallback (some Continental firmware versions use NCM instead of RNDIS):
+SUBSYSTEM=="net", ENV{ID_USB_DRIVER}=="cdc_ncm", \
+  TAG+="systemd", ENV{SYSTEMD_WANTS}="modem-connect.service"
+
+# Specific TCU rule — fill in VID:PID once identified from dmesg/lsusb:
+# SUBSYSTEM=="usb", ATTRS{idVendor}=="????", ATTRS{idProduct}=="????", \
+#   SYMLINK+="q60-tcu", TAG+="systemd", ENV{SYSTEMD_WANTS}="modem-connect.service"
+
+
+# ── Q60 2017-2020: Dead 3G Continental — needs external aftermarket modem ─────
+# AT&T 3G shutdown Feb 2022. Replace with one of the modems below.
+# To find USB IDs: lsusb | grep -i "quectel\|sierra\|telit\|huawei\|fibocom"
+
+# ── Quectel EC25 / EG25-G (most common embedded LTE modem) ──────────────────
+# SUBSYSTEM=="usb", ATTRS{idVendor}=="2c7c", ATTRS{idProduct}=="0125", \
+#   RUN+="/sbin/modprobe qmi_wwan", \
+#   SYMLINK+="lte-modem", TAG+="systemd", ENV{SYSTEMD_WANTS}="modem-connect.service"
+
+# ── Quectel EC25 (alternative PID) ───────────────────────────────────────────
+# SUBSYSTEM=="usb", ATTRS{idVendor}=="1e0e", ATTRS{idProduct}=="9001", \
+#   RUN+="/sbin/modprobe option", \
+#   SYMLINK+="lte-modem", TAG+="systemd", ENV{SYSTEMD_WANTS}="modem-connect.service"
+
+# ── Sierra Wireless EM7455 ────────────────────────────────────────────────────
+# SUBSYSTEM=="usb", ATTRS{idVendor}=="1199", ATTRS{idProduct}=="9071", \
+#   RUN+="/sbin/modprobe cdc_mbim", \
+#   SYMLINK+="lte-modem", TAG+="systemd", ENV{SYSTEMD_WANTS}="modem-connect.service"
+
+# ── Telit LN940 ──────────────────────────────────────────────────────────────
+# SUBSYSTEM=="usb", ATTRS{idVendor}=="1bc7", ATTRS{idProduct}=="1060", \
+#   RUN+="/sbin/modprobe cdc_mbim", \
+#   SYMLINK+="lte-modem", TAG+="systemd", ENV{SYSTEMD_WANTS}="modem-connect.service"
+
+
+# ── Generic fallbacks: wwan/ppp interfaces (covers most modems) ───────────────
+SUBSYSTEM=="net", KERNEL=="wwan*", \
+  TAG+="systemd", ENV{SYSTEMD_WANTS}="modem-connect.service"
+
+SUBSYSTEM=="net", KERNEL=="ppp*", \
+  TAG+="systemd", ENV{SYSTEMD_WANTS}="modem-connect.service"

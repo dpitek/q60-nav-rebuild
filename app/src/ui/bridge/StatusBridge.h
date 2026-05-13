@@ -8,6 +8,7 @@
 class NavigationService;
 class VehicleService;
 class AudioService;
+class NetworkService;
 
 class StatusBridge : public QObject {
     Q_OBJECT
@@ -32,12 +33,21 @@ class StatusBridge : public QObject {
     // GPS position (for map tracking)
     Q_PROPERTY(double  latitude       READ latitude       NOTIFY positionChanged)
     Q_PROPERTY(double  longitude      READ longitude      NOTIFY positionChanged)
+    // LTE network
+    Q_PROPERTY(bool    networkOnline  READ networkOnline  NOTIFY networkChanged)
+    Q_PROPERTY(QString networkType    READ networkType    NOTIFY networkChanged)  // "LTE"/"3G"/"none"
+    Q_PROPERTY(int     signalStrength READ signalStrength NOTIFY networkChanged)  // 0-5 bars
 
 public:
     explicit StatusBridge(NavigationService *nav,
                           VehicleService   *vehicle,
                           AudioService     *audio,
+                          NetworkService   *network = nullptr,
                           QObject *parent = nullptr);
+
+    bool   networkOnline()   const { return m_networkOnline; }
+    QString networkType()    const { return m_networkType; }
+    int    signalStrength()  const { return m_signalStrength; }
 
     bool   navActive()      const { return m_navActive; }
     QString nextStreet()    const { return m_nextStreet; }
@@ -71,6 +81,7 @@ signals:
     void outsideTempChanged(double);
     void timeChanged(QString);
     void positionChanged();
+    void networkChanged();
 
     // Cross-screen commands
     void showTurnBanner();      // Lower screen: flash turn arrow overlay
@@ -90,6 +101,11 @@ private:
     NavigationService *m_nav;
     VehicleService    *m_vehicle;
     AudioService      *m_audio;
+    NetworkService    *m_network;
+
+    bool    m_networkOnline  = false;
+    QString m_networkType    = QStringLiteral("none");
+    int     m_signalStrength = 0;
 
     bool    m_navActive = false;
     QString m_nextStreet;

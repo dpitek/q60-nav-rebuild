@@ -1,6 +1,6 @@
 // InfoView — Lower screen Info tab
 // Cards: Weather · Fuel Prices · Parking Location · Trip History
-// All data is STATIC MOCK — API wiring noted per card.
+// Weather bound to WeatherService (OWM). Fuel bound to FuelService (EIA).
 import QtQuick 6.6
 
 Item {
@@ -8,6 +8,28 @@ Item {
     anchors.fill: parent
 
     property bool hasParkingLocation: true  // show mock parked-location card
+
+    // ── OWM icon code → emoji helper ─────────────────────────────────────────
+    function owmEmoji(code) {
+        if (!code) return "🌡"
+        var c = code.substring(0, 2)
+        if (c === "01") return code.endsWith("d") ? "☀" : "🌙"
+        if (c === "02") return "⛅"
+        if (c === "03" || c === "04") return "☁"
+        if (c === "09") return "🌧"
+        if (c === "10") return "🌦"
+        if (c === "11") return "⛈"
+        if (c === "13") return "🌨"
+        if (c === "50") return "🌫"
+        return "🌡"
+    }
+
+    // ── Temperature color helper ──────────────────────────────────────────────
+    function tempColor(temp) {
+        if (temp < 50) return "#5AC8FA"   // cold = blue
+        if (temp > 80) return "#FF9F0A"   // hot = amber
+        return "#FFFFFF"                   // comfortable = white
+    }
 
     Rectangle { anchors.fill: parent; color: "#000000" }
 
@@ -22,16 +44,32 @@ Item {
             spacing: 12
 
             // ── Weather Card ─────────────────────────────────────────────────
-            // TODO: wire to OpenWeatherMap API once network is available
             Rectangle {
                 width: parent.width; height: 120
                 radius: 16
                 color: "#1C1C1E"
                 border { color: Qt.rgba(1, 1, 1, 0.08); width: 1 }
 
+                // Loading / no-data state
+                Item {
+                    anchors.fill: parent
+                    visible: !WeatherService.available
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "Weather unavailable — add OWM API key to config.json"
+                        color: "#3A3A3C"
+                        font { family: "Roboto"; pixelSize: 11 }
+                        wrapMode: Text.WordWrap
+                        width: parent.width - 24
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                }
+
                 Row {
                     anchors { fill: parent; margins: 14 }
                     spacing: 0
+                    visible: WeatherService.available
 
                     // Left: current conditions
                     Column {
@@ -44,43 +82,41 @@ Item {
 
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: "⛅"
+                                text: owmEmoji(WeatherService.iconCode)
                                 font { pixelSize: 32 }
                             }
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
-                                // Color coding: blue <50°F, white 50-80°F, amber >80°F
-                                text: "72°F"
-                                color: "#FFFFFF"   // 72 is in 50-80 range
+                                text: Math.round(WeatherService.temperature) + "°F"
+                                color: tempColor(WeatherService.temperature)
                                 font { family: "Roboto"; pixelSize: 36; weight: Font.Bold }
                             }
                         }
 
                         Text {
-                            text: "Partly Cloudy"
+                            text: WeatherService.condition
                             color: "#8E8E93"
                             font { family: "Roboto"; pixelSize: 13 }
+                            elide: Text.ElideRight
+                            width: parent.width
                         }
                         Text {
-                            text: "Cary, NC  •  Updated 9:41 AM"
+                            text: WeatherService.city + "  •  " + WeatherService.lastUpdated
                             color: "#3A3A3C"
                             font { family: "Roboto"; pixelSize: 10 }
+                            elide: Text.ElideRight
+                            width: parent.width
                         }
                     }
 
-                    // Right: 4-day forecast
+                    // Right: forecast strip (up to 4 days from WeatherService.forecast)
                     Row {
                         width: parent.width * 0.55
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 0
 
                         Repeater {
-                            model: [
-                                { day: "MON", hi: "75°", lo: "58°", icon: "⛅" },
-                                { day: "TUE", hi: "68°", lo: "52°", icon: "🌧" },
-                                { day: "WED", hi: "71°", lo: "55°", icon: "⛅" },
-                                { day: "THU", hi: "80°", lo: "62°", icon: "☀" }
-                            ]
+                            model: WeatherService.forecast.slice(0, 4)
 
                             delegate: Column {
                                 width: parent.width / 4
@@ -89,25 +125,28 @@ Item {
 
                                 Text {
                                     anchors.horizontalCenter: parent.horizontalCenter
-                                    text: modelData.day
+                                    // modelData.day is "YYYY-MM-DD"; show 3-letter day name
+                                    text: {
+                                        var d = new Date(modelData.day + "T12:00:00")
+                                        return d.toLocaleDateString(Qt.locale(), "ddd").toUpperCase().substring(0, 3)
+                                    }
                                     color: "#8E8E93"
                                     font { family: "Roboto"; pixelSize: 9; weight: Font.Medium; letterSpacing: 0.5 }
                                 }
                                 Text {
                                     anchors.horizontalCenter: parent.horizontalCenter
-                                    text: modelData.icon
+                                    text: owmEmoji(modelData.icon)
                                     font { pixelSize: 16 }
                                 }
                                 Text {
                                     anchors.horizontalCenter: parent.horizontalCenter
-                                    text: modelData.hi
-                                    // hi color: amber if >80, else white
-                                    color: parseInt(modelData.hi) > 80 ? "#FF9F0A" : "#FFFFFF"
+                                    text: Math.round(modelData.hi) + "°"
+                                    color: modelData.hi > 80 ? "#FF9F0A" : "#FFFFFF"
                                     font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
                                 }
                                 Text {
                                     anchors.horizontalCenter: parent.horizontalCenter
-                                    text: modelData.lo
+                                    text: Math.round(modelData.lo) + "°"
                                     color: "#8E8E93"
                                     font { family: "Roboto"; pixelSize: 11 }
                                 }
@@ -118,7 +157,7 @@ Item {
             }
 
             // ── Fuel Prices Card ─────────────────────────────────────────────
-            // TODO: wire to GasBuddy API
+            // EIA weekly regional averages — not per-station
             Rectangle {
                 width: parent.width; height: 110
                 radius: 16
@@ -129,20 +168,36 @@ Item {
                     anchors { fill: parent; margins: 12 }
                     spacing: 6
 
-                    // Header
-                    Text {
-                        text: "⛽  Nearby Fuel"
-                        color: "#FFFFFF"
-                        font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                    // Header row
+                    Row {
+                        width: parent.width
+                        spacing: 0
+                        Text {
+                            text: "⛽  Regional Prices"
+                            color: "#FFFFFF"
+                            font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                        }
+                        Item { width: parent.width - headerLeft.implicitWidth - regionLabel.implicitWidth; height: 1 }
+                        Text {
+                            id: headerLeft
+                            width: 0  // hidden spacer trick — use anchors instead
+                        }
+                        Text {
+                            id: regionLabel
+                            text: FuelService.available ? FuelService.region + "  •  " + FuelService.lastUpdated : "EIA data"
+                            color: "#3A3A3C"
+                            font { family: "Roboto"; pixelSize: 9 }
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.children[0].verticalCenter
+                        }
                     }
 
-                    // Station rows
-                    // Cheapest regular = BP at $3.25 — highlighted green
+                    // Price rows
                     Repeater {
                         model: [
-                            { name: "Shell",  dist: "0.4 mi", reg: "$3.29", prem: "$3.79", diesel: "$3.99", cheapest: false },
-                            { name: "BP",     dist: "1.1 mi", reg: "$3.25", prem: "$3.75", diesel: "$3.95", cheapest: true  },
-                            { name: "Exxon",  dist: "1.8 mi", reg: "$3.31", prem: "$3.81", diesel: "$4.01", cheapest: false }
+                            { label: "Regular",  price: FuelService.regularPrice,  grade: "reg" },
+                            { label: "Premium",  price: FuelService.premiumPrice,  grade: "prem" },
+                            { label: "Diesel",   price: FuelService.dieselPrice,   grade: "dsl" }
                         ]
 
                         delegate: Row {
@@ -150,35 +205,29 @@ Item {
                             spacing: 0
 
                             Text {
-                                width: parent.width * 0.22
-                                text: modelData.name
+                                width: parent.width * 0.30
+                                text: modelData.label
                                 color: "#FFFFFF"
                                 font { family: "Roboto"; pixelSize: 12 }
-                                elide: Text.ElideRight
                             }
                             Text {
-                                width: parent.width * 0.18
-                                text: modelData.dist
-                                color: "#8E8E93"
-                                font { family: "Roboto"; pixelSize: 11 }
+                                width: parent.width * 0.35
+                                text: FuelService.available
+                                      ? "$" + modelData.price.toFixed(2) + " / gal"
+                                      : "—"
+                                color: modelData.grade === "reg" ? "#30D158" : "#8E8E93"
+                                font { family: "Roboto"; pixelSize: 12;
+                                       weight: modelData.grade === "reg" ? Font.SemiBold : Font.Normal }
                             }
+                            // Trend arrow (only for regular)
                             Text {
-                                width: parent.width * 0.20
-                                text: modelData.reg
-                                color: modelData.cheapest ? "#30D158" : "#FFFFFF"
-                                font { family: "Roboto"; pixelSize: 12; weight: modelData.cheapest ? Font.SemiBold : Font.Normal }
-                            }
-                            Text {
-                                width: parent.width * 0.20
-                                text: modelData.prem
-                                color: "#8E8E93"
-                                font { family: "Roboto"; pixelSize: 11 }
-                            }
-                            Text {
-                                width: parent.width * 0.20
-                                text: modelData.diesel
-                                color: "#8E8E93"
-                                font { family: "Roboto"; pixelSize: 11 }
+                                visible: modelData.grade === "reg" && FuelService.available
+                                text: FuelService.trend === "up"   ? "▲" :
+                                      FuelService.trend === "down" ? "▼" : "—"
+                                color: FuelService.trend === "up"   ? "#FF453A" :
+                                       FuelService.trend === "down" ? "#30D158" : "#3A3A3C"
+                                font { family: "Roboto"; pixelSize: 10 }
+                                anchors.verticalCenter: parent.verticalCenter
                             }
                         }
                     }
@@ -197,14 +246,12 @@ Item {
                     anchors { fill: parent; margins: 12 }
                     spacing: 8
 
-                    // Header
                     Text {
                         text: "🅿  Last Parked"
                         color: "#FFFFFF"
                         font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
                     }
 
-                    // Location row
                     Row {
                         width: parent.width
                         spacing: 10
@@ -235,7 +282,6 @@ Item {
                             }
                         }
 
-                        // Navigate Back pill
                         Rectangle {
                             height: 30; width: navBackLabel.implicitWidth + 18
                             radius: 15
@@ -275,14 +321,12 @@ Item {
                     anchors { fill: parent; margins: 12 }
                     spacing: 6
 
-                    // Header
                     Text {
                         text: "🗺  Recent Trips"
                         color: "#FFFFFF"
                         font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
                     }
 
-                    // Trip rows
                     Repeater {
                         model: [
                             { when: "Today 7:42 AM",       route: "Home → Work",             dist: "18.4 mi", mpg: "28.6 MPG", dur: "32 min" },

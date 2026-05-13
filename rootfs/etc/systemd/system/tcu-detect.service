@@ -1,0 +1,22 @@
+[Unit]
+Description=Q60 TCU Auto-Detection (Continental BL28NA003)
+Documentation=file:///opt/nav/bin/tcu-detect.sh
+# Must run after udev has had time to enumerate USB devices,
+# but before modem-connect so config.json is updated first.
+After=systemd-udevd.service local-fs.target
+Before=modem-connect.service
+# ModemManager not required for TCU mode, but we want to run regardless
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/nav/bin/tcu-detect.sh
+# Non-fatal: if detection fails or no TCU present, modem-connect falls back to modem mode
+SuccessExitStatus=0 1
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=q60-tcu-detect
+
+[Install]
+WantedBy=multi-user.target

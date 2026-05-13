@@ -16,6 +16,9 @@
 #include "services/audio/AudioService.h"
 #include "services/search/SearchService.h"
 #include "services/profile/ProfileService.h"
+#include "services/network/NetworkService.h"
+#include "services/weather/WeatherService.h"
+#include "services/fuel/FuelService.h"
 #include "ui/bridge/StatusBridge.h"
 #include "ui/map/MapLibreItem.h"
 
@@ -51,9 +54,12 @@ int main(int argc, char *argv[])
     NavigationService navSvc;     // Valhalla + MapLibre
     SearchService   searchSvc;    // Pelias/Nominatim offline
     ProfileService  profileSvc;   // Driver profiles — CAN key detect + JSON persistence
+    NetworkService  networkSvc;   // LTE modem — sysfs + mmcli polling
+    WeatherService  weatherSvc;   // OpenWeatherMap current + 5-day forecast
+    FuelService     fuelSvc;      // EIA weekly regional gas prices
 
     // StatusBridge — shared state between both screens
-    StatusBridge bridge(&navSvc, &vehicleSvc, &audioSvc);
+    StatusBridge bridge(&navSvc, &vehicleSvc, &audioSvc, &networkSvc);
 
     // ── QML Engine ────────────────────────────────────────────────────────
     QQmlApplicationEngine engine;
@@ -64,6 +70,9 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("AudioService",      &audioSvc);
     engine.rootContext()->setContextProperty("SearchService",     &searchSvc);
     engine.rootContext()->setContextProperty("ProfileService",    &profileSvc);
+    engine.rootContext()->setContextProperty("NetworkService",    &networkSvc);
+    engine.rootContext()->setContextProperty("WeatherService",    &weatherSvc);
+    engine.rootContext()->setContextProperty("FuelService",       &fuelSvc);
     engine.rootContext()->setContextProperty("StatusBridge",      &bridge);
 
     engine.load(QUrl(QStringLiteral("qrc:/Q60Nav/src/qml/Main.qml")));
@@ -125,6 +134,9 @@ int main(int argc, char *argv[])
     audioSvc.start();
     navSvc.start();
     profileSvc.start(&vehicleSvc);  // subscribes to keySlotDetected + ignitionOff
+    networkSvc.start();             // LTE polling — non-blocking sysfs + mmcli
+    weatherSvc.start();             // OWM fetch; graceful no-op without API key
+    fuelSvc.start();                // EIA fetch; hardcoded fallback if no API key
 
     return app.exec();
 }

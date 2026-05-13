@@ -197,10 +197,21 @@ docker run --rm --privileged \
         mknod \$MOUNT/dev/tty     c 5 0 2>/dev/null || true
 
         # ── Permissions ────────────────────────────────────────────────────
-        chmod 755 \$MOUNT/etc/init.d/*   2>/dev/null || true
-        chmod 755 \$MOUNT/opt/nav/*.sh   2>/dev/null || true
+        chmod 755 \$MOUNT/etc/init.d/*      2>/dev/null || true
+        chmod 755 \$MOUNT/opt/nav/*.sh      2>/dev/null || true
+        chmod 755 \$MOUNT/opt/nav/bin/*.sh  2>/dev/null || true
         chmod 755 \$MOUNT/opt/valhalla/*.sh 2>/dev/null || true
-        chmod 755 \$MOUNT/etc/rc         2>/dev/null || true
+        chmod 755 \$MOUNT/etc/rc            2>/dev/null || true
+
+        # ── Systemd service enablement (multi-user.target.wants symlinks) ──
+        # Equivalent to: systemctl enable <service>
+        mkdir -p \$MOUNT/etc/systemd/system/multi-user.target.wants
+        for SVC in tcu-detect modem-connect modem-reconnect; do
+            ln -sf /etc/systemd/system/\${SVC}.service \
+                   \$MOUNT/etc/systemd/system/multi-user.target.wants/\${SVC}.service \
+                   2>/dev/null || true
+        done
+        echo '  systemd services enabled: tcu-detect modem-connect modem-reconnect'
 
         # ── Size summary ───────────────────────────────────────────────────
         echo ''
