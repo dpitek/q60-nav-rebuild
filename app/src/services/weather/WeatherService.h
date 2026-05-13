@@ -5,6 +5,9 @@
 // Config: /opt/nav/config/config.json → "openweathermap" → { "api_key": "...", "update_interval_minutes": 15 }
 // Coordinates: read from NavigationService position or fallback lat/lon from config.
 // Units: imperial (°F, mph)
+//
+// AIR-GAP: offline by default. NetworkService must call setNetworkOnline(true) before
+// any external request fires. Fetches are silently dropped when m_networkOnline is false.
 #include <QObject>
 #include <QString>
 #include <QVariantList>
@@ -43,6 +46,10 @@ public:
     // Called by main when GPS position updates — triggers a refresh if location changed significantly
     Q_INVOKABLE void updatePosition(double lat, double lon);
 
+    // Called by NetworkService when LTE link comes up or drops.
+    // Triggers an immediate fetch on first online transition.
+    void setNetworkOnline(bool online);
+
 signals:
     void availableChanged(bool available);
     void weatherUpdated();
@@ -55,7 +62,6 @@ private slots:
 
 private:
     void loadConfig();
-    QString iconUrl(const QString &code) const;
 
     QNetworkAccessManager *m_nam;
     QTimer  m_updateTimer;
@@ -63,13 +69,15 @@ private:
     double  m_lat = 35.789, m_lon = -78.781;   // Cary NC default
     int     m_intervalMin = 15;
 
-    bool    m_available   = false;
-    double  m_temperature = 0.0;
-    double  m_feelsLike   = 0.0;
+    bool    m_networkOnline = false; // must be set true by NetworkService before any fetch fires
+    bool    m_started       = false; // set after start() completes config load
+    bool    m_available     = false;
+    double  m_temperature   = 0.0;
+    double  m_feelsLike     = 0.0;
     QString m_condition;
     QString m_iconCode;
-    int     m_humidity    = 0;
-    double  m_windSpeed   = 0.0;
+    int     m_humidity      = 0;
+    double  m_windSpeed     = 0.0;
     QString m_city;
     QString m_lastUpdated;
     QVariantList m_forecast; // Each entry: { day, hi, lo, icon, condition }

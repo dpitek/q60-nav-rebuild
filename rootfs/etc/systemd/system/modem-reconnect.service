@@ -4,11 +4,13 @@ After=modem-connect.service
 
 [Service]
 Type=simple
-# Re-run connect script if connectivity drops for >60s
+# Re-run connect script if connectivity drops for >60s.
+# Uses DHCP gateway probe — no external IP address required.
 ExecStart=/bin/sh -c '\
   while true; do \
     sleep 60; \
-    if ! ping -c 1 -W 5 8.8.8.8 > /dev/null 2>&1; then \
+    GW=$(ip route | awk '"'"'/default/ {print $3; exit}'"'"'); \
+    if [ -z "$GW" ] || ! ping -c 1 -W 5 "$GW" > /dev/null 2>&1; then \
       logger -t q60-modem "Connectivity lost — reconnecting..."; \
       /opt/nav/bin/modem-connect.sh; \
     fi; \

@@ -62,11 +62,13 @@ if [ "$TCU_MODE" = "true" ]; then
     log "WARN: DHCP failed — TCU may not be ready yet (reconnect will retry)"
 
     sleep 2
-    if ping -c 1 -W 5 8.8.8.8 > /dev/null 2>&1; then
+    # Probe the DHCP gateway — no external IP required
+    GW=$(ip route | awk '/default/ {print $3; exit}')
+    if [ -n "$GW" ] && ping -c 1 -W 5 "$GW" > /dev/null 2>&1; then
         IP=$(ip -4 addr show "$TCU_IFACE" 2>/dev/null | grep 'inet ' | awk '{print $2}')
         log "TCU online. IP: $IP (LTE via InfinitiConnect)"
     else
-        log "WARN: No connectivity yet — TCU may still be registering on network"
+        log "WARN: No gateway response yet — TCU may still be registering on network"
     fi
 
     log "modem-connect (TCU mode) done"
@@ -125,13 +127,14 @@ if ip link show "$MODEM_IFACE" > /dev/null 2>&1; then
     log "WARN: DHCP failed — interface may use static IP from bearer"
 fi
 
-# ── Verify ───────────────────────────────────────────────────────────────────
+# ── Verify — probe gateway only, no external IP ──────────────────────────────
 sleep 2
-if ping -c 1 -W 5 8.8.8.8 > /dev/null 2>&1; then
+GW=$(ip route | awk '/default/ {print $3; exit}')
+if [ -n "$GW" ] && ping -c 1 -W 5 "$GW" > /dev/null 2>&1; then
     IP=$(ip -4 addr show "$MODEM_IFACE" 2>/dev/null | grep 'inet ' | awk '{print $2}')
     log "LTE connected. IP: $IP"
 else
-    log "WARN: No ping response — data path may still be initialising"
+    log "WARN: No gateway response — data path may still be initialising"
 fi
 
 # ── Write signal info for NetworkService to read ─────────────────────────────

@@ -74,22 +74,26 @@ void FuelService::loadConfig()
 }
 
 // ---------------------------------------------------------------------------
-// start
+// start — load config, arm fallback, arm timer. Does NOT fetch immediately.
+// Fetches only begin once NetworkService calls setNetworkOnline(true).
 // ---------------------------------------------------------------------------
 void FuelService::start()
 {
     loadConfig();
+    m_started = true;
+
+    // Always publish fallback prices immediately so UI has something to show
+    m_regular     = FALLBACK_REGULAR;
+    m_premium     = FALLBACK_PREMIUM;
+    m_diesel      = FALLBACK_DIESEL;
+    m_lastUpdated = QStringLiteral("Recent avg");
+    m_trend       = QStringLiteral("flat");
+    m_available   = true;
+    emit availableChanged(true);
+    emit pricesUpdated();
 
     if (m_apiKey.isEmpty()) {
-        qCWarning(lcFuel) << "No EIA API key — using hardcoded fallback prices";
-        m_regular     = FALLBACK_REGULAR;
-        m_premium     = FALLBACK_PREMIUM;
-        m_diesel      = FALLBACK_DIESEL;
-        m_lastUpdated = QStringLiteral("Recent avg");
-        m_trend       = QStringLiteral("flat");
-        m_available   = true;
-        emit availableChanged(true);
-        emit pricesUpdated();
+        qCWarning(lcFuel) << "No EIA API key — showing hardcoded fallback prices";
         return;
     }
 
@@ -97,7 +101,23 @@ void FuelService::start()
     m_updateTimer.setInterval(UPDATE_INTERVAL_MS);
     m_updateTimer.start();
 
-    fetchPrices();
+    // Don't call fetchPrices() here — wait for setNetworkOnline(true)
+    qCInfo(lcFuel) << "Started — waiting for network before first fetch";
+}
+
+// ---------------------------------------------------------------------------
+// setNetworkOnline — called by NetworkService when LTE link changes state.
+// ---------------------------------------------------------------------------
+void FuelService::setNetworkOnline(bool online)
+{
+    if (m_networkOnline == online)
+        return;
+
+    m_networkOnline = online;
+    qCInfo(lcFuel) << "Network online:" << online;
+
+    if (online && m_started && !m_apiKey.isEmpty())
+        fetchPrices(); // first live fetch now that we have connectivity
 }
 
 // ---------------------------------------------------------------------------
@@ -107,6 +127,11 @@ void FuelService::start()
 // ---------------------------------------------------------------------------
 void FuelService::fetchPrices()
 {
+    // Air-gap gate — drop silently if offline or unconfigured
+    if (!m_networkOnline) {
+        qCInfo(lcFuel) << "fetchPrices: offline — skipping";
+        return;
+    }
     if (m_apiKey.isEmpty())
         return;
 

@@ -68,11 +68,13 @@ void WeatherService::loadConfig()
 }
 
 // ---------------------------------------------------------------------------
-// start
+// start — load config and arm the timer. Does NOT fetch immediately.
+// Fetches only begin once NetworkService calls setNetworkOnline(true).
 // ---------------------------------------------------------------------------
 void WeatherService::start()
 {
     loadConfig();
+    m_started = true;
 
     if (m_apiKey.isEmpty()) {
         qCWarning(lcWeather) << "No OWM API key configured — weather unavailable";
@@ -85,7 +87,25 @@ void WeatherService::start()
     m_updateTimer.setInterval(m_intervalMin * 60 * 1000);
     m_updateTimer.start();
 
-    fetchWeather();
+    // Don't call fetchWeather() here — wait for setNetworkOnline(true)
+    qCInfo(lcWeather) << "Started — waiting for network before first fetch";
+}
+
+// ---------------------------------------------------------------------------
+// setNetworkOnline — called by NetworkService when LTE link changes state.
+// Triggers an immediate fetch on the first online transition; subsequent
+// fetches are driven by m_updateTimer.
+// ---------------------------------------------------------------------------
+void WeatherService::setNetworkOnline(bool online)
+{
+    if (m_networkOnline == online)
+        return;
+
+    m_networkOnline = online;
+    qCInfo(lcWeather) << "Network online:" << online;
+
+    if (online && m_started && !m_apiKey.isEmpty())
+        fetchWeather(); // first fetch now that we have connectivity
 }
 
 // ---------------------------------------------------------------------------
@@ -93,6 +113,11 @@ void WeatherService::start()
 // ---------------------------------------------------------------------------
 void WeatherService::fetchWeather()
 {
+    // Air-gap gate — drop silently if offline or unconfigured
+    if (!m_networkOnline) {
+        qCInfo(lcWeather) << "fetchWeather: offline — skipping";
+        return;
+    }
     if (m_apiKey.isEmpty())
         return;
 
@@ -275,14 +300,6 @@ void WeatherService::updatePosition(double lat, double lon)
         qCInfo(lcWeather) << "Position moved significantly — refreshing weather";
         m_lat = lat;
         m_lon = lon;
-        fetchWeather();
+        fetchWeather(); // gated by m_networkOnline inside fetchWeather()
     }
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-QString WeatherService::iconUrl(const QString &code) const
-{
-    return QStringLiteral("https://openweathermap.org/img/wn/%1@2x.png").arg(code);
 }

@@ -13,12 +13,10 @@
     },
     "q60-traffic-src": {
       "type": "raster",
-      "_comment": "Traffic tile URL — set provider + api_key in /opt/nav/config/config.json.",
-      "_comment2": "HERE: https://traffic.maps.hereapi.com/maptile/2.1/flowtile/newest/normal.day/{z}/{x}/{y}/256/png8?apiKey=KEY",
-      "_comment3": "TomTom: https://api.tomtom.com/traffic/map/4/tile/flow/relative0/{z}/{x}/{y}.png?key=KEY",
-      "tiles": ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      "_comment": "Traffic disabled — no provider configured. Set tiles[] in config.json when a provider is available.",
+      "tiles": [],
       "tileSize": 256,
-      "attribution": "Traffic data © provider"
+      "attribution": ""
     }
   },
   "sprite": "file:///opt/nav/style/sprites/sprite",
