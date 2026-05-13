@@ -910,9 +910,9 @@ void VehicleService::setMaxAC()
     sendCANFrame(m_vehicleCanSock, CAN_HVAC_WRITE, d, 8);
 }
 
-void VehicleService::setMaxDEF()
+void VehicleService::setMaxDefrost()
 {
-    qWarning() << "[VehicleService] setMaxDEF: Q50_LIKELY — verify via J2534";
+    qWarning() << "[VehicleService] setMaxDefrost: Q50_LIKELY — verify via J2534";
     m_climateMode = 3;  emit climateModeChanged(m_climateMode);
     m_fanSpeed    = 7;  emit fanSpeedChanged(m_fanSpeed);
     m_acOn        = true; emit acOnChanged(m_acOn);
@@ -937,29 +937,28 @@ void VehicleService::syncZones()
 
 void VehicleService::setHeatedSteeringWheel(bool on)
 {
-    qWarning() << "[VehicleService] setHeatedSteeringWheel: Q50_LIKELY — verify via J2534";
+    // CAN_HEATED_STEERING = 0xFFFF — write ID UNVERIFIED until J2534 capture.
+    // State + signal still update so UI is responsive; CAN frame is suppressed.
     m_heatedSteeringWheel = on;
     emit heatedSteeringWheelChanged(on);
-    uint8_t d[2] = { static_cast<uint8_t>(on ? 0x04 : 0x00), 0x00 };
-    sendCANFrame(m_vehicleCanSock, CAN_STEERING_HEAT, d, 2);
+    qWarning() << "[VehicleService] setHeatedSteeringWheel: write ID UNVERIFIED — no CAN frame sent";
 }
 
 void VehicleService::setPlasmacluster(int level)
 {
-    qWarning() << "[VehicleService] setPlasmacluster: Q50_LIKELY — verify via J2534";
+    // CAN_PLASMA = 0xFFFF — write ID UNVERIFIED until J2534 capture.
     m_plasmaclusterLevel = qBound(0, level, 3);
     emit plasmaclusterLevelChanged(m_plasmaclusterLevel);
-    uint8_t d[2] = { static_cast<uint8_t>(m_plasmaclusterLevel), 0x00 };
-    sendCANFrame(m_vehicleCanSock, CAN_PLASMACLUSTER, d, 2);
+    qWarning() << "[VehicleService] setPlasmacluster: write ID UNVERIFIED — no CAN frame sent";
 }
 
 void VehicleService::setRainSensor(bool on)
 {
-    qWarning() << "[VehicleService] setRainSensor: Q50_LIKELY — verify via J2534";
+    // CAN_RAIN_SENSOR_ENABLE = 0xFFFF — write ID UNVERIFIED until J2534 capture.
+    // Sensitivity is stalk-only; this toggle just enables/disables the system.
     m_rainSensorEnabled = on;
     emit rainSensorEnabledChanged(on);
-    uint8_t d[1] = { static_cast<uint8_t>(on ? 0x01 : 0x00) };
-    sendCANFrame(m_vehicleCanSock, CAN_RAIN_SENSOR, d, 1);
+    qWarning() << "[VehicleService] setRainSensor: write ID UNVERIFIED — no CAN frame sent";
 }
 
 // ─── Drive mode ────────────────────────────────────────────────────────────

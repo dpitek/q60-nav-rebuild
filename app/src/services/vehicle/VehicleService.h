@@ -199,7 +199,7 @@ public slots:
     // Climate shortcuts + steering wheel + plasmacluster + rain sensor
     Q_INVOKABLE void setAutoClimate(bool on);    // AUTO mode: full-auto fan+AC+mode
     Q_INVOKABLE void setMaxAC();                 // MAX AC: recirc + max fan + max cool
-    Q_INVOKABLE void setMaxDEF();                // MAX DEF: A/C + max fan + defrost mode
+    Q_INVOKABLE void setMaxDefrost();            // MAX DEF: A/C + max fan + defrost mode
     Q_INVOKABLE void syncZones();                // SYNC: set passenger = driver temp
     Q_INVOKABLE void setHeatedSteeringWheel(bool on);
     Q_INVOKABLE void setPlasmacluster(int level);  // 0=off 1-3=level
@@ -565,14 +565,12 @@ private:
     static constexpr canid_t UDS_BCM_RESPONSE       = 0x74D; // CONFIRMED (request+8)
 
     // ── Climate shortcuts / steering wheel / plasmacluster / rain sensor ────
-    // Heated steering wheel — BCM command (Q50_LIKELY; verify via J2534)
-    static constexpr canid_t CAN_STEERING_HEAT = 0x35F;  // Q50_LIKELY
-
-    // Plasmacluster — HVAC module command (Q50_LIKELY)
-    static constexpr canid_t CAN_PLASMACLUSTER = 0x542;  // Q50_LIKELY
-
-    // Rain sensor enable/disable — ADAS/wiper module (Q50_LIKELY)
-    static constexpr canid_t CAN_RAIN_SENSOR   = 0x3C5;  // Q50_LIKELY
+    // No confirmed public write paths for Q50/Q60. BLOCKED until J2534 capture.
+    // Setters update local state + emit signals but do NOT transmit any frame —
+    // matches the seat-heat placeholder pattern (CAN_SEAT_HEAT_WRITE).
+    static constexpr canid_t CAN_HEATED_STEERING     = 0xFFFF; // UNVERIFIED PLACEHOLDER — blocked until J2534 capture
+    static constexpr canid_t CAN_PLASMA              = 0xFFFF; // UNVERIFIED PLACEHOLDER — blocked until J2534 capture
+    static constexpr canid_t CAN_RAIN_SENSOR_ENABLE  = 0xFFFF; // UNVERIFIED PLACEHOLDER — blocked until J2534 capture
 
     // ── TPMS / oil life / fuel economy ───────────────────────────────────────
     // TPMS — 4 tire PSI broadcast (Q50_LIKELY)
