@@ -57,8 +57,20 @@ restores the original if the new system fails to start.
 ## UI Mockups
 
 An interactive dual-screen HTML prototype lives at [`docs/mockup/index.html`](docs/mockup/index.html).
-It simulates both screens side-by-side at native resolution (800×480 upper / 800×420 lower)
+Simulates both screens at native resolution — **800×480 upper (8" nav)** / **800×420 lower (7" control hub)** —
 and is the primary design reference for the QML implementation.
+
+### Night Mode
+
+| Climate | Audio | Nav Companion |
+|:---:|:---:|:---:|
+| ![Night — Climate](docs/mockups/screenshots/night-climate.png) | ![Night — Audio](docs/mockups/screenshots/night-audio.png) | ![Night — Nav](docs/mockups/screenshots/night-nav.png) |
+
+### Day Mode
+
+| Climate | Audio | Nav Companion |
+|:---:|:---:|:---:|
+| ![Day — Climate](docs/mockups/screenshots/day-climate.png) | ![Day — Audio](docs/mockups/screenshots/day-audio.png) | ![Day — Nav](docs/mockups/screenshots/day-nav.png) |
 
 **To run it locally:**
 ```bash
@@ -66,12 +78,12 @@ open docs/mockup/index.html   # macOS
 # or: python3 -m http.server 8080 && open http://localhost:8080/docs/mockup/
 ```
 
-**Mockup simulation controls:**
-- **Lower nav bar:** Home · Audio · Phone · Climate · Vehicle · Info · Settings · Volume (🔊) — all tabs functional
-- **Volume button:** slides up volume tray; 4s auto-dismiss; amber accent when open
-- **Reverse sim:** triggers upper screen camera view (parking guidelines, R badge) + lower screen camera placeholder
+**Controls:**
+- **☀️ / 🌙 button** (top-right) — toggles day/night mode
+- **Lower nav bar:** Home · Audio · Phone · Climate · Vehicle — all tabs functional
+- **Reverse sim:** triggers upper screen camera view + lower screen camera placeholder
 - **Cruise sim (Vehicle tab):** shows/hides cruise bubble on upper screen left side
-- **Joystick panel:** brightness up/down, day/night toggle, route start/stop, notification injection
+- **Joystick panel:** brightness, day/night toggle, route start/stop, notification injection
 
 ---
 
