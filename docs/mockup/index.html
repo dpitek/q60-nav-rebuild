@@ -699,9 +699,6 @@
   .tab-item.active { color: #0A84FF; }
   .tab-item.active::before { opacity: 1; }
   .tab-item:hover:not(.active) { color: #CCCCCC; }
-  /* Volume button uses amber accent when open */
-  .tab-item.vol-btn.active { color: #FF9F0A; }
-  .tab-item.vol-btn.active::before { background: #FF9F0A; opacity: 1; }
 
   .tab-icon { font-size: 20px; line-height: 1; }
   .tab-label { font-size: 10px; font-weight: 500; letter-spacing: 0.04em; margin-top: 2px; }
@@ -3024,35 +3021,6 @@
           <span class="tab-icon">◈</span>
           <span class="tab-label">Vehicle</span>
         </button>
-        <button class="tab-item" data-tab="5" onclick="app.switchTab(5)">
-          <span class="tab-icon">ℹ</span>
-          <span class="tab-label">Info</span>
-        </button>
-        <button class="tab-item" data-tab="6" onclick="app.switchTab(6)">
-          <span class="tab-icon">⚙</span>
-          <span class="tab-label">Settings</span>
-        </button>
-        <button class="tab-item vol-btn" id="vol-tab-btn" onclick="app.toggleVolume()">
-          <span class="tab-icon" id="vol-icon">🔊</span>
-          <span class="tab-label">Volume</span>
-        </button>
-      </div>
-
-      <!-- VOLUME OVERLAY — slides up from nav bar -->
-      <div id="volume-overlay" style="
-        position:absolute; bottom:60px; left:0; right:0; height:64px;
-        background:#0D0D0D; border-top:1px solid rgba(255,255,255,0.1);
-        display:flex; align-items:center; padding:0 16px; gap:12px;
-        transform:translateY(20px); opacity:0; pointer-events:none;
-        transition:transform 180ms ease,opacity 180ms ease; z-index:30;">
-        <span style="font-size:20px;cursor:pointer;" onclick="app.toggleMute()">🔊</span>
-        <div style="flex:1;position:relative;height:40px;display:flex;align-items:center;" onclick="app.seekVolume(event,this)">
-          <div style="width:100%;height:8px;background:#2C2C2E;border-radius:4px;overflow:hidden;">
-            <div id="vol-fill" style="width:72%;height:100%;background:#0A84FF;border-radius:4px;transition:width 80ms;"></div>
-          </div>
-          <div id="vol-handle" style="position:absolute;width:24px;height:24px;border-radius:50%;background:#FFF;left:calc(72% - 12px);pointer-events:none;"></div>
-        </div>
-        <span id="vol-pct" style="font-size:13px;font-weight:600;width:40px;color:#FFF;">72%</span>
       </div>
 
       <!-- BRIGHTNESS OVERLAY -->
@@ -3425,9 +3393,9 @@ const app = {
     // Lower screen: switch to/from reverse tab (tab 7 not in nav bar)
     if (rev) {
       this._prevTabBeforeReverse = this.ui.activeTab;
-      const tabs = ['tab-nav','tab-audio','tab-phone','tab-climate','tab-vehicle','tab-info','tab-settings'];
+      const tabs = ['tab-nav','tab-audio','tab-phone','tab-climate','tab-vehicle'];
       tabs.forEach(id => { const el=document.getElementById(id); if(el) el.classList.remove('active'); });
-      document.querySelectorAll('.tab-item:not(.vol-btn)').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-item').forEach(b => b.classList.remove('active'));
     } else {
       this.switchTab(this._prevTabBeforeReverse ?? 0);
     }
@@ -3602,42 +3570,16 @@ const app = {
 
   // ─ TABS ─
   switchTab(idx) {
-    // 7 content panels: home=nav, audio, phone, climate, vehicle, info, settings
-    const tabs = ['tab-nav','tab-audio','tab-phone','tab-climate','tab-vehicle','tab-info','tab-settings'];
+    // 5 content panels: home=nav, audio, phone, climate, vehicle
+    const tabs = ['tab-nav','tab-audio','tab-phone','tab-climate','tab-vehicle'];
     tabs.forEach((id, i) => {
       const el = document.getElementById(id);
       if (el) el.classList.toggle('active', i === idx);
     });
-    // Tab buttons (first 7 only — volume button is index 7, handled separately)
-    document.querySelectorAll('.tab-item:not(.vol-btn)').forEach((btn, i) => {
+    document.querySelectorAll('.tab-item').forEach((btn, i) => {
       btn.classList.toggle('active', i === idx);
     });
     this.ui.activeTab = idx;
-    // Close volume overlay when switching content tabs
-    this._setVolumeOpen(false);
-  },
-
-  toggleVolume() {
-    this._setVolumeOpen(!this._volumeOpen);
-  },
-
-  _volumeOpen: false,
-  _setVolumeOpen(open) {
-    this._volumeOpen = open;
-    const ov = document.getElementById('volume-overlay');
-    const btn = document.getElementById('vol-tab-btn');
-    if (ov) { ov.style.opacity = open ? '1' : '0'; ov.style.transform = open ? 'translateY(0)' : 'translateY(20px)'; ov.style.pointerEvents = open ? 'auto' : 'none'; }
-    if (btn) btn.classList.toggle('active', open);
-    if (open) { clearTimeout(this._volTimer); this._volTimer = setTimeout(() => this._setVolumeOpen(false), 4000); }
-  },
-
-  seekVolume(e, el) {
-    const rect = el.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(100, Math.round(((e.clientX - rect.left) / rect.width) * 100)));
-    document.getElementById('vol-fill').style.width = pct + '%';
-    document.getElementById('vol-handle').style.left = `calc(${pct}% - 12px)`;
-    document.getElementById('vol-pct').textContent = pct + '%';
-    clearTimeout(this._volTimer); this._volTimer = setTimeout(() => this._setVolumeOpen(false), 4000);
   },
 
   // ─ AUDIO ─
