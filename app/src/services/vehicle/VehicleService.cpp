@@ -8,6 +8,7 @@
 // HVAC write path and Bose wake ID require J2534 verification before relying on.
 
 #include "VehicleService.h"
+#include "../settings/SettingsService.h"
 #include <QCoreApplication>
 #include <QDebug>
 #include <QDateTime>
@@ -32,6 +33,11 @@ VehicleService::~VehicleService()
     if (m_vehicleCanSock >= 0) ::close(m_vehicleCanSock);
     if (m_avCanSock >= 0)      ::close(m_avCanSock);
     if (m_can2Sock >= 0)       ::close(m_can2Sock);
+}
+
+void VehicleService::setSettingsService(SettingsService *s)
+{
+    m_settings = s;
 }
 
 void VehicleService::start()
@@ -87,7 +93,7 @@ void VehicleService::start()
     connect(m_perfTimer, &QTimer::timeout, this, &VehicleService::onPerfTick);
     m_perfTimer->start();
 
-    // Reset peak G + 0-60 latches on ignition cycle — per spec, in-memory only
+    // Reset peak G + 0-60 latches on ignition cycle — in-memory only
     connect(this, &VehicleService::ignitionOff, this, [this]() {
         m_peakLateralG = 0.0;
         m_peakLongitudinalG = 0.0;
@@ -101,6 +107,12 @@ void VehicleService::start()
         emit gMeterChanged();
         emit perfTimerChanged();
     });
+
+    // BCM-unlock comfort features — gated by SettingsService at fire time.
+    connect(this, &VehicleService::doorsLockedChanged,
+            this, &VehicleService::onDoorsLockedForMirrorFold);
+    connect(this, &VehicleService::keyFobLockHold,
+            this, &VehicleService::onKeyFobLockHoldForWindowClose);
 }
 
 void VehicleService::openCAN(const char *iface, int &sock)
@@ -337,9 +349,27 @@ void VehicleService::parseVehicleFrame(const struct can_frame &f)
         int  hl  = (f.data[0] & 0x02) ? 2 : (f.data[0] & 0x04) ? 1 : 0;
         bool lft = (f.data[1] & 0x20) != 0;
         bool rgt = (f.data[1] & 0x40) != 0;
+        // Door-lock state — byte 1 bit 7 is a Q50_LIKELY position for "all locked".
+        // UNVERIFIED bit position; confirm via J2534 during a key-fob lock cycle.
+        bool dl  = (f.data[1] & 0x80) != 0;
         if (hl  != m_headlights) { m_headlights = hl;  emit headlightsChanged(hl); }
         if (lft != m_leftTurn)   { m_leftTurn   = lft; emit leftTurnChanged(lft); }
         if (rgt != m_rightTurn)  { m_rightTurn  = rgt; emit rightTurnChanged(rgt); }
+        if (dl  != m_doorsLocked){ m_doorsLocked = dl; emit doorsLockedChanged(dl); }
+        break;
+    }
+
+    // ── 0xFFFF: BCM key-fob event broadcast (UNVERIFIED PLACEHOLDER) ──────────
+    // Real ID + byte encoding unknown. Stubbed parse: byte 0 = event enum,
+    // 0x02 indicates "lock button held >2s" (JDM comfort-close trigger).
+    // Frame never arrives on the bus today; case exists so the J2534 capture
+    // can drop the real ID in and the rest of the chain lights up.
+    case CAN_KEYFOB_EVENT: {
+        if (f.can_dlc < 1) break;
+        if (f.data[0] == 0x02) {
+            qDebug() << "[VehicleService] BCM key-fob lock-hold (UNVERIFIED frame)";
+            emit keyFobLockHold();
+        }
         break;
     }
 
@@ -1366,6 +1396,45 @@ void VehicleService::resetPerformanceTimer()
     m_quarterMileSec     = 0.0;
     m_quarterMileTrapMph = 0.0;
     emit perfTimerChanged();
+}
+
+// ─── BCM-unlock comfort writes (UNVERIFIED PLACEHOLDERS — log only) ────────
+// Three features piggy-back on undocumented BCM commands:
+//   1) Walk-away auto-fold mirrors (CAN_MIRROR_FOLD)
+//   2) Comfort window close on lock-hold (CAN_WINDOW_COMMAND × 4)
+//   3) One-touch up/down for all 4 windows (gated by toggle)
+// All IDs are 0xFFFF placeholders — senders log the intended frame and bail.
+void VehicleService::sendMirrorFold()
+{
+    qWarning() << "[VehicleService] sendMirrorFold: CAN_MIRROR_FOLD (0xFFFF) "
+                  "UNVERIFIED — no frame sent. Sniff during mirror-fold-switch press.";
+}
+
+void VehicleService::sendWindowOneTouch(uint8_t window, bool up)
+{
+    qWarning() << "[VehicleService] sendWindowOneTouch: CAN_WINDOW_COMMAND (0xFFFF) "
+                  "UNVERIFIED — no frame sent. window=" << window << "up=" << up;
+    (void)window; (void)up;
+}
+
+void VehicleService::sendWindowCloseAll()
+{
+    qWarning() << "[VehicleService] sendWindowCloseAll: comfort close all 4 — UNVERIFIED";
+    for (uint8_t w = 0; w < 4; ++w)
+        sendWindowOneTouch(w, /*up=*/true);
+}
+
+void VehicleService::onDoorsLockedForMirrorFold(bool locked)
+{
+    if (!locked) return;
+    if (!m_settings || !m_settings->mirrorFoldLock()) return;
+    sendMirrorFold();
+}
+
+void VehicleService::onKeyFobLockHoldForWindowClose()
+{
+    if (!m_settings || !m_settings->fobLockHoldCloses()) return;
+    sendWindowCloseAll();
 }
 
 // ─── Bose wake ─────────────────────────────────────────────────────────────

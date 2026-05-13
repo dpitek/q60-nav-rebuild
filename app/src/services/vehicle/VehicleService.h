@@ -6,6 +6,8 @@
 #include <linux/can/raw.h>
 #include "ButtonLogger.h"
 
+class SettingsService;
+
 class VehicleService : public QObject {
     Q_OBJECT
     // Climate
@@ -39,6 +41,7 @@ class VehicleService : public QObject {
     Q_PROPERTY(bool  doorRearLeft  READ doorRearLeft  NOTIFY doorRearLeftChanged)
     Q_PROPERTY(bool  doorRearRight READ doorRearRight NOTIFY doorRearRightChanged)
     Q_PROPERTY(bool  trunkOpen     READ trunkOpen     NOTIFY trunkOpenChanged)
+    Q_PROPERTY(bool  doorsLocked   READ doorsLocked   NOTIFY doorsLockedChanged)
     // Powertrain / climate extended (0x551 + 0x625)
     Q_PROPERTY(float coolantTemp   READ coolantTemp   NOTIFY coolantTempChanged)
     Q_PROPERTY(float batteryVolts  READ batteryVolts  NOTIFY batteryVoltsChanged)
@@ -126,6 +129,10 @@ public:
     explicit VehicleService(QObject *parent = nullptr);
     ~VehicleService();
     void start();
+    // Wire SettingsService for BCM-unlock comfort features (mirror fold, comfort
+    // window close, all-windows one-touch). Optional — VehicleService runs without
+    // it; the gated features simply stay dormant.
+    void setSettingsService(SettingsService *s);
 
     // Climate
     float driverTemp()    const { return m_driverTemp; }
@@ -158,6 +165,7 @@ public:
     bool  doorRearLeft()  const { return m_doorRearLeft; }
     bool  doorRearRight() const { return m_doorRearRight; }
     bool  trunkOpen()     const { return m_trunkOpen; }
+    bool  doorsLocked()   const { return m_doorsLocked; }
     // Powertrain extended
     float coolantTemp()   const { return m_coolantTemp; }
     float batteryVolts()  const { return m_batteryVolts; }
@@ -312,6 +320,8 @@ signals:
     void doorRearLeftChanged(bool);
     void doorRearRightChanged(bool);
     void trunkOpenChanged(bool);
+    void doorsLockedChanged(bool);
+    void keyFobLockHold();  // BCM emits when lock button is held >2s (JDM/EU only)
     void coolantTempChanged(float);
     void batteryVoltsChanged(float);
     void rearDefrostOnChanged(bool);
@@ -373,8 +383,11 @@ private slots:
     void onVehicleCanData();
     void onAVCanData();
     void onCAN2Data();
-    void onTripTimerTick();  // 1Hz trip computer accumulator
+    void onTripTimerTick();   // 1Hz trip computer accumulator
     void onPerfTick();        // ~10Hz performance timer state machine
+    // BCM-unlock comfort feature handlers — all placeholder CAN writes
+    void onDoorsLockedForMirrorFold(bool locked);
+    void onKeyFobLockHoldForWindowClose();
 
 private:
     void openCAN(const char *iface, int &sock);
@@ -390,6 +403,10 @@ private:
     void handleVR30Frame(const struct can_frame &f);
     // Performance timer state machine — drives 0-60, quarter mile, peak G tracking.
     void updatePerformanceTimer();
+    // BCM-unlock comfort write paths (all UNVERIFIED placeholders — log only)
+    void sendMirrorFold();
+    void sendWindowCloseAll();
+    void sendWindowOneTouch(uint8_t window, bool up);  // window 0..3 = DRV/PAS/RL/RR
 
     ButtonLogger m_buttonLog;        // hardware button diagnostic logger
     bool m_ignitionOffSent = false;  // debounce: only emit ignitionOff() once per cycle
@@ -429,6 +446,7 @@ private:
     bool  m_doorRearLeft  = false;
     bool  m_doorRearRight = false;
     bool  m_trunkOpen     = false;
+    bool  m_doorsLocked   = false;
     float m_coolantTemp   = 0.0f;
     float m_batteryVolts  = 0.0f;
     bool  m_rearDefrostOn = false;
@@ -469,6 +487,11 @@ private:
     // ATTESA (rear-biased default)
     float m_atessaFront   = 50.0f;
     float m_atessaRear    = 50.0f;
+
+    // SettingsService — non-owning pointer, set via setSettingsService().
+    // Gates BCM-unlock comfort features (mirror fold, comfort window close,
+    // all-windows one-touch). Nullable; features no-op when unset.
+    SettingsService *m_settings = nullptr;
 
     // ── VR30 telemetry state ────────────────────────────────────────────────
     double m_boostPressurePsi    = 0.0;
@@ -691,13 +714,26 @@ private:
     // BLOCKED until J2534 capture. Do not transmit.
     static constexpr canid_t CAN_SEAT_HEAT_WRITE = 0xFFFF; // UNVERIFIED PLACEHOLDER
 
-    // Active Sound Control (Bose engine sound enhancement) — factory hides this
-    // toggle in a deep diagnostic menu (Settings → Seek-up ×3 → hold below
-    // right-scroll-arrow ×5s). The CAN frame written by the diag menu has not
-    // been captured yet. BLOCKED until J2534 capture identifies the real ID.
-    // UNVERIFIED PLACEHOLDER — sniff during diagnostic menu toggle
-    //   (Settings→Seek-up×3→hold below right-scroll-arrow×5s)
+    // ── Hidden / unlock-feature writes (all UNVERIFIED PLACEHOLDERS) ─────────
+    // Setters log the intended frame and bail — same pattern as seat-heat write.
+    // J2534 capture required to confirm real frame IDs.
+
+    // Active Sound Control toggle (Bose engine sound enhancement).
+    // Sniff during diag menu: Settings → Seek-up ×3 → hold below right-scroll-arrow ×5s.
     static constexpr canid_t CAN_ASC_TOGGLE      = 0xFFFF; // UNVERIFIED PLACEHOLDER
+
+    // Mirror fold command — sniff during physical mirror-fold-switch press
+    static constexpr canid_t CAN_MIRROR_FOLD     = 0xFFFF; // UNVERIFIED PLACEHOLDER
+
+    // BCM key-fob event broadcast (lock-button hold >2s, etc.)
+    // Real frame likely byte 0 = event enum:
+    //   0x01=lock-tap 0x02=lock-hold 0x03=unlock-tap 0x04=unlock-hold
+    static constexpr canid_t CAN_KEYFOB_EVENT    = 0xFFFF; // UNVERIFIED PLACEHOLDER
+
+    // Window motor command — used by both comfort close and all-windows one-touch
+    // byte 0: window enum (0=DRV 1=PAS 2=RL 3=RR)
+    // byte 1: direction (0=stop 1=up 2=down)
+    static constexpr canid_t CAN_WINDOW_COMMAND  = 0xFFFF; // UNVERIFIED PLACEHOLDER
 
     // ── UDS diagnostic addresses (HS-CAN) ────────────────────────────────────
     // Standard Nissan/Infiniti UDS addressing pattern — confirmed cross-platform.

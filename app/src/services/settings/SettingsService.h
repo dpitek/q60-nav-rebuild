@@ -114,6 +114,9 @@ class SettingsService : public QObject
     Q_PROPERTY(bool seatbeltReminder       READ seatbeltReminder       WRITE setSeatbeltReminder       NOTIFY comfortChanged)
     Q_PROPERTY(int  parkAssistChimeVolume  READ parkAssistChimeVolume  WRITE setParkAssistChimeVolume  NOTIFY comfortChanged)
     // 0=Off 1=Low 2=Med 3=High
+    // BCM-unlock comfort toggles (factory disables on US firmware; placeholder CAN writes)
+    Q_PROPERTY(bool fobLockHoldCloses      READ fobLockHoldCloses      WRITE setFobLockHoldCloses      NOTIFY comfortChanged)
+    Q_PROPERTY(bool allWindowsOneTouch     READ allWindowsOneTouch     WRITE setAllWindowsOneTouch     NOTIFY comfortChanged)
 
     // ── Map ───────────────────────────────────────────────────────────────
     Q_PROPERTY(int  mapOrientation    READ mapOrientation    WRITE setMapOrientation    NOTIFY mapSettingsChanged)
@@ -227,6 +230,8 @@ public:
     bool powerWindowAutoOpen()   const { return m_powerWindowAutoOpen; }
     bool seatbeltReminder()      const { return m_seatbeltReminder; }
     int  parkAssistChimeVolume() const { return m_parkAssistChimeVolume; }
+    bool fobLockHoldCloses()     const { return m_fobLockHoldCloses; }
+    bool allWindowsOneTouch()    const { return m_allWindowsOneTouch; }
     int  mapOrientation()        const { return m_mapOrientation; }
     bool speedLimitDisplay()     const { return m_speedLimitDisplay; }
     int  mapDetailLevel()        const { return m_mapDetailLevel; }
@@ -284,6 +289,8 @@ public:
     void setPowerWindowAutoOpen(bool v);
     void setSeatbeltReminder(bool v);
     void setParkAssistChimeVolume(int v);
+    void setFobLockHoldCloses(bool v);
+    void setAllWindowsOneTouch(bool v);
     void setMapOrientation(int v);
     void setSpeedLimitDisplay(bool v);
     void setMapDetailLevel(int v);
@@ -378,6 +385,8 @@ private:
     bool m_powerWindowAutoOpen   = true;
     bool m_seatbeltReminder      = true;
     int  m_parkAssistChimeVolume = 2;
+    bool m_fobLockHoldCloses     = false;  // JDM/EU comfort close — US firmware disables
+    bool m_allWindowsOneTouch    = false;  // factory only one-touches driver window
     int  m_mapOrientation        = 0;
     bool m_speedLimitDisplay     = true;
     int  m_mapDetailLevel        = 1;

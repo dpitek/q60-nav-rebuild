@@ -319,6 +319,8 @@ void SettingsService::loadFromDisk()
     m_powerWindowAutoOpen   = bget("powerWindowAutoOpen", true);
     m_seatbeltReminder      = bget("seatbeltReminder",    true);
     m_parkAssistChimeVolume = iget("parkAssistChimeVolume",  2);
+    m_fobLockHoldCloses     = bget("fobLockHoldCloses",  false);
+    m_allWindowsOneTouch    = bget("allWindowsOneTouch", false);
     m_mapOrientation        = iget("mapOrientation",         0);
     m_speedLimitDisplay     = bget("speedLimitDisplay",   true);
     m_mapDetailLevel        = iget("mapDetailLevel",         1);
@@ -409,6 +411,8 @@ void SettingsService::saveToDisk()
     root["powerWindowAutoOpen"]   = m_powerWindowAutoOpen;
     root["seatbeltReminder"]      = m_seatbeltReminder;
     root["parkAssistChimeVolume"] = m_parkAssistChimeVolume;
+    root["fobLockHoldCloses"]     = m_fobLockHoldCloses;
+    root["allWindowsOneTouch"]    = m_allWindowsOneTouch;
     root["mapOrientation"]        = m_mapOrientation;
     root["speedLimitDisplay"]     = m_speedLimitDisplay;
     root["mapDetailLevel"]        = m_mapDetailLevel;
@@ -638,6 +642,8 @@ SETTER_BOOL(SeatMemoryOnUnlock,    seatMemoryOnUnlock,    comfortChanged)
 SETTER_BOOL(PowerWindowAutoOpen,   powerWindowAutoOpen,   comfortChanged)
 SETTER_BOOL(SeatbeltReminder,      seatbeltReminder,      comfortChanged)
 SETTER_INT (ParkAssistChimeVolume, parkAssistChimeVolume, comfortChanged)
+SETTER_BOOL(FobLockHoldCloses,     fobLockHoldCloses,     comfortChanged)
+SETTER_BOOL(AllWindowsOneTouch,    allWindowsOneTouch,    comfortChanged)
 
 // Map
 SETTER_INT (MapOrientation,        mapOrientation,        mapSettingsChanged)

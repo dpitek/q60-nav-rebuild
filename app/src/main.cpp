@@ -139,6 +139,7 @@ int main(int argc, char *argv[])
     }
 
     // Start services
+    vehicleSvc.setSettingsService(&settingsSvc);  // BCM-unlock comfort feature gates
     vehicleSvc.start();
     audioSvc.start();
     navSvc.start();

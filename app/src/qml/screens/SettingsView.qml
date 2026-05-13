@@ -835,6 +835,20 @@ Item {
                     }
                 }
                 SettingsRow {
+                    label: "Comfort Window Close (Lock Hold)"
+                    control: ToggleSwitch {
+                        checked: settings.fobLockHoldCloses
+                        onCheckedChanged: settings.fobLockHoldCloses = checked
+                    }
+                }
+                SettingsRow {
+                    label: "One-Touch Up/Down — All Windows"
+                    control: ToggleSwitch {
+                        checked: settings.allWindowsOneTouch
+                        onCheckedChanged: settings.allWindowsOneTouch = checked
+                    }
+                }
+                SettingsRow {
                     label: "Seat Belt Reminder"
                     control: ToggleSwitch {
                         checked: settings.seatbeltReminder
