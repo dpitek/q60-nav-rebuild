@@ -30,6 +30,11 @@ while preserving the original firmware as a permanent, non-destructive fallback.
 
 ---
 
+> **UI Status (as of latest commit):** Apple CarPlay-inspired redesign complete across both screens.
+> Interactive prototype: [`docs/mockup/index.html`](docs/mockup/index.html)
+
+---
+
 ## Background
 
 The factory navigation system in the 2017 Infiniti Q60 is a **Clarion QY5092 DCU**
@@ -61,6 +66,13 @@ open docs/mockup/index.html   # macOS
 # or: python3 -m http.server 8080 && open http://localhost:8080/docs/mockup/
 ```
 
+**Mockup simulation controls:**
+- **Lower nav bar:** Home · Audio · Phone · Climate · Vehicle · Info · Settings · Volume (🔊) — all tabs functional
+- **Volume button:** slides up volume tray; 4s auto-dismiss; amber accent when open
+- **Reverse sim:** triggers upper screen camera view (parking guidelines, R badge) + lower screen camera placeholder
+- **Cruise sim (Vehicle tab):** shows/hides cruise bubble on upper screen left side
+- **Joystick panel:** brightness up/down, day/night toggle, route start/stop, notification injection
+
 ---
 
 ### Upper Screen — Navigation Display (800×480)
@@ -79,13 +91,21 @@ Nav idle state (no active route):
 
 Nav active state (route in progress):
 
-| Element | Notes |
-|---|---|
-| Turn card (top-left) | Turn arrow · distance-to-maneuver · next street name |
-| Orange pulse bar | Animates under turn card when turn is <0.2 mi away |
-| Bottom strip (72px) | ETA · remaining distance · current street; 3-column layout |
-| Rerouting banner | Amber overlay when `NavigationService.rerouting` is true |
-| GPS acquiring indicator | Pulsing orange dot when no GPS lock |
+| Element | Location | Notes |
+|---|---|---|
+| Turn card | Top-left | Turn arrow · distance-to-maneuver · next street name |
+| Orange pulse bar | Below turn card | Animates when turn is <0.2 mi away |
+| **Cruise bubble** | **Left side, below turn card** | **80×68px — speed + CRUISE label; blue pulse ring when active; `visible: VehicleService.cruiseActive`** |
+| Bottom strip (72px) | Bottom | ETA · remaining distance · current street; 3-column layout |
+| Rerouting banner | Top | Amber overlay when `NavigationService.rerouting` is true |
+| GPS acquiring indicator | Above bottom strip | Pulsing orange dot when no GPS lock |
+
+**Reverse camera (RearCameraView):**
+- Loaded/unloaded dynamically via `Loader` in `Main.qml` (`z: 80`) — camera device fully released when not in reverse
+- Activates on `StatusBridge.reverseActive`; 180ms fade transition
+- Full 800×480 canvas with three-zone trapezoid parking guidelines (green/amber/red), distance markers (6 ft / 3 ft / 1 ft), and R badge
+- Camera feed isolated in `components/CameraFeed.qml` (sole `import QtMultimedia 6.6`) so Loader fails gracefully if module absent on i386 build
+- Z-ordering: WelcomeOverlay (z:50) → RearCameraView (z:80) → IncomingCallOverlay (z:100)
 
 Notification banner (overlaid above drive mode bar):
 - Centered pill, slides down from status bar edge
@@ -105,20 +125,27 @@ Day / Night mode + brightness:
 
 ### Lower Screen — Control Hub (800×420)
 
-Five tabs (tab bar across the bottom, 56px):
+**8-item bottom navigation bar (60px):** 7 content tabs × 100px + 1 Volume quick-action × 100px = 800px.
+Active tab: blue (#0A84FF) indicator bar at top + colored icon/label. Phone tab shows pulsing green dot when call is active.
 
-**Nav tab** — turn-by-turn companion
+Auto-switching: reverse gear → tab 7 (lower screen shows camera placeholder); incoming call → Phone tab. Both restore to previous tab on exit.
+
+---
+
+**Home tab (⌂)** — turn-by-turn nav companion
 
 | Element | Notes |
 |---|---|
-| Turn arrow | Large canvas element — same logic as upper screen |
+| Turn arrow | Large canvas element — same direction logic as upper screen |
 | Distance countdown | Primary glance target; ft/mi auto-switching |
 | ETA · remaining · speed | 3-column stat cards |
 | Along-route pills | Gas · food · lodging quick-search |
 | Turn list | Scrollable upcoming maneuvers |
 | Stop navigation button | Full-width, bottom |
 
-**Audio tab**
+---
+
+**Audio tab (♪)**
 
 | Element | Notes |
 |---|---|
@@ -126,48 +153,79 @@ Five tabs (tab bar across the bottom, 56px):
 | Album art | 120×120 placeholder (real art via AVRCP) |
 | Track / artist / album | BlueZ MediaPlayer1 D-Bus |
 | Progress bar | Visual only until AVRCP Seek is validated |
-| Transport controls | Prev / Play-Pause / Next |
-| Volume + EQ | Slider + Bass/Mid/Treble ±5 dB; Bose DSP toggle |
+| Transport controls | Flanking seek buttons (⏮ / ⏯ / ⏭) OEM-style layout |
+| Preset bar | Pinned 6-station preset row at bottom |
+| EQ | Bass/Mid/Treble ±5 dB; Bose DSP toggle |
 
-**Phone tab**
+---
+
+**Phone tab (✆)**
 
 | Element | Notes |
 |---|---|
 | Dial pad | Full 10-key with call button |
 | Contacts / Recent / Messages | Three sub-tab panels, scrollable |
-| Active call overlay | Caller name · timer · Mute · End Call |
+| **Persistent right panel (88px)** | **Answer (green ✆) · End (red ✆) · Mute — always visible regardless of call state** |
 | Incoming call overlay | Shown on both screens simultaneously via `StatusBridge.callActive` |
 
-**Climate tab**
+The 88px right panel is permanently docked; the main content area anchors `right: callPanel.left` so nothing is obscured.
+
+---
+
+**Climate tab (❄)**
 
 | Element | Notes |
 |---|---|
 | Driver / passenger temp zones | ±1°F buttons; large temp readout |
-| Center column | Fan speed (7-step) · airflow mode (face/feet/blend/defrost) |
+| **Fan speed row (full-width)** | **OFF + speeds 1–5 spread across full screen width; active speed solid blue, below-active speeds tinted** |
+| Airflow mode | Face / feet / blend / defrost icons |
 | Toggles | A/C · Recirc · Sync zones |
 | Seat heat / steering wheel heat | 0–3 levels per zone |
 | Outside temp | CAN-sourced; shown center-bottom |
 
-**Vehicle tab**
+Fan speed row sits between the zone card and the extras row — maximizes use of available screen real estate.
+
+---
+
+**Vehicle tab (◈)**
 
 | Element | Notes |
 |---|---|
 | Drive mode selector | Standard · Sport · Sport+ · Eco · Snow · Personal |
-| TPMS | 4-corner tire pressure display |
+| **TPMS card (364×160)** | **Q60 coupe Canvas silhouette (top-down) + 4 corner PSI readouts** |
+| PSI color coding | ≥30 psi → green (#30D158) · 25–29 → amber (#FF9F0A) · <25 → red (#FF453A) · 0 → grey |
+| **Door / fuel card** | **2-door default (FL/FR + trunk); fuel bar with fill level + percentage** |
+| Door state | Open = red · Closed = green |
+| `fourDoorModel` bool | Default `false` (Q60 coupe); set `true` via VIN detection — RL/RR doors animate in with `Behavior on height` |
 | Active settings | Steering weight · suspension · throttle response |
-| Steering wheel heat | 3-level toggle |
-| Door / fluid status | Visual vehicle diagram with door-open indicators |
+
+The Q60 coupe body is drawn with `bezierCurveTo` on a Canvas (no `roundRect` — not available in Mesa softpipe).
+The fuel slider has been removed; a clean horizontal bar + percentage replaces the arc gauge.
 
 ---
 
-### Settings Overlay
+**Info tab (ℹ)**
 
-Accessible via ⚙ button (bottom-right corner of lower screen, persistent):
+System information: firmware version, CAN bus status, GPS fix details, uptime.
+
+---
+
+**Settings tab (⚙)**
 
 - **Display:** brightness slider, day/night toggle, auto-dim
 - **Navigation:** reroute threshold, units (mi/km), voice guidance
 - **Audio:** source defaults, BT device list, EQ preset
 - **System:** about · software version · CAN bus status
+
+---
+
+**Volume quick-action (🔊)**
+
+- 8th nav bar item — not a content tab
+- Taps toggle a 64px slide-up tray above the nav bar: mute toggle · drag slider · percentage readout
+- Auto-dismisses after 4 seconds of no interaction
+- Amber (#FF9F0A) accent when overlay is open; grey when closed
+- Closing any content tab while volume overlay is open collapses the tray
 
 ---
 
@@ -237,29 +295,38 @@ The prototype includes a floating sim panel for testing without hardware:
 ## System Architecture
 
 ```
-┌────────────────────────────────────────────────────────┐
-│                    Hardware Layer                       │
-│  CAN bus  │  GPS UART  │  LVDS×2  │  HDA audio  │  BT  │
-└─────┬─────┴─────┬──────┴────┬─────┴──────┬──────┴──┬───┘
-      │           │           │            │         │
-┌─────▼───────────▼───────────▼────────────▼─────────▼───┐
-│                  Linux 4.19 + SysV init                  │
-│  SocketCAN   gpsd(:2947)   Weston(DRM)  ALSA    BlueZ5  │
-└─────┬──────────┬────────────┬───────────┬────────┬──────┘
-      │          │            │           │        │
-┌─────▼──────────▼────────────▼───────────▼────────▼──────┐
-│                  C++ Service Layer                        │
-│  VehicleService  NavigationService  AudioService         │
-│  SearchService   StatusBridge                            │
-└─────────────────────────┬────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                       Hardware Layer                          │
+│  CAN bus  │  GPS UART  │  LVDS×2  │  HDA audio  │  BT  │ LTE │
+└─────┬─────┴─────┬──────┴────┬─────┴──────┬──────┴──┬───┴──┬──┘
+      │           │           │            │         │      │
+┌─────▼───────────▼───────────▼────────────▼─────────▼──────▼──┐
+│                    Linux 4.19 + SysV init                      │
+│  SocketCAN  gpsd(:2947)  Weston(DRM)  ALSA  BlueZ5  NetworkMgr│
+└─────┬──────────┬───────────┬───────────┬────────┬───────┬─────┘
+      │          │           │           │        │       │
+┌─────▼──────────▼───────────▼───────────▼────────▼───────▼─────┐
+│                     C++ Service Layer                           │
+│  VehicleService  NavigationService  AudioService               │
+│  SearchService   StatusBridge                                  │
+│  NetworkService  WeatherService  FuelService                   │
+└─────────────────────────┬──────────────────────────────────────┘
                           │ QML context properties
-┌─────────────────────────▼────────────────────────────────┐
-│                   Qt 6 QML UI Layer                       │
-│  Upper screen (800×480): NavigationView + MapLibreItem    │
-│  Lower screen (800×420): ControlHubView                  │
-│    ├─ ClimateView  ├─ AudioView  ├─ NavCompanionView     │
-│    └─ PhoneView                                           │
-└──────────────────────────────────────────────────────────┘
+┌─────────────────────────▼──────────────────────────────────────┐
+│                     Qt 6 QML UI Layer                           │
+│                                                                 │
+│  Upper screen (800×480)        Lower screen (800×420)          │
+│  ├─ NavigationView             ├─ ControlHubView               │
+│  │   ├─ MapLibreItem           │   ├─ NavCompanionView (Home)  │
+│  │   ├─ TurnCard + CruiseBubble│   ├─ AudioView               │
+│  │   └─ BottomInfoStrip        │   ├─ PhoneView                │
+│  ├─ RearCameraView (z:80)      │   ├─ ClimateView              │
+│  │   └─ CameraFeed (QtMM)      │   ├─ VehicleStatusView        │
+│  ├─ WelcomeOverlay (z:50)      │   ├─ InfoView                 │
+│  └─ IncomingCallOverlay (z:100)│   ├─ SettingsView             │
+│                                │   └─ VolumeOverlay (tray)     │
+│                                └─ IncomingCallOverlay (z:100)  │
+└────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -466,6 +533,23 @@ All services are Qt 6 QObjects with signals exposed to QML via `rootContext()`.
 - Wires all service signals: clock (30s timer), call routing, steering wheel → volume
 - Single QML-accessible object coordinating both screens
 
+### NetworkService
+
+- Detects connectivity mode: Wi-Fi (development/home) vs. LTE TCU (in-vehicle)
+- `tcu-detect.sh` runs at first boot to identify which interface is active and writes a persistent mode flag
+- Dual-mode: same app binary runs in both environments; services switch data sources transparently
+
+### WeatherService
+
+- Fetches current conditions and short forecast via HTTP
+- Updates outside temp display on upper screen when GPS-derived location is available
+- Falls back to CAN-sourced outside temp (VehicleService) when network is unavailable
+
+### FuelService
+
+- Tracks fuel level from CAN (can0) and exposes to both screens
+- Triggers low-fuel notification banner on upper screen when level drops below threshold
+
 ---
 
 ## UI Layer
@@ -475,20 +559,31 @@ Qt 6 QML, software-rendered (Mesa swrast), targeting two windows on two LVDS out
 ### Upper Screen — NavigationView (800×480)
 
 - `MapLibreItem` QQuickItem backed by `mbgl::HeadlessFrontend` (headless GL → QImage → QSGImageNode)
-- Turn HUD: `TurnArrow` canvas + distance + street name + ETA
-- Bottom HUD: `SpeedWidget`, GPS lock indicator, outside temp
-- Overlays: reverse camera, approaching-turn pulse, rerouting pill
+- Turn card: `TurnArrow` canvas + distance + street name
+- **Cruise bubble** (`cruiseWidget`): 80×68px rounded rect, left side below turn card — speed + CRUISE label, blue pulse ring animation; `visible: VehicleService.cruiseActive`
+- Speed badge: top-right (`SpeedWidget`) — current speed + posted limit; turns amber if over limit
+- Bottom strip (72px): ETA · remaining distance · current street; `visible: StatusBridge.navActive`
+- Overlays: approaching-turn amber pulse bar, GPS acquiring indicator, rerouting banner
+
+**RearCameraView (z:80) — loaded dynamically from Main.qml:**
+- `Loader { active: StatusBridge.reverseActive; source: active ? "screens/RearCameraView.qml" : "" }`
+- Full 800×480 canvas: R badge top-left, 3-zone trapezoid parking guides (green/amber/red), right-edge distance markers
+- `CameraFeed.qml` (separate file) contains the sole `import QtMultimedia 6.6` — Loader failure is graceful
+- 180ms opacity fade in/out
 
 ### Lower Screen — ControlHubView (800×420)
 
-Six tabs via `TabBar` component:
-- **Nav** (`NavCompanionView`) — turn-by-turn: ft/mi countdown, ETA, speed vs limit
-- **Climate** — dual temp zones, fan bars, mode/AC/recirc, seat heat 0-3
-- **Audio** — BT/FM/AM/SXM/AUX with per-source track/seek UI
-- **Phone** — call status, mute/end, DTMF keypad, timer
-- **Map** — (reserved)
+8-item bottom nav bar (60px, `Item`-based, no `TabBar`):
+- **Home** (⌂) → `NavCompanionView` — turn-by-turn: ft/mi countdown, ETA, speed vs limit
+- **Audio** (♪) → `AudioView` — BT/FM/AM/SXM/AUX, OEM transport layout, pinned preset bar
+- **Phone** (✆) → `PhoneView` — DTMF pad, contacts/recent, **persistent 88px right panel** (Answer/End/Mute always visible)
+- **Climate** (❄) → `ClimateView` — dual temp zones, **full-width fan speed row** (OFF + 1–5), mode/AC/recirc, seat heat
+- **Vehicle** (◈) → `VehicleStatusView` — drive mode, **Q60 coupe Canvas TPMS** with color-coded PSI, door/fuel card, `fourDoorModel` bool
+- **Info** (ℹ) → `InfoView` — firmware version, CAN status, GPS details, uptime
+- **Settings** (⚙) → `SettingsView` — display, nav, audio, system settings
+- **Volume** (🔊) — quick-action; slides up 64px `volumeOverlay` tray, amber accent, 4s auto-dismiss
 
-Auto-switching: reverse gear → NavCompanionView; incoming call → PhoneView.
+Auto-switching: `StatusBridge.reverseActive` → tab 7 (camera placeholder on lower); `StatusBridge.onSwitchLowerToPhone` → Phone tab. Both restore `previousTab` on exit.
 
 ### Map Style
 
