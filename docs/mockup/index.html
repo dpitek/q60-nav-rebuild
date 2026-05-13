@@ -334,7 +334,7 @@
     font-size: 14px; font-weight: 600;
     color: #000000;
     z-index: 25;
-    transform: translateY(-40px);
+    transform: translateY(-76px);
     transition: transform 200ms ease;
   }
 
@@ -377,10 +377,11 @@
   .dm-bar-right { font-size: 12px; color: #8E8E93; display: flex; align-items: center; gap: 10px; }
 
   /* ── NOTIFICATION BANNER ── */
+  /* translateY must exceed (top + height) to fully hide above clipped screen */
   .notif-banner {
     position: absolute;
     top: 32px; left: 50%;
-    transform: translateX(-50%) translateY(-56px);
+    transform: translateX(-50%) translateY(-80px);
     width: 480px;
     height: 44px;
     border-radius: 0 0 14px 14px;
@@ -1705,8 +1706,9 @@
   #sig-b4 { height: 13px; }
 
   /* ── ON-SCREEN KEYBOARD ── */
+  /* position: absolute so it stays inside the lower screen container, not the page */
   #osk-overlay {
-    position: fixed;
+    position: absolute;
     bottom: 0; left: 0; right: 0;
     background: rgba(18,18,20,0.97);
     backdrop-filter: blur(16px);
@@ -1850,7 +1852,11 @@
       <!-- STATUS BAR -->
       <div class="status-bar">
         <span class="status-time" id="status-time">9:41 AM</span>
-        <span class="status-center">Q60</span>
+        <!-- Drive mode badge — centered in status bar -->
+        <div class="dm-badge" id="dm-badge" style="color:#0A84FF;padding:2px 10px 2px 7px;font-size:11px;">
+          <span class="dm-icon" id="dm-icon">⚖️</span>
+          <span id="dm-label">STANDARD</span>
+        </div>
         <div class="status-right" style="display:flex;align-items:center;gap:6px;">
           <!-- BT icon -->
           <div id="si-bt" title="Bluetooth" style="display:flex;align-items:center;gap:2px;opacity:1;">
@@ -2023,12 +2029,8 @@
         </div>
       </div>
 
-      <!-- DRIVE MODE BAR -->
+      <!-- DRIVE MODE BAR — temp + compass only; mode badge moved to status bar -->
       <div class="drive-mode-bar" id="drive-mode-bar">
-        <div class="dm-badge" id="dm-badge" style="color:#0A84FF;">
-          <span class="dm-icon" id="dm-icon">⚖️</span>
-          <span id="dm-label">STANDARD</span>
-        </div>
         <div class="dm-bar-spacer"></div>
         <div class="dm-bar-right">
           <span id="dm-bar-temp">68°F</span>
@@ -3025,6 +3027,90 @@
 
       <!-- BRIGHTNESS OVERLAY -->
       <div class="brightness-overlay" id="brightness-overlay-lower"></div>
+
+      <!-- ON-SCREEN KEYBOARD — inside screen-lower so it stays within the screen bounds -->
+      <div id="osk-overlay">
+        <div class="osk-field-preview">
+          <span id="osk-preview" data-placeholder="Search…"></span>
+          <button class="osk-close-btn" onclick="osk.close()">✕</button>
+        </div>
+        <div id="osk-rows-alpha">
+          <div class="osk-row">
+            <button class="osk-key" onclick="osk.key('q')">q</button>
+            <button class="osk-key" onclick="osk.key('w')">w</button>
+            <button class="osk-key" onclick="osk.key('e')">e</button>
+            <button class="osk-key" onclick="osk.key('r')">r</button>
+            <button class="osk-key" onclick="osk.key('t')">t</button>
+            <button class="osk-key" onclick="osk.key('y')">y</button>
+            <button class="osk-key" onclick="osk.key('u')">u</button>
+            <button class="osk-key" onclick="osk.key('i')">i</button>
+            <button class="osk-key" onclick="osk.key('o')">o</button>
+            <button class="osk-key" onclick="osk.key('p')">p</button>
+          </div>
+          <div class="osk-row">
+            <button class="osk-key" onclick="osk.key('a')">a</button>
+            <button class="osk-key" onclick="osk.key('s')">s</button>
+            <button class="osk-key" onclick="osk.key('d')">d</button>
+            <button class="osk-key" onclick="osk.key('f')">f</button>
+            <button class="osk-key" onclick="osk.key('g')">g</button>
+            <button class="osk-key" onclick="osk.key('h')">h</button>
+            <button class="osk-key" onclick="osk.key('j')">j</button>
+            <button class="osk-key" onclick="osk.key('k')">k</button>
+            <button class="osk-key" onclick="osk.key('l')">l</button>
+          </div>
+          <div class="osk-row">
+            <button class="osk-key wide" onclick="osk.toggleShift()">⇧</button>
+            <button class="osk-key" onclick="osk.key('z')">z</button>
+            <button class="osk-key" onclick="osk.key('x')">x</button>
+            <button class="osk-key" onclick="osk.key('c')">c</button>
+            <button class="osk-key" onclick="osk.key('v')">v</button>
+            <button class="osk-key" onclick="osk.key('b')">b</button>
+            <button class="osk-key" onclick="osk.key('n')">n</button>
+            <button class="osk-key" onclick="osk.key('m')">m</button>
+            <button class="osk-key delete" onclick="osk.backspace()">⌫</button>
+          </div>
+          <div class="osk-row">
+            <button class="osk-key wide" onclick="osk.switchMode('num')">123</button>
+            <button class="osk-key" onclick="osk.key(',')">，</button>
+            <button class="osk-key space" onclick="osk.key(' ')">space</button>
+            <button class="osk-key" onclick="osk.key('.')">.</button>
+            <button class="osk-key action" onclick="osk.submit()">Go</button>
+          </div>
+        </div>
+        <div id="osk-rows-num" style="display:none;">
+          <div class="osk-row">
+            <button class="osk-key" onclick="osk.key('1')">1</button>
+            <button class="osk-key" onclick="osk.key('2')">2</button>
+            <button class="osk-key" onclick="osk.key('3')">3</button>
+            <button class="osk-key" onclick="osk.key('4')">4</button>
+            <button class="osk-key" onclick="osk.key('5')">5</button>
+            <button class="osk-key" onclick="osk.key('6')">6</button>
+            <button class="osk-key" onclick="osk.key('7')">7</button>
+            <button class="osk-key" onclick="osk.key('8')">8</button>
+            <button class="osk-key" onclick="osk.key('9')">9</button>
+            <button class="osk-key" onclick="osk.key('0')">0</button>
+          </div>
+          <div class="osk-row">
+            <button class="osk-key" onclick="osk.key('-')">-</button>
+            <button class="osk-key" onclick="osk.key('/')">／</button>
+            <button class="osk-key" onclick="osk.key(':')">:</button>
+            <button class="osk-key" onclick="osk.key(';')">;</button>
+            <button class="osk-key" onclick="osk.key('(')">（</button>
+            <button class="osk-key" onclick="osk.key(')')">）</button>
+            <button class="osk-key" onclick="osk.key('$')">$</button>
+            <button class="osk-key" onclick="osk.key('&')">&amp;</button>
+            <button class="osk-key" onclick="osk.key('@')">@</button>
+            <button class="osk-key delete" onclick="osk.backspace()">⌫</button>
+          </div>
+          <div class="osk-row">
+            <button class="osk-key wide" onclick="osk.switchMode('alpha')">ABC</button>
+            <button class="osk-key" onclick="osk.key('.')">.</button>
+            <button class="osk-key space" onclick="osk.key(' ')">space</button>
+            <button class="osk-key" onclick="osk.key(',')">,</button>
+            <button class="osk-key action" onclick="osk.submit()">Go</button>
+          </div>
+        </div>
+      </div>
 
     </div><!-- /screen-lower -->
   </div>
@@ -4978,89 +5064,7 @@ document.addEventListener('focusin', function(e) {
   </div>
 </div>
 
-<!-- ── ON-SCREEN KEYBOARD ── -->
-<div id="osk-overlay">
-  <div class="osk-field-preview">
-    <span id="osk-preview" data-placeholder="Search…"></span>
-    <button class="osk-close-btn" onclick="osk.close()">✕</button>
-  </div>
-  <div id="osk-rows-alpha">
-    <div class="osk-row">
-      <button class="osk-key" onclick="osk.key('q')">q</button>
-      <button class="osk-key" onclick="osk.key('w')">w</button>
-      <button class="osk-key" onclick="osk.key('e')">e</button>
-      <button class="osk-key" onclick="osk.key('r')">r</button>
-      <button class="osk-key" onclick="osk.key('t')">t</button>
-      <button class="osk-key" onclick="osk.key('y')">y</button>
-      <button class="osk-key" onclick="osk.key('u')">u</button>
-      <button class="osk-key" onclick="osk.key('i')">i</button>
-      <button class="osk-key" onclick="osk.key('o')">o</button>
-      <button class="osk-key" onclick="osk.key('p')">p</button>
-    </div>
-    <div class="osk-row">
-      <button class="osk-key" onclick="osk.key('a')">a</button>
-      <button class="osk-key" onclick="osk.key('s')">s</button>
-      <button class="osk-key" onclick="osk.key('d')">d</button>
-      <button class="osk-key" onclick="osk.key('f')">f</button>
-      <button class="osk-key" onclick="osk.key('g')">g</button>
-      <button class="osk-key" onclick="osk.key('h')">h</button>
-      <button class="osk-key" onclick="osk.key('j')">j</button>
-      <button class="osk-key" onclick="osk.key('k')">k</button>
-      <button class="osk-key" onclick="osk.key('l')">l</button>
-    </div>
-    <div class="osk-row">
-      <button class="osk-key wide" onclick="osk.toggleShift()">⇧</button>
-      <button class="osk-key" onclick="osk.key('z')">z</button>
-      <button class="osk-key" onclick="osk.key('x')">x</button>
-      <button class="osk-key" onclick="osk.key('c')">c</button>
-      <button class="osk-key" onclick="osk.key('v')">v</button>
-      <button class="osk-key" onclick="osk.key('b')">b</button>
-      <button class="osk-key" onclick="osk.key('n')">n</button>
-      <button class="osk-key" onclick="osk.key('m')">m</button>
-      <button class="osk-key delete wide" onclick="osk.backspace()">⌫</button>
-    </div>
-    <div class="osk-row">
-      <button class="osk-key wide" onclick="osk.switchMode('num')">123</button>
-      <button class="osk-key" onclick="osk.key(',')">，</button>
-      <button class="osk-key space" onclick="osk.key(' ')">space</button>
-      <button class="osk-key" onclick="osk.key('.')">.</button>
-      <button class="osk-key action" onclick="osk.submit()">Go</button>
-    </div>
-  </div>
-  <div id="osk-rows-num" style="display:none;">
-    <div class="osk-row">
-      <button class="osk-key" onclick="osk.key('1')">1</button>
-      <button class="osk-key" onclick="osk.key('2')">2</button>
-      <button class="osk-key" onclick="osk.key('3')">3</button>
-      <button class="osk-key" onclick="osk.key('4')">4</button>
-      <button class="osk-key" onclick="osk.key('5')">5</button>
-      <button class="osk-key" onclick="osk.key('6')">6</button>
-      <button class="osk-key" onclick="osk.key('7')">7</button>
-      <button class="osk-key" onclick="osk.key('8')">8</button>
-      <button class="osk-key" onclick="osk.key('9')">9</button>
-      <button class="osk-key" onclick="osk.key('0')">0</button>
-    </div>
-    <div class="osk-row">
-      <button class="osk-key" onclick="osk.key('-')">-</button>
-      <button class="osk-key" onclick="osk.key('/')">／</button>
-      <button class="osk-key" onclick="osk.key(':')">:</button>
-      <button class="osk-key" onclick="osk.key(';')">;</button>
-      <button class="osk-key" onclick="osk.key('(')">（</button>
-      <button class="osk-key" onclick="osk.key(')')">）</button>
-      <button class="osk-key" onclick="osk.key('$')">$</button>
-      <button class="osk-key" onclick="osk.key('&')">&amp;</button>
-      <button class="osk-key" onclick="osk.key('@')">@</button>
-      <button class="osk-key delete" onclick="osk.backspace()">⌫</button>
-    </div>
-    <div class="osk-row">
-      <button class="osk-key wide" onclick="osk.switchMode('alpha')">ABC</button>
-      <button class="osk-key" onclick="osk.key('.')">.</button>
-      <button class="osk-key space" onclick="osk.key(' ')">space</button>
-      <button class="osk-key" onclick="osk.key(',')">,</button>
-      <button class="osk-key action" onclick="osk.submit()">Go</button>
-    </div>
-  </div>
-</div>
+<!-- OSK is now inside #screen-lower — see screen-lower section above -->
 
 </body>
 </html>
