@@ -160,7 +160,11 @@ Item {
                                     anchors.verticalCenter: parent.verticalCenter
                                     width: parent.width - 40
                                     Text { text: modelData.name; color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 14; weight: Font.Medium } }
-                                    Text { text: modelData.addr; color: "#8E8E93"; font { family: "Roboto"; pixelSize: 11 }; width: parent.width; elide: Text.ElideRight }
+                                    Text {
+                                        text: modelData.addr; color: "#8E8E93"
+                                        font { family: "Roboto"; pixelSize: 11 }
+                                        width: parent.width; elide: Text.ElideRight
+                                    }
                                 }
                             }
                             MouseArea {
@@ -208,8 +212,16 @@ Item {
                             Column {
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: parent.width - 40
-                                Text { text: modelData.name; color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 14; weight: Font.Medium }; width: parent.width; elide: Text.ElideRight }
-                                Text { text: modelData.addr; color: "#8E8E93"; font { family: "Roboto"; pixelSize: 11 }; width: parent.width; elide: Text.ElideRight }
+                                Text {
+                                    text: modelData.name; color: "#FFFFFF"
+                                    font { family: "Roboto"; pixelSize: 14; weight: Font.Medium }
+                                    width: parent.width; elide: Text.ElideRight
+                                }
+                                Text {
+                                    text: modelData.addr; color: "#8E8E93"
+                                    font { family: "Roboto"; pixelSize: 11 }
+                                    width: parent.width; elide: Text.ElideRight
+                                }
                             }
                         }
                         MouseArea {

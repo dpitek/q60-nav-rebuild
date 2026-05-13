@@ -88,7 +88,8 @@ TurnArrow · SpeedWidget · FanControl · TempZone · TabBar · StatusBar · Wel
 - [deploy-to-image.sh](scripts/deploy-to-image.sh) — write kernel + rootfs to eMMC
 - [deploy-tiles.sh](scripts/deploy-tiles.sh) — push tiles to mounted partition
 - [restore-logan1.sh](scripts/restore-logan1.sh) — emergency factory restore (~10s)
-- [run-simulator.sh](scripts/run-simulator.sh) — Docker x86 desktop simulator
+- [run-simulator.sh](scripts/run-simulator.sh) — Docker x86 desktop simulator (VNC client, port 5900)
+- [run-simulator-web.sh](scripts/run-simulator-web.sh) — Browser-accessible simulator (noVNC over WebSocket, default port 8080). Full mouse + keyboard interactivity. Pass `--port N` to override.
 
 ### Dependencies (`deps/`)
 - [build-qt6-host.sh](deps/build-qt6-host.sh) — host amd64 Qt6 (QT_HOST_PATH)

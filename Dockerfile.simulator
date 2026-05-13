@@ -45,4 +45,11 @@ RUN dpkg --add-architecture i386 2>/dev/null || true && \
         libxau6 \
         # Xvfb — provides the virtual DISPLAY so VNC init succeeds
         xvfb \
+        # noVNC + websockify — browser-accessible HTML5 VNC client on :8080.
+        # Bridges WebSocket→TCP so http://localhost:8080 renders the running
+        # Qt VNC output. Mouse + keyboard pass through to the live app.
+        # Adds ~25MB to the image (mostly the static JS/CSS bundle).
+        novnc \
+        websockify \
+        net-tools \
     && rm -rf /var/lib/apt/lists/*

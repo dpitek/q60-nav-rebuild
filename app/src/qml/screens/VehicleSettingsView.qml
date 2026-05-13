@@ -467,7 +467,11 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: parent.width - 60
                                 Text { text: modelData.code + " — " + modelData.status; color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 13; weight: Font.Medium } }
-                                Text { text: modelData.desc; color: "#8E8E93"; font { family: "Roboto"; pixelSize: 11 }; width: parent.width; elide: Text.ElideRight }
+                                Text {
+                                    text: modelData.desc; color: "#8E8E93"
+                                    font { family: "Roboto"; pixelSize: 11 }
+                                    width: parent.width; elide: Text.ElideRight
+                                }
                             }
                         }
                     }
