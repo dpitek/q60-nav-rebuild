@@ -16,6 +16,9 @@
 #include <QObject>
 #include <QTimer>
 #include <QString>
+#include <QStringList>
+#include <QVariantList>
+#include <QDateTime>
 
 class ProfileService;
 
@@ -24,17 +27,21 @@ class SettingsService : public QObject
     Q_OBJECT
 
     // ── Display ────────────────────────────────────────────────────────────
-    Q_PROPERTY(int  upperBrightness READ upperBrightness WRITE setUpperBrightness NOTIFY displayChanged)
-    Q_PROPERTY(int  lowerBrightness READ lowerBrightness WRITE setLowerBrightness NOTIFY displayChanged)
-    Q_PROPERTY(int  dayNightMode    READ dayNightMode    WRITE setDayNightMode    NOTIFY displayChanged)
+    Q_PROPERTY(int  upperBrightness   READ upperBrightness   WRITE setUpperBrightness   NOTIFY displayChanged)
+    Q_PROPERTY(int  lowerBrightness   READ lowerBrightness   WRITE setLowerBrightness   NOTIFY displayChanged)
+    Q_PROPERTY(int  dayNightMode      READ dayNightMode      WRITE setDayNightMode      NOTIFY displayChanged)
     // 0=Auto 1=Day 2=Night
+    Q_PROPERTY(int  autoDimThreshold  READ autoDimThreshold  WRITE setAutoDimThreshold  NOTIFY displayChanged)
+    // lux threshold (0–1000) — engages day mode below this value when dayNightMode=Auto
 
     // ── Clock ──────────────────────────────────────────────────────────────
-    Q_PROPERTY(int  timeFormat   READ timeFormat   WRITE setTimeFormat   NOTIFY clockChanged)
+    Q_PROPERTY(int  timeFormat     READ timeFormat     WRITE setTimeFormat     NOTIFY clockChanged)
     // 0=12h 1=24h
-    Q_PROPERTY(bool gpsSync      READ gpsSync      WRITE setGpsSync      NOTIFY clockChanged)
-    Q_PROPERTY(int  clockHour    READ clockHour    WRITE setClockHour    NOTIFY clockChanged)
-    Q_PROPERTY(int  clockMinute  READ clockMinute  WRITE setClockMinute  NOTIFY clockChanged)
+    Q_PROPERTY(bool gpsSync        READ gpsSync        WRITE setGpsSync        NOTIFY clockChanged)
+    Q_PROPERTY(int  clockHour      READ clockHour      WRITE setClockHour      NOTIFY clockChanged)
+    Q_PROPERTY(int  clockMinute    READ clockMinute    WRITE setClockMinute    NOTIFY clockChanged)
+    Q_PROPERTY(int  timezoneOffset READ timezoneOffset WRITE setTimezoneOffset NOTIFY clockChanged)
+    // hours offset from UTC, -12 to +14
 
     // ── Units ──────────────────────────────────────────────────────────────
     Q_PROPERTY(int distanceUnit READ distanceUnit WRITE setDistanceUnit NOTIFY unitsChanged)
@@ -42,7 +49,7 @@ class SettingsService : public QObject
     Q_PROPERTY(int tempUnit     READ tempUnit     WRITE setTempUnit     NOTIFY unitsChanged)
     // 0=°F 1=°C
     Q_PROPERTY(int fuelUnit     READ fuelUnit     WRITE setFuelUnit     NOTIFY unitsChanged)
-    // 0=MPG 1=L/100km
+    // 0=MPG 1=L/100km 2=km/L
 
     // ── Navigation ────────────────────────────────────────────────────────
     Q_PROPERTY(bool voiceGuidance   READ voiceGuidance   WRITE setVoiceGuidance   NOTIFY navChanged)
@@ -108,6 +115,22 @@ class SettingsService : public QObject
     Q_PROPERTY(int maintenanceInterval READ maintenanceInterval WRITE setMaintenanceInterval NOTIFY maintenanceChanged)
     // 0=3k 1=5k 2=7.5k 3=10k
 
+    // ── Bluetooth (UI shell — real BlueZ pairing pending hardware) ───────
+    // Devices are stored as a list of QVariantMap rows:
+    //   { "name": "Phone (Driver)", "mac": "AA:BB:CC:DD:EE:FF",
+    //     "priority": 0, "connected": false }
+    Q_PROPERTY(QVariantList btDevices READ btDevices NOTIFY btDevicesChanged)
+
+    // ── Language (UI shell — real i18n binding is post-MVP) ──────────────
+    Q_PROPERTY(int language READ language WRITE setLanguage NOTIFY languageChanged)
+    // 0=English 1=Spanish 2=French 3=Japanese
+
+    // ── System (read-only build / runtime metadata) ──────────────────────
+    Q_PROPERTY(QString softwareVersion READ softwareVersion CONSTANT)
+    Q_PROPERTY(QString mapDataVersion  READ mapDataVersion  CONSTANT)
+    Q_PROPERTY(QString buildDate       READ buildDate       CONSTANT)
+    Q_PROPERTY(qint64  uptimeMs        READ uptimeMs        NOTIFY uptimeChanged)
+
 public:
     explicit SettingsService(QObject *parent = nullptr);
     ~SettingsService() override = default;
@@ -126,14 +149,26 @@ public:
     // Force immediate save (bypasses debounce)
     Q_INVOKABLE void saveNow();
 
+    // Factory reset — wipe in-memory state, delete settings.json on disk,
+    // re-emit every Changed signal so QML rebinds to fresh defaults.
+    Q_INVOKABLE void resetToDefaults();
+
+    // ── Bluetooth UI actions (mock — TODO: wire to BlueZ) ────────────────
+    Q_INVOKABLE void btForgetDevice(const QString &mac);
+    Q_INVOKABLE void btSetPriority(const QString &mac, int delta); // +1 up, -1 down
+    Q_INVOKABLE void btToggleConnect(const QString &mac);
+    Q_INVOKABLE void btAddMockDevice(const QString &name);          // pairing-flow shim
+
     // ── Property accessors ──────────────────────────────────────────────
     int  upperBrightness()       const { return m_upperBrightness; }
     int  lowerBrightness()       const { return m_lowerBrightness; }
     int  dayNightMode()          const { return m_dayNightMode; }
+    int  autoDimThreshold()      const { return m_autoDimThreshold; }
     int  timeFormat()            const { return m_timeFormat; }
     bool gpsSync()               const { return m_gpsSync; }
     int  clockHour()             const { return m_clockHour; }
     int  clockMinute()           const { return m_clockMinute; }
+    int  timezoneOffset()        const { return m_timezoneOffset; }
     int  distanceUnit()          const { return m_distanceUnit; }
     int  tempUnit()              const { return m_tempUnit; }
     int  fuelUnit()              const { return m_fuelUnit; }
@@ -169,15 +204,23 @@ public:
     bool speedLimitDisplay()     const { return m_speedLimitDisplay; }
     int  mapDetailLevel()        const { return m_mapDetailLevel; }
     int  maintenanceInterval()   const { return m_maintenanceInterval; }
+    int  language()              const { return m_language; }
+    QVariantList btDevices()     const { return m_btDevices; }
+    QString softwareVersion()    const { return m_softwareVersion; }
+    QString mapDataVersion()     const { return m_mapDataVersion; }
+    QString buildDate()          const { return m_buildDate; }
+    qint64  uptimeMs()           const;
 
     // ── Setters (each arms the save debounce) ───────────────────────────
     void setUpperBrightness(int v);
     void setLowerBrightness(int v);
     void setDayNightMode(int v);
+    void setAutoDimThreshold(int v);
     void setTimeFormat(int v);
     void setGpsSync(bool v);
     void setClockHour(int v);
     void setClockMinute(int v);
+    void setTimezoneOffset(int v);
     void setDistanceUnit(int v);
     void setTempUnit(int v);
     void setFuelUnit(int v);
@@ -213,6 +256,7 @@ public:
     void setSpeedLimitDisplay(bool v);
     void setMapDetailLevel(int v);
     void setMaintenanceInterval(int v);
+    void setLanguage(int v);
 
 signals:
     void displayChanged();
@@ -228,24 +272,33 @@ signals:
     void comfortChanged();
     void mapSettingsChanged();
     void maintenanceChanged();
+    void btDevicesChanged();
+    void languageChanged();
+    void uptimeChanged();
 
 private slots:
     void onSaveTimerFired();
+    void onUptimeTimerFired();
 
 private:
     QString settingsFilePath() const;
     void    loadFromDisk();
     void    saveToDisk();
     void    armSaveTimer();
+    void    seedDefaultBtDevices();
+    void    emitAllChanged();
+    QString readMapDataVersion() const;
 
     // ── Data members — defaults match SettingsView.qml ─────────────────
     int  m_upperBrightness       = 80;
     int  m_lowerBrightness       = 80;
     int  m_dayNightMode          = 0;
+    int  m_autoDimThreshold      = 100;   // lux
     int  m_timeFormat            = 0;
     bool m_gpsSync               = true;
     int  m_clockHour             = 12;
     int  m_clockMinute           = 0;
+    int  m_timezoneOffset        = -5;    // EST default
     int  m_distanceUnit          = 0;
     int  m_tempUnit              = 0;
     int  m_fuelUnit              = 0;
@@ -281,7 +334,16 @@ private:
     bool m_speedLimitDisplay     = true;
     int  m_mapDetailLevel        = 1;
     int  m_maintenanceInterval   = 1;
+    int  m_language              = 0;
+    QVariantList m_btDevices;             // seeded in ctor
+
+    // System metadata (set in ctor, never mutates after)
+    QString m_softwareVersion;
+    QString m_mapDataVersion;
+    QString m_buildDate;
+    qint64  m_bootTime           = 0;     // QDateTime::currentMSecsSinceEpoch() at ctor
 
     QTimer        *m_saveTimer   = nullptr;
+    QTimer        *m_uptimeTimer = nullptr;
     ProfileService *m_profileSvc = nullptr;
 };
