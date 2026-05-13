@@ -6,6 +6,8 @@
 #include <linux/can/raw.h>
 #include "ButtonLogger.h"
 
+class SettingsService;
+
 class VehicleService : public QObject {
     Q_OBJECT
     // Climate
@@ -39,6 +41,7 @@ class VehicleService : public QObject {
     Q_PROPERTY(bool  doorRearLeft  READ doorRearLeft  NOTIFY doorRearLeftChanged)
     Q_PROPERTY(bool  doorRearRight READ doorRearRight NOTIFY doorRearRightChanged)
     Q_PROPERTY(bool  trunkOpen     READ trunkOpen     NOTIFY trunkOpenChanged)
+    Q_PROPERTY(bool  doorsLocked   READ doorsLocked   NOTIFY doorsLockedChanged)
     // Powertrain / climate extended (0x551 + 0x625)
     Q_PROPERTY(float coolantTemp   READ coolantTemp   NOTIFY coolantTempChanged)
     Q_PROPERTY(float batteryVolts  READ batteryVolts  NOTIFY batteryVoltsChanged)
@@ -72,8 +75,13 @@ class VehicleService : public QObject {
     Q_PROPERTY(float tripBAvgMPG   READ tripBAvgMPG   NOTIFY tripBChanged)
     Q_PROPERTY(int   tripBSeconds  READ tripBSeconds  NOTIFY tripBChanged)
     Q_PROPERTY(float tripBAvgSpeed READ tripBAvgSpeed NOTIFY tripBChanged)
-    // Drive mode (0=Std 1=Sport 2=Sport+ 3=Eco 4=Snow 5=Personal)
+    // Drive mode (0=Std 1=Sport 2=Sport+ 3=Eco 4=Snow 5=Personal 6=Track)
     Q_PROPERTY(int  driveMode      READ driveMode      NOTIFY driveModeChanged)
+    // Active Sound Control (Bose-synthesized engine sound through speakers)
+    // Default true to match factory state. Toggle exposed in AudioView Settings panel.
+    Q_PROPERTY(bool ascEnabled     READ ascEnabled     NOTIFY ascEnabledChanged)
+    // Track mode active (driveMode == 6) — composite "cool" mode
+    Q_PROPERTY(bool trackModeActive READ trackModeActive NOTIFY trackModeActiveChanged)
     // Commander joystick + adjacent buttons
     Q_PROPERTY(int joystickX READ joystickX NOTIFY joystickMoved)
     Q_PROPERTY(int joystickY READ joystickY NOTIFY joystickMoved)
@@ -92,10 +100,39 @@ class VehicleService : public QObject {
     Q_PROPERTY(float atessaFront   READ atessaFront    NOTIFY atessaChanged)  // % front torque 0-100
     Q_PROPERTY(float atessaRear    READ atessaRear     NOTIFY atessaChanged)  // % rear torque 0-100
 
+    // ── VR30DDTT track telemetry (Q60 3.0L twin-turbo) ──────────────────────
+    // Most read paths Q50_LIKELY or UNVERIFIED — see VR30 EcuTek tuning guide.
+    Q_PROPERTY(double boostPressurePsi   READ boostPressurePsi   NOTIFY vr30TelemetryChanged)  // 0x551 byte 4-5 Q50_LIKELY
+    Q_PROPERTY(double oilTempF           READ oilTempF           NOTIFY vr30TelemetryChanged)  // 0x55D Q50_LIKELY
+    Q_PROPERTY(double transTempF         READ transTempF         NOTIFY vr30TelemetryChanged)  // 0x59A Q50_LIKELY
+    Q_PROPERTY(double intakeAirTempF     READ intakeAirTempF     NOTIFY vr30TelemetryChanged)  // 0x551 byte 7 Q50_LIKELY
+    Q_PROPERTY(double ignitionAdvanceDeg READ ignitionAdvanceDeg NOTIFY vr30TelemetryChanged)  // UNVERIFIED
+    Q_PROPERTY(double knockRetardDeg     READ knockRetardDeg     NOTIFY vr30TelemetryChanged)  // UNVERIFIED
+    Q_PROPERTY(double wastegatePercent   READ wastegatePercent   NOTIFY vr30TelemetryChanged)  // 0x55C Q50_LIKELY
+    Q_PROPERTY(double manifoldPressurePsi READ manifoldPressurePsi NOTIFY vr30TelemetryChanged)  // OBD2 PID 0x0B (calc)
+    Q_PROPERTY(double airFuelRatio       READ airFuelRatio       NOTIFY vr30TelemetryChanged)  // calc from MAF
+
+    // ── G-meter (chassis sensor — frame ID UNVERIFIED) ──────────────────────
+    Q_PROPERTY(double lateralG           READ lateralG           NOTIFY gMeterChanged)
+    Q_PROPERTY(double longitudinalG      READ longitudinalG      NOTIFY gMeterChanged)
+    Q_PROPERTY(double peakLateralG       READ peakLateralG       NOTIFY gMeterChanged)
+    Q_PROPERTY(double peakLongitudinalG  READ peakLongitudinalG  NOTIFY gMeterChanged)
+
+    // ── Performance timer (0-60 / quarter-mile) ────────────────────────────
+    Q_PROPERTY(double zeroToSixtySec     READ zeroToSixtySec     NOTIFY perfTimerChanged)
+    Q_PROPERTY(double quarterMileSec     READ quarterMileSec     NOTIFY perfTimerChanged)
+    Q_PROPERTY(double quarterMileTrapMph READ quarterMileTrapMph NOTIFY perfTimerChanged)
+    Q_PROPERTY(bool   perfRunActive      READ perfRunActive      NOTIFY perfTimerChanged)
+    Q_PROPERTY(double perfRunElapsedSec  READ perfRunElapsedSec  NOTIFY perfTimerChanged)
+
 public:
     explicit VehicleService(QObject *parent = nullptr);
     ~VehicleService();
     void start();
+    // Wire SettingsService for BCM-unlock comfort features (mirror fold, comfort
+    // window close, all-windows one-touch). Optional — VehicleService runs without
+    // it; the gated features simply stay dormant.
+    void setSettingsService(SettingsService *s);
 
     // Climate
     float driverTemp()    const { return m_driverTemp; }
@@ -128,6 +165,7 @@ public:
     bool  doorRearLeft()  const { return m_doorRearLeft; }
     bool  doorRearRight() const { return m_doorRearRight; }
     bool  trunkOpen()     const { return m_trunkOpen; }
+    bool  doorsLocked()   const { return m_doorsLocked; }
     // Powertrain extended
     float coolantTemp()   const { return m_coolantTemp; }
     float batteryVolts()  const { return m_batteryVolts; }
@@ -163,6 +201,8 @@ public:
     float tripBAvgSpeed() const { return m_tripBAvgSpeed; }
     // Drive mode
     int  driveMode()      const { return m_driveMode; }
+    bool ascEnabled()      const { return m_ascEnabled; }
+    bool trackModeActive() const { return m_driveMode == 6; }
     // Commander joystick + adjacent buttons
     int joystickX() const { return m_joystickX; }
     int joystickY() const { return m_joystickY; }
@@ -180,6 +220,27 @@ public:
     // ATTESA
     float atessaFront()   const { return m_atessaFront; }
     float atessaRear()    const { return m_atessaRear; }
+    // VR30 track telemetry
+    double boostPressurePsi()    const { return m_boostPressurePsi; }
+    double oilTempF()            const { return m_oilTempF; }
+    double transTempF()          const { return m_transTempF; }
+    double intakeAirTempF()      const { return m_intakeAirTempF; }
+    double ignitionAdvanceDeg()  const { return m_ignitionAdvanceDeg; }
+    double knockRetardDeg()      const { return m_knockRetardDeg; }
+    double wastegatePercent()    const { return m_wastegatePercent; }
+    double manifoldPressurePsi() const { return m_manifoldPressurePsi; }
+    double airFuelRatio()        const { return m_airFuelRatio; }
+    // G-meter
+    double lateralG()            const { return m_lateralG; }
+    double longitudinalG()       const { return m_longitudinalG; }
+    double peakLateralG()        const { return m_peakLateralG; }
+    double peakLongitudinalG()   const { return m_peakLongitudinalG; }
+    // Performance timer
+    double zeroToSixtySec()      const { return m_zeroToSixtySec; }
+    double quarterMileSec()      const { return m_quarterMileSec; }
+    double quarterMileTrapMph()  const { return m_quarterMileTrapMph; }
+    bool   perfRunActive()       const { return m_perfRunActive; }
+    double perfRunElapsedSec()   const { return m_perfRunElapsedSec; }
 
 public slots:
     // Climate writes — CAUTION: Q50/Q60 HVAC write path not publicly documented.
@@ -199,7 +260,7 @@ public slots:
     // Climate shortcuts + steering wheel + plasmacluster + rain sensor
     Q_INVOKABLE void setAutoClimate(bool on);    // AUTO mode: full-auto fan+AC+mode
     Q_INVOKABLE void setMaxAC();                 // MAX AC: recirc + max fan + max cool
-    Q_INVOKABLE void setMaxDEF();                // MAX DEF: A/C + max fan + defrost mode
+    Q_INVOKABLE void setMaxDefrost();            // MAX DEF: A/C + max fan + defrost mode
     Q_INVOKABLE void syncZones();                // SYNC: set passenger = driver temp
     Q_INVOKABLE void setHeatedSteeringWheel(bool on);
     Q_INVOKABLE void setPlasmacluster(int level);  // 0=off 1-3=level
@@ -209,6 +270,12 @@ public slots:
     Q_INVOKABLE void resetTripB();
     // Drive mode
     Q_INVOKABLE void setDriveMode(int mode);
+    // Active Sound Control toggle — hidden in factory diag menu; we expose directly.
+    // CAN write blocked until J2534 capture identifies the real ID (CAN_ASC_TOGGLE=0xFFFF).
+    Q_INVOKABLE void setAscEnabled(bool on);
+    // Track mode preference JSON blob — same pattern as audioPresets/driveModePersonalConfig.
+    // Updates internal m_trackModePreferences struct and emits signals.
+    Q_INVOKABLE void setTrackModeConfig(const QString &json);
     // Driver aids
     Q_INVOKABLE void setBSW(bool on);
     Q_INVOKABLE void setBSI(bool on);
@@ -223,6 +290,8 @@ public slots:
     // Single-frame UDS request; BCM must be on the active CAN bus (can0 HS-CAN).
     Q_INVOKABLE void lockDoors();
     Q_INVOKABLE void unlockDoors();
+    // Performance timer
+    Q_INVOKABLE void resetPerformanceTimer();
 
 signals:
     void driverTempChanged(float);
@@ -251,6 +320,8 @@ signals:
     void doorRearLeftChanged(bool);
     void doorRearRightChanged(bool);
     void trunkOpenChanged(bool);
+    void doorsLockedChanged(bool);
+    void keyFobLockHold();  // BCM emits when lock button is held >2s (JDM/EU only)
     void coolantTempChanged(float);
     void batteryVoltsChanged(float);
     void rearDefrostOnChanged(bool);
@@ -272,6 +343,9 @@ signals:
     void tripBChanged();
     // Drive mode + driver aids + ATTESA
     void driveModeChanged(int);
+    void ascEnabledChanged(bool);
+    void trackModeActiveChanged(bool);
+    void trackModeConfigChanged();   // m_trackModePreferences struct updated
     void bswOnChanged(bool);
     void bsiOnChanged(bool);
     void ldwOnChanged(bool);
@@ -300,12 +374,20 @@ signals:
     void muteToggle();
     // Ignition / session lifecycle
     void ignitionOff();     // fired when ignition-off detected (speed=0 + gear=P + key event)
+    // VR30 telemetry + G-meter + performance timer
+    void vr30TelemetryChanged();
+    void gMeterChanged();
+    void perfTimerChanged();
 
 private slots:
     void onVehicleCanData();
     void onAVCanData();
     void onCAN2Data();
-    void onTripTimerTick();  // 1Hz trip computer accumulator
+    void onTripTimerTick();   // 1Hz trip computer accumulator
+    void onPerfTick();        // ~10Hz performance timer state machine
+    // BCM-unlock comfort feature handlers — all placeholder CAN writes
+    void onDoorsLockedForMirrorFold(bool locked);
+    void onKeyFobLockHoldForWindowClose();
 
 private:
     void openCAN(const char *iface, int &sock);
@@ -317,6 +399,14 @@ private:
     uint8_t hvacTempRaw(float tempF) const;  // °F → 0x540 byte encoding
     uint8_t hvacModeFlags() const;           // pack current state → byte 0 of 0x540
     void sendADASFrame();     // rebuild and send CAN_ADAS_CTRL (0x47D) from current aid state
+    // VR30 telemetry: parses Q50_LIKELY frames; UNVERIFIED frames log TODO.
+    void handleVR30Frame(const struct can_frame &f);
+    // Performance timer state machine — drives 0-60, quarter mile, peak G tracking.
+    void updatePerformanceTimer();
+    // BCM-unlock comfort write paths (all UNVERIFIED placeholders — log only)
+    void sendMirrorFold();
+    void sendWindowCloseAll();
+    void sendWindowOneTouch(uint8_t window, bool up);  // window 0..3 = DRV/PAS/RL/RR
 
     ButtonLogger m_buttonLog;        // hardware button diagnostic logger
     bool m_ignitionOffSent = false;  // debounce: only emit ignitionOff() once per cycle
@@ -356,6 +446,7 @@ private:
     bool  m_doorRearLeft  = false;
     bool  m_doorRearRight = false;
     bool  m_trunkOpen     = false;
+    bool  m_doorsLocked   = false;
     float m_coolantTemp   = 0.0f;
     float m_batteryVolts  = 0.0f;
     bool  m_rearDefrostOn = false;
@@ -396,6 +487,73 @@ private:
     // ATTESA (rear-biased default)
     float m_atessaFront   = 50.0f;
     float m_atessaRear    = 50.0f;
+
+    // SettingsService — non-owning pointer, set via setSettingsService().
+    // Gates BCM-unlock comfort features (mirror fold, comfort window close,
+    // all-windows one-touch). Nullable; features no-op when unset.
+    SettingsService *m_settings = nullptr;
+
+    // ── VR30 telemetry state ────────────────────────────────────────────────
+    double m_boostPressurePsi    = 0.0;
+    double m_oilTempF            = 0.0;
+    double m_transTempF          = 0.0;
+    double m_intakeAirTempF      = 0.0;
+    double m_ignitionAdvanceDeg  = 0.0;
+    double m_knockRetardDeg      = 0.0;
+    double m_wastegatePercent    = 0.0;
+    double m_manifoldPressurePsi = 0.0;
+    double m_airFuelRatio        = 0.0;
+    // Throttle 0-100% — derived from existing 0x551 cruise/coolant byte if available
+    // (used by performance timer start detection). Currently a stub.
+    double m_throttlePct         = 0.0;
+
+    // ── G-meter state ───────────────────────────────────────────────────────
+    double m_lateralG            = 0.0;
+    double m_longitudinalG       = 0.0;
+    double m_peakLateralG        = 0.0;
+    double m_peakLongitudinalG   = 0.0;
+
+    // ── Performance timer state ─────────────────────────────────────────────
+    QTimer *m_perfTimer          = nullptr;
+    bool   m_perfRunActive       = false;
+    bool   m_perfRunArmed        = false;
+    qint64 m_perfRunStartMs      = 0;
+    double m_perfRunElapsedSec   = 0.0;
+    double m_perfRunDistanceMi   = 0.0;
+    double m_zeroToSixtySec      = 0.0;
+    double m_quarterMileSec      = 0.0;
+    double m_quarterMileTrapMph  = 0.0;
+
+    // ── Active Sound Control (factory diag-menu hidden toggle) ────────────
+    bool m_ascEnabled            = true;
+    bool m_ascStateBeforeTrack   = true;
+
+    // ── Track mode composite preferences (mode 6) ─────────────────────────
+    // Only CAN write is 0x2DC (Sport+ encoding); rest is internal state + signals.
+    enum class TrackThrottle  { Stock, Sport, Max };
+    enum class TrackAtessa    { Auto, RwdPref, RwdOnly };
+    enum class TrackAudioProf { Stock, Sport, Dry };
+    struct TrackModePreferences {
+        TrackThrottle  throttleMap   = TrackThrottle::Max;
+        TrackAtessa    atessaBias    = TrackAtessa::RwdPref;
+        bool           ascOff        = true;
+        TrackAudioProf audioProfile  = TrackAudioProf::Dry;
+        QString        gaugesSubTab  = QStringLiteral("track");
+    };
+    TrackModePreferences m_trackModePreferences;
+
+    // ── VR30 / chassis CAN IDs (Q50_LIKELY / UNVERIFIED) ────────────────────
+    // 0x551 carries cruise/coolant AND turbo data:
+    //   byte 4-5: boost raw (big-endian uint16, kPa absolute) → psi = (raw*0.01)-14.504
+    //   byte 7:   IAT raw, 0.75°C/LSB offset -48°C
+    static constexpr canid_t CAN_VR30_BOOST_IAT  = 0x551;  // Q50_LIKELY (shared)
+    static constexpr canid_t CAN_VR30_OIL_TEMP   = 0x55D;  // Q50_LIKELY (VVT proxy)
+    static constexpr canid_t CAN_VR30_TRANS_TEMP = 0x59A;  // Q50_LIKELY (TCM)
+    static constexpr canid_t CAN_VR30_WASTEGATE  = 0x55C;  // Q50_LIKELY
+    static constexpr canid_t CAN_VR30_IGN_KNOCK  = 0xFFFF; // UNVERIFIED placeholder
+    // G-sensor 3-axis (ATTESA + ABS): bytes 0-1 lateral, 2-3 longitudinal,
+    // signed 16-bit big-endian 0.001 G/LSB.
+    static constexpr canid_t CAN_G_SENSOR        = 0x132;  // UNVERIFIED
 
     // ─── CAN IDs ─────────────────────────────────────────────────────────────
     // Sources: opendbc nissan_common.dbc, opendbc X-Trail/Xterra, carhack 370Z,
@@ -556,6 +714,27 @@ private:
     // BLOCKED until J2534 capture. Do not transmit.
     static constexpr canid_t CAN_SEAT_HEAT_WRITE = 0xFFFF; // UNVERIFIED PLACEHOLDER
 
+    // ── Hidden / unlock-feature writes (all UNVERIFIED PLACEHOLDERS) ─────────
+    // Setters log the intended frame and bail — same pattern as seat-heat write.
+    // J2534 capture required to confirm real frame IDs.
+
+    // Active Sound Control toggle (Bose engine sound enhancement).
+    // Sniff during diag menu: Settings → Seek-up ×3 → hold below right-scroll-arrow ×5s.
+    static constexpr canid_t CAN_ASC_TOGGLE      = 0xFFFF; // UNVERIFIED PLACEHOLDER
+
+    // Mirror fold command — sniff during physical mirror-fold-switch press
+    static constexpr canid_t CAN_MIRROR_FOLD     = 0xFFFF; // UNVERIFIED PLACEHOLDER
+
+    // BCM key-fob event broadcast (lock-button hold >2s, etc.)
+    // Real frame likely byte 0 = event enum:
+    //   0x01=lock-tap 0x02=lock-hold 0x03=unlock-tap 0x04=unlock-hold
+    static constexpr canid_t CAN_KEYFOB_EVENT    = 0xFFFF; // UNVERIFIED PLACEHOLDER
+
+    // Window motor command — used by both comfort close and all-windows one-touch
+    // byte 0: window enum (0=DRV 1=PAS 2=RL 3=RR)
+    // byte 1: direction (0=stop 1=up 2=down)
+    static constexpr canid_t CAN_WINDOW_COMMAND  = 0xFFFF; // UNVERIFIED PLACEHOLDER
+
     // ── UDS diagnostic addresses (HS-CAN) ────────────────────────────────────
     // Standard Nissan/Infiniti UDS addressing pattern — confirmed cross-platform.
     // Service 0x30 (InputOutputControlByID) enables BCM I/O commands.
@@ -565,14 +744,12 @@ private:
     static constexpr canid_t UDS_BCM_RESPONSE       = 0x74D; // CONFIRMED (request+8)
 
     // ── Climate shortcuts / steering wheel / plasmacluster / rain sensor ────
-    // Heated steering wheel — BCM command (Q50_LIKELY; verify via J2534)
-    static constexpr canid_t CAN_STEERING_HEAT = 0x35F;  // Q50_LIKELY
-
-    // Plasmacluster — HVAC module command (Q50_LIKELY)
-    static constexpr canid_t CAN_PLASMACLUSTER = 0x542;  // Q50_LIKELY
-
-    // Rain sensor enable/disable — ADAS/wiper module (Q50_LIKELY)
-    static constexpr canid_t CAN_RAIN_SENSOR   = 0x3C5;  // Q50_LIKELY
+    // No confirmed public write paths for Q50/Q60. BLOCKED until J2534 capture.
+    // Setters update local state + emit signals but do NOT transmit any frame —
+    // matches the seat-heat placeholder pattern (CAN_SEAT_HEAT_WRITE).
+    static constexpr canid_t CAN_HEATED_STEERING     = 0xFFFF; // UNVERIFIED PLACEHOLDER — blocked until J2534 capture
+    static constexpr canid_t CAN_PLASMA              = 0xFFFF; // UNVERIFIED PLACEHOLDER — blocked until J2534 capture
+    static constexpr canid_t CAN_RAIN_SENSOR_ENABLE  = 0xFFFF; // UNVERIFIED PLACEHOLDER — blocked until J2534 capture
 
     // ── TPMS / oil life / fuel economy ───────────────────────────────────────
     // TPMS — 4 tire PSI broadcast (Q50_LIKELY)

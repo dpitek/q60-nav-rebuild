@@ -94,6 +94,8 @@ set(SOURCES
     src/services/weather/WeatherService.cpp
     src/services/fuel/FuelService.cpp
     src/services/settings/SettingsService.cpp
+    src/services/trip/TripLoggerService.cpp
+    src/services/parking/ParkingService.cpp
     src/ui/bridge/StatusBridge.cpp
     src/ui/map/MapLibreItem.cpp
 )
@@ -132,6 +134,12 @@ qt6_add_qml_module(q60nav
         src/qml/screens/VoiceCommandView.qml
         src/qml/components/WelcomeOverlay.qml
         src/qml/components/StatusBar.qml
+        src/qml/components/ContactsModel.qml
+        src/qml/components/LaneGuidance.qml
+        src/qml/components/JunctionView.qml
+        src/qml/components/AvmOverlay.qml
+        src/qml/components/MiniGauge.qml
+        src/qml/components/GPad.qml
 )
 
 target_include_directories(q60nav PRIVATE
@@ -139,6 +147,8 @@ target_include_directories(q60nav PRIVATE
     src/services/
     src/services/profile/
     src/services/vehicle/
+    src/services/trip/
+    src/services/parking/
     src/ui/
     src/ui/map/         # Qt QML type registration generates '#include <MapLibreItem.h>' — bare filename
 )

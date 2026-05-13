@@ -14,8 +14,30 @@ Item {
     anchors.fill: parent
 
     property bool eqPanelVisible: false
+    property bool settingsPanelVisible: false
+    property bool ascInfoVisible: false
 
     Rectangle { anchors.fill: parent; color: "#0A0A0A" }
+
+    // ── Persisted ASC state sync ────────────────────────────────────────────
+    // SettingsService.ascEnabled is the persisted "source of truth"; we mirror
+    // it into VehicleService on load and on user toggle. This survives reboot.
+    Component.onCompleted: {
+        // Apply persisted ASC state at view-mount time. The Settings panel
+        // toggle writes back to both services below.
+        if (typeof SettingsService !== "undefined"
+                && typeof VehicleService !== "undefined"
+                && SettingsService.ascEnabled !== VehicleService.ascEnabled) {
+            VehicleService.setAscEnabled(SettingsService.ascEnabled)
+        }
+    }
+    Connections {
+        target: SettingsService
+        function onAscEnabledChanged() {
+            if (VehicleService.ascEnabled !== SettingsService.ascEnabled)
+                VehicleService.setAscEnabled(SettingsService.ascEnabled)
+        }
+    }
 
     // ── Row 1: Source tabs ──────────────────────────────────────────────────
     Item {
@@ -117,8 +139,8 @@ Item {
 
             // Volume slider
             Item {
-                // Fill remaining space: total - mute(36) - vol#(28) - eqBtn(44) - spacings(8*3=24)
-                width: parent.width - 36 - 28 - 44 - 24
+                // Fill remaining space: total - mute(36) - vol#(28) - eqBtn(44) - settingsBtn(32) - spacings(8*4=32)
+                width: parent.width - 36 - 28 - 44 - 32 - 32
                 height: parent.height
                 anchors.verticalCenter: parent.verticalCenter
 
@@ -174,7 +196,38 @@ Item {
                     color: root.eqPanelVisible ? "#0A84FF" : "#8E8E93"
                     font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
                 }
-                MouseArea { anchors.fill: parent; onClicked: root.eqPanelVisible = !root.eqPanelVisible }
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        root.eqPanelVisible = !root.eqPanelVisible
+                        if (root.eqPanelVisible) root.settingsPanelVisible = false
+                    }
+                }
+            }
+
+            // Settings (⚙) button — opens the Audio Settings slide-up panel
+            // (currently houses the Active Sound Control toggle).
+            Rectangle {
+                height: 26; width: 32; radius: 6
+                anchors.verticalCenter: parent.verticalCenter
+                color: root.settingsPanelVisible ? Qt.rgba(0.04, 0.52, 1, 0.22) : "#1A1A1A"
+                border {
+                    color: root.settingsPanelVisible ? "#0A84FF" : Qt.rgba(1, 1, 1, 0.14)
+                    width: 1
+                }
+                Behavior on color { ColorAnimation { duration: 120 } }
+                Text {
+                    anchors.centerIn: parent; text: "⚙"
+                    color: root.settingsPanelVisible ? "#0A84FF" : "#8E8E93"
+                    font { family: "Roboto"; pixelSize: 14 }
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        root.settingsPanelVisible = !root.settingsPanelVisible
+                        if (root.settingsPanelVisible) root.eqPanelVisible = false
+                    }
+                }
             }
         }
     }
@@ -374,6 +427,153 @@ Item {
                             }
                             MouseArea { anchors.fill: parent; onClicked: AudioService.setSSVLevel(modelData.value) }
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Settings panel — slides up over tuner zone ───────────────────────────
+    // Currently houses the Active Sound Control (ASC) toggle. Keep additions
+    // here tight — the Settings panel is intended to stay short.
+    Rectangle {
+        id: settingsPanel
+        anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
+        height: root.settingsPanelVisible ? Math.min(parent.height, 138) : 0
+        color: "#141414"; clip: true; z: 10
+        Behavior on height { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+
+        Rectangle {
+            anchors { top: parent.top; left: parent.left; right: parent.right }
+            height: 1; color: Qt.rgba(1, 1, 1, 0.14)
+        }
+
+        Column {
+            anchors {
+                fill: parent
+                topMargin: 14; leftMargin: 14; rightMargin: 14; bottomMargin: 12
+            }
+            spacing: 10
+            visible: root.settingsPanelVisible && settingsPanel.height > 50
+
+            // Header
+            Text {
+                text: "Audio Settings"
+                color: "#8E8E93"
+                font { family: "Roboto"; pixelSize: 11; capitalization: Font.AllUppercase; letterSpacing: 1.5 }
+            }
+
+            // ── ASC toggle row ───────────────────────────────────────────────
+            Item {
+                width: parent.width
+                height: 44
+
+                // Label + info button
+                Row {
+                    anchors { left: parent.left; verticalCenter: parent.verticalCenter }
+                    spacing: 8
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Active Sound Control (Engine Sound Enhancement)"
+                        color: "#FFFFFF"
+                        font { family: "Roboto"; pixelSize: 13 }
+                    }
+
+                    // ⓘ hint button — opens brief explainer overlay
+                    Rectangle {
+                        width: 20; height: 20; radius: 10
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: "transparent"
+                        border { color: Qt.rgba(1, 1, 1, 0.28); width: 1 }
+                        Text {
+                            anchors.centerIn: parent; text: "i"
+                            color: "#8E8E93"
+                            font { family: "Roboto"; pixelSize: 11; weight: Font.SemiBold; italic: true }
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: root.ascInfoVisible = true
+                        }
+                    }
+                }
+
+                // Toggle pill — bound to VehicleService.ascEnabled, writes both services.
+                Rectangle {
+                    id: ascToggle
+                    anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+                    width: 52; height: 30; radius: 15
+                    color: VehicleService.ascEnabled ? "#30D158" : "#3A3A3C"
+                    Behavior on color { ColorAnimation { duration: 140 } }
+
+                    Rectangle {
+                        width: 26; height: 26; radius: 13; color: "#FFFFFF"
+                        x: VehicleService.ascEnabled ? parent.width - width - 2 : 2
+                        anchors.verticalCenter: parent.verticalCenter
+                        Behavior on x { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            const next = !VehicleService.ascEnabled
+                            VehicleService.setAscEnabled(next)
+                            // Persist via SettingsService — survives reboot.
+                            SettingsService.ascEnabled = next
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ── ASC explainer overlay ────────────────────────────────────────────────
+    Rectangle {
+        id: ascInfoOverlay
+        anchors.fill: parent
+        color: Qt.rgba(0, 0, 0, 0.78)
+        visible: root.ascInfoVisible
+        z: 100
+        MouseArea { anchors.fill: parent; onClicked: root.ascInfoVisible = false }
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: Math.min(parent.width - 40, 380)
+            height: Math.min(parent.height - 40, 160)
+            radius: 12
+            color: "#1C1C1E"
+            border { color: Qt.rgba(1, 1, 1, 0.14); width: 1 }
+            MouseArea { anchors.fill: parent }  // swallow clicks inside the card
+
+            Column {
+                anchors { fill: parent; margins: 16 }
+                spacing: 10
+
+                Text {
+                    text: "Active Sound Control"
+                    color: "#FFFFFF"
+                    font { family: "Roboto"; pixelSize: 16; weight: Font.SemiBold }
+                }
+                Text {
+                    width: parent.width
+                    text: "Synthesized engine sound piped through speakers by Bose. " +
+                          "Disable for natural V6 sound."
+                    color: "#C7C7CC"
+                    font { family: "Roboto"; pixelSize: 13 }
+                    wrapMode: Text.WordWrap
+                }
+                Item { width: 1; height: 4 }
+                Rectangle {
+                    anchors.right: parent.right
+                    width: 80; height: 30; radius: 8
+                    color: "#0A84FF"
+                    Text {
+                        anchors.centerIn: parent; text: "OK"
+                        color: "#FFFFFF"
+                        font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: root.ascInfoVisible = false
                     }
                 }
             }

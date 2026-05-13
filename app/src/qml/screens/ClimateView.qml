@@ -10,9 +10,9 @@ Item {
 
     Rectangle { anchors.fill: parent; color: "#000000" }
 
-    // ── Top action row — AUTO / MAX A/C / MAX DEF / SYNC ─────────────────────
-    Row {
-        id: actionRow
+    // ── AUTO — full-width prominent button at top ─────────────────────────────
+    Rectangle {
+        id: autoBtn
         anchors {
             top: parent.top
             left: parent.left
@@ -21,36 +21,45 @@ Item {
             leftMargin: 8
             rightMargin: 8
         }
+        height: 64
+        radius: 14
+        color: VehicleService.autoClimateOn ? "#0A84FF" : "#1C1C1E"
+        border { color: "#0A84FF"; width: 2 }
+
+        Behavior on color { ColorAnimation { duration: 150 } }
+
+        Text {
+            anchors.centerIn: parent
+            text: "AUTO"
+            color: VehicleService.autoClimateOn ? "#FFFFFF" : "#0A84FF"
+            font { family: "Roboto"; pixelSize: 22; weight: Font.Bold; letterSpacing: 2 }
+        }
+        MouseArea {
+            anchors.fill: parent
+            onClicked: VehicleService.setAutoClimate(!VehicleService.autoClimateOn)
+        }
+    }
+
+    // ── MAX A/C + MAX DEF paired row ──────────────────────────────────────────
+    Row {
+        id: maxRow
+        anchors {
+            top: autoBtn.bottom
+            left: parent.left
+            right: parent.right
+            topMargin: 6
+            leftMargin: 8
+            rightMargin: 8
+        }
         height: 44
         spacing: 8
 
-        // Distribute evenly: each button = (width - 3*spacing) / 4
-        property real btnW: (parent.width - 3 * spacing - anchors.leftMargin - anchors.rightMargin) / 4
-
-        // AUTO
-        Rectangle {
-            width: actionRow.btnW; height: 44; radius: 22
-            color: VehicleService.autoClimateOn ? "#0A84FF" : "#1C1C1E"
-            border.color: "#0A84FF"; border.width: 1.5
-
-            Behavior on color { ColorAnimation { duration: 150 } }
-
-            Text {
-                anchors.centerIn: parent
-                text: "AUTO"
-                color: VehicleService.autoClimateOn ? "#FFFFFF" : "#0A84FF"
-                font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
-            }
-            MouseArea {
-                anchors.fill: parent
-                onClicked: VehicleService.setAutoClimate(!VehicleService.autoClimateOn)
-            }
-        }
+        property real btnW: (parent.width - spacing - anchors.leftMargin - anchors.rightMargin) / 2
 
         // MAX A/C — flash only, no persistent toggle
         Rectangle {
             id: maxAcBtn
-            width: actionRow.btnW; height: 44; radius: 22
+            width: maxRow.btnW; height: 44; radius: 12
             color: maxAcFlash ? "#0A84FF" : "#1C1C1E"
             border.color: "#0A84FF"; border.width: 1.5
 
@@ -62,7 +71,7 @@ Item {
                 anchors.centerIn: parent
                 text: "MAX A/C"
                 color: maxAcBtn.maxAcFlash ? "#FFFFFF" : "#0A84FF"
-                font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold; letterSpacing: 1 }
             }
             MouseArea {
                 anchors.fill: parent
@@ -82,7 +91,7 @@ Item {
         // MAX DEF — flash only, no persistent toggle
         Rectangle {
             id: maxDefBtn
-            width: actionRow.btnW; height: 44; radius: 22
+            width: maxRow.btnW; height: 44; radius: 12
             color: maxDefFlash ? "#0A84FF" : "#1C1C1E"
             border.color: "#0A84FF"; border.width: 1.5
 
@@ -94,7 +103,7 @@ Item {
                 anchors.centerIn: parent
                 text: "MAX DEF"
                 color: maxDefBtn.maxDefFlash ? "#FFFFFF" : "#0A84FF"
-                font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold; letterSpacing: 1 }
             }
             MouseArea {
                 anchors.fill: parent
@@ -110,45 +119,13 @@ Item {
                 onTriggered: maxDefBtn.maxDefFlash = false
             }
         }
-
-        // SYNC
-        Rectangle {
-            id: syncBtn
-            width: actionRow.btnW; height: 44; radius: 22
-            color: syncFlash ? "#0A84FF" : "#1C1C1E"
-            border.color: "#0A84FF"; border.width: 1.5
-
-            property bool syncFlash: false
-
-            Behavior on color { ColorAnimation { duration: 150 } }
-
-            Text {
-                anchors.centerIn: parent
-                text: "SYNC"
-                color: syncBtn.syncFlash ? "#FFFFFF" : "#0A84FF"
-                font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
-            }
-            MouseArea {
-                anchors.fill: parent
-                onClicked: {
-                    VehicleService.syncZones()
-                    syncBtn.syncFlash = true
-                    syncFlashTimer.restart()
-                }
-            }
-            Timer {
-                id: syncFlashTimer
-                interval: 300
-                onTriggered: syncBtn.syncFlash = false
-            }
-        }
     }
 
     // ── Main zone row ─────────────────────────────────────────────────────────
     Row {
         id: zoneRow
         anchors {
-            top: actionRow.bottom
+            top: maxRow.bottom
             horizontalCenter: parent.horizontalCenter
             topMargin: 8
         }
@@ -156,7 +133,7 @@ Item {
 
         // ── Driver zone card ──────────────────────────────────────────────────
         Rectangle {
-            width: 180; height: 218; radius: 16
+            width: 180; height: 188; radius: 16
             color: "#1C1C1E"
             border { color: Qt.rgba(1, 1, 1, 0.15); width: 1 }
 
@@ -173,7 +150,7 @@ Item {
 
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    width: 56; height: 56; radius: 28
+                    width: 44; height: 44; radius: 22
                     color: drvUp.pressed ? "#2C2C2E" : "transparent"
                     border { color: "#0A84FF"; width: 1.5 }
                     Text { anchors.centerIn: parent; text: "▲"; color: "#0A84FF"; font { pixelSize: 20 } }
@@ -192,7 +169,7 @@ Item {
 
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    width: 56; height: 56; radius: 28
+                    width: 44; height: 44; radius: 22
                     color: drvDn.pressed ? "#2C2C2E" : "transparent"
                     border { color: "#0A84FF"; width: 1.5 }
                     Text { anchors.centerIn: parent; text: "▼"; color: "#0A84FF"; font { pixelSize: 20 } }
@@ -209,7 +186,7 @@ Item {
                     Repeater {
                         model: 3
                         delegate: Rectangle {
-                            width: 26; height: 26; radius: 13
+                            width: 22; height: 22; radius: 11
                             color: VehicleService.driverSeat > index ? Qt.rgba(1, 0.6235, 0.0392, 0.25) : "#2C2C2E"
                             border { color: VehicleService.driverSeat > index ? "#FF9F0A" : "#3A3A3C"; width: 1.5 }
                             Text {
@@ -230,13 +207,46 @@ Item {
 
         // ── Center controls card ──────────────────────────────────────────────
         Rectangle {
-            width: 168; height: 164; radius: 16
+            width: 168; height: 188; radius: 16
             color: "#1C1C1E"
             border { color: Qt.rgba(1, 1, 1, 0.15); width: 1 }
 
             Column {
-                anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; topMargin: 14 }
-                spacing: 10
+                anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; topMargin: 10 }
+                spacing: 8
+
+                // SYNC — sits between driver/passenger zones; flash-only feedback
+                Rectangle {
+                    id: syncBtn
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 148; height: 32; radius: 16
+                    color: syncFlash ? "#0A84FF" : "#2C2C2E"
+                    border { color: "#0A84FF"; width: 1.5 }
+
+                    property bool syncFlash: false
+
+                    Behavior on color { ColorAnimation { duration: 150 } }
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "⇄ SYNC"
+                        color: syncBtn.syncFlash ? "#FFFFFF" : "#0A84FF"
+                        font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold; letterSpacing: 1 }
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            VehicleService.syncZones()
+                            syncBtn.syncFlash = true
+                            syncFlashTimer.restart()
+                        }
+                    }
+                    Timer {
+                        id: syncFlashTimer
+                        interval: 300
+                        onTriggered: syncBtn.syncFlash = false
+                    }
+                }
 
                 // Airflow modes — 5 tiles including Feet+Def
                 Row {
@@ -324,7 +334,7 @@ Item {
 
         // ── Passenger zone card ───────────────────────────────────────────────
         Rectangle {
-            width: 180; height: 218; radius: 16
+            width: 180; height: 188; radius: 16
             color: "#1C1C1E"
             border { color: Qt.rgba(1, 1, 1, 0.15); width: 1 }
 
@@ -341,7 +351,7 @@ Item {
 
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    width: 56; height: 56; radius: 28
+                    width: 44; height: 44; radius: 22
                     color: paxUp.pressed ? "#2C2C2E" : "transparent"
                     border { color: "#0A84FF"; width: 1.5 }
                     Text { anchors.centerIn: parent; text: "▲"; color: "#0A84FF"; font { pixelSize: 20 } }
@@ -360,7 +370,7 @@ Item {
 
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    width: 56; height: 56; radius: 28
+                    width: 44; height: 44; radius: 22
                     color: paxDn.pressed ? "#2C2C2E" : "transparent"
                     border { color: "#0A84FF"; width: 1.5 }
                     Text { anchors.centerIn: parent; text: "▼"; color: "#0A84FF"; font { pixelSize: 20 } }
@@ -377,7 +387,7 @@ Item {
                     Repeater {
                         model: 3
                         delegate: Rectangle {
-                            width: 26; height: 26; radius: 13
+                            width: 22; height: 22; radius: 11
                             color: VehicleService.passSeat > index ? Qt.rgba(1, 0.6235, 0.0392, 0.25) : "#2C2C2E"
                             border { color: VehicleService.passSeat > index ? "#FF9F0A" : "#3A3A3C"; width: 1.5 }
                             Text {
@@ -541,9 +551,9 @@ Item {
             }
         }
 
-        // 3. Rain Sensor
+        // 3. Rain Sensor — sensitivity is stalk-only (knob on wiper stalk)
         Rectangle {
-            width: 68; height: 48; radius: 16
+            width: 96; height: 48; radius: 16
             color: VehicleService.rainSensorEnabled ? Qt.rgba(0.0392, 0.5176, 1, 0.18) : "#1C1C1E"
             border {
                 color: VehicleService.rainSensorEnabled ? "#0A84FF" : "#2C2C2E"
@@ -553,18 +563,18 @@ Item {
 
             Column {
                 anchors.centerIn: parent
-                spacing: 2
+                spacing: 1
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: "⛆"
+                    text: "⛆ RAIN SENSOR"
                     color: VehicleService.rainSensorEnabled ? "#0A84FF" : "#8E8E93"
-                    font { pixelSize: 18 }
+                    font { family: "Roboto"; pixelSize: 9; weight: Font.SemiBold; letterSpacing: 0.5 }
                 }
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: "RAIN SENS"
-                    color: VehicleService.rainSensorEnabled ? "#0A84FF" : "#8E8E93"
-                    font { family: "Roboto"; pixelSize: 8; capitalization: Font.AllUppercase; letterSpacing: 0.8 }
+                    text: "sensitivity via stalk"
+                    color: "#6E6E73"
+                    font { family: "Roboto"; pixelSize: 7; italic: true }
                 }
             }
             MouseArea {

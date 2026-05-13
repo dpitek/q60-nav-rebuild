@@ -8,8 +8,12 @@
 // HVAC write path and Bose wake ID require J2534 verification before relying on.
 
 #include "VehicleService.h"
+#include "../settings/SettingsService.h"
 #include <QCoreApplication>
 #include <QDebug>
+#include <QDateTime>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 #include <sys/socket.h>
 #include <sys/ioctl.h>
@@ -17,6 +21,7 @@
 #include <unistd.h>
 #include <cstring>
 #include <cerrno>
+#include <cmath>
 
 VehicleService::VehicleService(QObject *parent)
     : QObject(parent)
@@ -28,6 +33,11 @@ VehicleService::~VehicleService()
     if (m_vehicleCanSock >= 0) ::close(m_vehicleCanSock);
     if (m_avCanSock >= 0)      ::close(m_avCanSock);
     if (m_can2Sock >= 0)       ::close(m_can2Sock);
+}
+
+void VehicleService::setSettingsService(SettingsService *s)
+{
+    m_settings = s;
 }
 
 void VehicleService::start()
@@ -76,6 +86,33 @@ void VehicleService::start()
     m_tripTimer->setInterval(1000);
     connect(m_tripTimer, &QTimer::timeout, this, &VehicleService::onTripTimerTick);
     m_tripTimer->start();
+
+    // Performance timer 10Hz — runs continuously, gated by speed/throttle state
+    m_perfTimer = new QTimer(this);
+    m_perfTimer->setInterval(100);
+    connect(m_perfTimer, &QTimer::timeout, this, &VehicleService::onPerfTick);
+    m_perfTimer->start();
+
+    // Reset peak G + 0-60 latches on ignition cycle — in-memory only
+    connect(this, &VehicleService::ignitionOff, this, [this]() {
+        m_peakLateralG = 0.0;
+        m_peakLongitudinalG = 0.0;
+        m_zeroToSixtySec = 0.0;
+        m_quarterMileSec = 0.0;
+        m_quarterMileTrapMph = 0.0;
+        m_perfRunActive = false;
+        m_perfRunArmed = false;
+        m_perfRunElapsedSec = 0.0;
+        m_perfRunDistanceMi = 0.0;
+        emit gMeterChanged();
+        emit perfTimerChanged();
+    });
+
+    // BCM-unlock comfort features — gated by SettingsService at fire time.
+    connect(this, &VehicleService::doorsLockedChanged,
+            this, &VehicleService::onDoorsLockedForMirrorFold);
+    connect(this, &VehicleService::keyFobLockHold,
+            this, &VehicleService::onKeyFobLockHoldForWindowClose);
 }
 
 void VehicleService::openCAN(const char *iface, int &sock)
@@ -312,9 +349,27 @@ void VehicleService::parseVehicleFrame(const struct can_frame &f)
         int  hl  = (f.data[0] & 0x02) ? 2 : (f.data[0] & 0x04) ? 1 : 0;
         bool lft = (f.data[1] & 0x20) != 0;
         bool rgt = (f.data[1] & 0x40) != 0;
+        // Door-lock state — byte 1 bit 7 is a Q50_LIKELY position for "all locked".
+        // UNVERIFIED bit position; confirm via J2534 during a key-fob lock cycle.
+        bool dl  = (f.data[1] & 0x80) != 0;
         if (hl  != m_headlights) { m_headlights = hl;  emit headlightsChanged(hl); }
         if (lft != m_leftTurn)   { m_leftTurn   = lft; emit leftTurnChanged(lft); }
         if (rgt != m_rightTurn)  { m_rightTurn  = rgt; emit rightTurnChanged(rgt); }
+        if (dl  != m_doorsLocked){ m_doorsLocked = dl; emit doorsLockedChanged(dl); }
+        break;
+    }
+
+    // ── 0xFFFF: BCM key-fob event broadcast (UNVERIFIED PLACEHOLDER) ──────────
+    // Real ID + byte encoding unknown. Stubbed parse: byte 0 = event enum,
+    // 0x02 indicates "lock button held >2s" (JDM comfort-close trigger).
+    // Frame never arrives on the bus today; case exists so the J2534 capture
+    // can drop the real ID in and the rest of the chain lights up.
+    case CAN_KEYFOB_EVENT: {
+        if (f.can_dlc < 1) break;
+        if (f.data[0] == 0x02) {
+            qDebug() << "[VehicleService] BCM key-fob lock-hold (UNVERIFIED frame)";
+            emit keyFobLockHold();
+        }
         break;
     }
 
@@ -396,6 +451,30 @@ void VehicleService::parseVehicleFrame(const struct can_frame &f)
             m_coolantTemp = cool_f;
             emit coolantTempChanged(cool_f);
         }
+        // ── VR30 piggyback parse on 0x551 (Q50_LIKELY) ──────────────────────
+        // bytes 4-5 (big-endian uint16): manifold absolute pressure kPa × 0.1
+        //   psi_gauge = (kPa - 101.3) / 6.895     (subtract atm, kPa→psi)
+        // byte 7: intake air temp raw, 0.75°C/LSB offset -48°C
+        // Reference: VR30 EcuTek tuning guide MAP/IAT channel descriptions.
+        if (f.can_dlc >= 8) {
+            uint16_t boostRaw = (static_cast<uint16_t>(f.data[4]) << 8) | f.data[5];
+            double kpaAbs = boostRaw * 0.1;
+            double boostPsi = (kpaAbs - 101.3) / 6.895;
+            double mapPsi   = kpaAbs / 6.895;
+            if (boostPsi > -15.0 && boostPsi < 40.0
+                    && std::fabs(boostPsi - m_boostPressurePsi) > 0.05) {
+                m_boostPressurePsi    = boostPsi;
+                m_manifoldPressurePsi = mapPsi;
+                emit vr30TelemetryChanged();
+            }
+            double iatC = (f.data[7] * 0.75) - 48.0;
+            double iatF = iatC * 9.0 / 5.0 + 32.0;
+            if (iatF > -40.0 && iatF < 300.0
+                    && std::fabs(iatF - m_intakeAirTempF) > 0.5) {
+                m_intakeAirTempF = iatF;
+                emit vr30TelemetryChanged();
+            }
+        }
         break;
     }
 
@@ -474,12 +553,54 @@ void VehicleService::parseVehicleFrame(const struct can_frame &f)
     case CAN_DRIVE_MODE_STATUS: {
         if (f.can_dlc < 1) break;
         const uint8_t mode = f.data[0];
+        // Track mode (6) is a virtual composite — it writes Sport+ (2) to the
+        // powertrain, so the status frame will report back 2. Don't clobber
+        // our Track state when that happens; the user explicitly enters/exits
+        // Track from the UI.
+        if (m_driveMode == 6 && mode == 0x02) break;
         if (mode <= 5 && static_cast<int>(mode) != m_driveMode) {
             m_driveMode = static_cast<int>(mode);
             emit driveModeChanged(m_driveMode);
             emit driveModeConfirmed(m_driveMode);
             qDebug("[CAN] Drive mode confirmed by status frame: %d (UNVERIFIED ID)", m_driveMode);
         }
+        break;
+    }
+
+    // ── VR30 telemetry frames (Q50_LIKELY — delegated to handler) ────────────
+    // 0x551 boost+IAT is parsed inside the CAN_CRUISE_COOLANT case above to avoid
+    // a duplicate switch label (same ID). Other VR30 IDs dispatched here.
+    case CAN_VR30_OIL_TEMP:
+    case CAN_VR30_TRANS_TEMP:
+    case CAN_VR30_WASTEGATE:
+        handleVR30Frame(f);
+        break;
+
+    // ── G-sensor (chassis 3-axis accel — UNVERIFIED ID 0x132) ────────────────
+    // byte 0-1 (signed 16-bit BE): lateral G   × 0.001 G/LSB
+    // byte 2-3 (signed 16-bit BE): longitudinal G × 0.001 G/LSB
+    // Values for the same physical sensor that feeds ATTESA — frame ID is the
+    // unknown variable. Parser is enabled but treat results as Q50_LIKELY.
+    case CAN_G_SENSOR: {
+        if (f.can_dlc < 4) break;
+        int16_t latRaw = static_cast<int16_t>(
+            (static_cast<uint16_t>(f.data[0]) << 8) | f.data[1]);
+        int16_t lonRaw = static_cast<int16_t>(
+            (static_cast<uint16_t>(f.data[2]) << 8) | f.data[3]);
+        double lat = latRaw * 0.001;
+        double lon = lonRaw * 0.001;
+        bool changed = false;
+        if (std::fabs(lat - m_lateralG) > 0.005) {
+            m_lateralG = lat;
+            if (std::fabs(lat) > std::fabs(m_peakLateralG)) m_peakLateralG = lat;
+            changed = true;
+        }
+        if (std::fabs(lon - m_longitudinalG) > 0.005) {
+            m_longitudinalG = lon;
+            if (std::fabs(lon) > std::fabs(m_peakLongitudinalG)) m_peakLongitudinalG = lon;
+            changed = true;
+        }
+        if (changed) emit gMeterChanged();
         break;
     }
 
@@ -910,9 +1031,9 @@ void VehicleService::setMaxAC()
     sendCANFrame(m_vehicleCanSock, CAN_HVAC_WRITE, d, 8);
 }
 
-void VehicleService::setMaxDEF()
+void VehicleService::setMaxDefrost()
 {
-    qWarning() << "[VehicleService] setMaxDEF: Q50_LIKELY — verify via J2534";
+    qWarning() << "[VehicleService] setMaxDefrost: Q50_LIKELY — verify via J2534";
     m_climateMode = 3;  emit climateModeChanged(m_climateMode);
     m_fanSpeed    = 7;  emit fanSpeedChanged(m_fanSpeed);
     m_acOn        = true; emit acOnChanged(m_acOn);
@@ -937,39 +1058,123 @@ void VehicleService::syncZones()
 
 void VehicleService::setHeatedSteeringWheel(bool on)
 {
-    qWarning() << "[VehicleService] setHeatedSteeringWheel: Q50_LIKELY — verify via J2534";
+    // CAN_HEATED_STEERING = 0xFFFF — write ID UNVERIFIED until J2534 capture.
+    // State + signal still update so UI is responsive; CAN frame is suppressed.
     m_heatedSteeringWheel = on;
     emit heatedSteeringWheelChanged(on);
-    uint8_t d[2] = { static_cast<uint8_t>(on ? 0x04 : 0x00), 0x00 };
-    sendCANFrame(m_vehicleCanSock, CAN_STEERING_HEAT, d, 2);
+    qWarning() << "[VehicleService] setHeatedSteeringWheel: write ID UNVERIFIED — no CAN frame sent";
 }
 
 void VehicleService::setPlasmacluster(int level)
 {
-    qWarning() << "[VehicleService] setPlasmacluster: Q50_LIKELY — verify via J2534";
+    // CAN_PLASMA = 0xFFFF — write ID UNVERIFIED until J2534 capture.
     m_plasmaclusterLevel = qBound(0, level, 3);
     emit plasmaclusterLevelChanged(m_plasmaclusterLevel);
-    uint8_t d[2] = { static_cast<uint8_t>(m_plasmaclusterLevel), 0x00 };
-    sendCANFrame(m_vehicleCanSock, CAN_PLASMACLUSTER, d, 2);
+    qWarning() << "[VehicleService] setPlasmacluster: write ID UNVERIFIED — no CAN frame sent";
 }
 
 void VehicleService::setRainSensor(bool on)
 {
-    qWarning() << "[VehicleService] setRainSensor: Q50_LIKELY — verify via J2534";
+    // CAN_RAIN_SENSOR_ENABLE = 0xFFFF — write ID UNVERIFIED until J2534 capture.
+    // Sensitivity is stalk-only; this toggle just enables/disables the system.
     m_rainSensorEnabled = on;
     emit rainSensorEnabledChanged(on);
-    uint8_t d[1] = { static_cast<uint8_t>(on ? 0x01 : 0x00) };
-    sendCANFrame(m_vehicleCanSock, CAN_RAIN_SENSOR, d, 1);
+    qWarning() << "[VehicleService] setRainSensor: write ID UNVERIFIED — no CAN frame sent";
 }
 
 // ─── Drive mode ────────────────────────────────────────────────────────────
+// Modes 0–5 = factory (Standard / Sport / Sport+ / Eco / Snow / Personal).
+// Mode 6 = Track (composite): writes Sport+ to powertrain, mutes ASC, applies
+//   track-specific preferences held in m_trackModePreferences.
+// When switching AWAY from Track, the previous ASC state is restored.
 void VehicleService::setDriveMode(int mode)
 {
     qWarning() << "[VehicleService] setDriveMode: Q50_LIKELY — verify via J2534";
-    m_driveMode = qBound(0, mode, 5);
+    const int newMode = qBound(0, mode, 6);
+    if (newMode == m_driveMode) return;
+
+    const bool wasTrack = (m_driveMode == 6);
+    const bool nowTrack = (newMode == 6);
+
+    m_driveMode = newMode;
     emit driveModeChanged(m_driveMode);
-    uint8_t d[1] = { static_cast<uint8_t>(m_driveMode) };
-    sendCANFrame(m_vehicleCanSock, CAN_DRIVE_MODE, d, 1);
+
+    if (nowTrack) {
+        m_ascStateBeforeTrack = m_ascEnabled;
+
+        // Track maps to Sport+ (0x02) on the powertrain side — closest stock equivalent.
+        uint8_t d[1] = { 0x02 };
+        qInfo("[VehicleService] TX 0x%03X DLC=1 [%02X]  (Track → Sport+ powertrain)",
+              CAN_DRIVE_MODE, d[0]);
+        sendCANFrame(m_vehicleCanSock, CAN_DRIVE_MODE, d, 1);
+
+        if (m_trackModePreferences.ascOff)
+            setAscEnabled(false);
+
+        emit trackModeConfigChanged();
+        emit trackModeActiveChanged(true);
+    } else {
+        uint8_t d[1] = { static_cast<uint8_t>(m_driveMode) };
+        qInfo("[VehicleService] TX 0x%03X DLC=1 [%02X]  (drive mode=%d)",
+              CAN_DRIVE_MODE, d[0], m_driveMode);
+        sendCANFrame(m_vehicleCanSock, CAN_DRIVE_MODE, d, 1);
+
+        if (wasTrack) {
+            setAscEnabled(m_ascStateBeforeTrack);
+            emit trackModeActiveChanged(false);
+        }
+    }
+}
+
+// ─── Active Sound Control — Bose engine sound enhancement ────────────────────
+// Factory hides this in a deep diagnostic menu. UNVERIFIED PLACEHOLDER write.
+void VehicleService::setAscEnabled(bool on)
+{
+    if (m_ascEnabled == on) return;
+    qWarning() << "[VehicleService] setAscEnabled: CAN_ASC_TOGGLE=0xFFFF "
+                  "UNVERIFIED PLACEHOLDER — no CAN frame sent. "
+                  "Sniff during diagnostic menu toggle "
+                  "(Settings → Seek-up ×3 → hold below right-scroll-arrow ×5s).";
+    m_ascEnabled = on;
+    emit ascEnabledChanged(on);
+}
+
+// ─── Track-mode preference JSON blob ─────────────────────────────────────────
+// Schema mirrors SettingsService.trackModeConfig.
+void VehicleService::setTrackModeConfig(const QString &json)
+{
+    const QJsonDocument doc = QJsonDocument::fromJson(json.toUtf8());
+    if (doc.isNull() || !doc.isObject()) {
+        qWarning() << "[VehicleService] setTrackModeConfig: invalid JSON, ignored";
+        return;
+    }
+    const QJsonObject o = doc.object();
+
+    const QString tm = o.value(QStringLiteral("throttleMap")).toString();
+    if      (tm == QStringLiteral("stock")) m_trackModePreferences.throttleMap = TrackThrottle::Stock;
+    else if (tm == QStringLiteral("sport")) m_trackModePreferences.throttleMap = TrackThrottle::Sport;
+    else if (tm == QStringLiteral("max"))   m_trackModePreferences.throttleMap = TrackThrottle::Max;
+
+    const QString ab = o.value(QStringLiteral("atessaBias")).toString();
+    if      (ab == QStringLiteral("auto"))     m_trackModePreferences.atessaBias = TrackAtessa::Auto;
+    else if (ab == QStringLiteral("rwd_pref")) m_trackModePreferences.atessaBias = TrackAtessa::RwdPref;
+    else if (ab == QStringLiteral("rwd_only")) m_trackModePreferences.atessaBias = TrackAtessa::RwdOnly;
+
+    if (o.contains(QStringLiteral("ascOff")))
+        m_trackModePreferences.ascOff = o.value(QStringLiteral("ascOff")).toBool();
+
+    const QString ap = o.value(QStringLiteral("audioProfile")).toString();
+    if      (ap == QStringLiteral("stock")) m_trackModePreferences.audioProfile = TrackAudioProf::Stock;
+    else if (ap == QStringLiteral("sport")) m_trackModePreferences.audioProfile = TrackAudioProf::Sport;
+    else if (ap == QStringLiteral("dry"))   m_trackModePreferences.audioProfile = TrackAudioProf::Dry;
+
+    if (o.contains(QStringLiteral("gaugesSubTab")))
+        m_trackModePreferences.gaugesSubTab = o.value(QStringLiteral("gaugesSubTab")).toString();
+
+    emit trackModeConfigChanged();
+
+    if (m_driveMode == 6 && m_trackModePreferences.ascOff && m_ascEnabled)
+        setAscEnabled(false);
 }
 
 // ─── Driver aids helpers ───────────────────────────────────────────────────
@@ -990,6 +1195,12 @@ void VehicleService::sendADASFrame()
         adasFlags(m_bswOn, m_bsiOn, m_ldwOn, m_ldpOn, m_febOn, m_bciOn, m_vdcOn),
         static_cast<uint8_t>(m_pfcwSensitivity)
     };
+    // J2534 trace — full aid bitmap + PFCW sensitivity, both bytes.
+    qInfo("[VehicleService] TX 0x%03X DLC=2 [%02X %02X]  "
+          "(BSW=%d BSI=%d LDW=%d LDP=%d FEB=%d BCI=%d VDC=%d PFCW=%d)",
+          CAN_ADAS_CTRL, d[0], d[1],
+          m_bswOn, m_bsiOn, m_ldwOn, m_ldpOn, m_febOn, m_bciOn, m_vdcOn,
+          m_pfcwSensitivity);
     sendCANFrame(m_vehicleCanSock, CAN_ADAS_CTRL, d, 2);
 }
 
@@ -1034,6 +1245,196 @@ void VehicleService::setPFCWSensitivity(int level)
     m_pfcwSensitivity = qBound(0, level, 3);
     emit pfcwSensitivityChanged(m_pfcwSensitivity);
     sendADASFrame();
+}
+
+// ─── VR30DDTT track telemetry frame handler ────────────────────────────────
+// Parses Q50_LIKELY frames for oil temp, trans temp, and electronic wastegate.
+// UNVERIFIED frames (ignition advance, knock retard) log TODO — no value is
+// fabricated. The 0x551 boost+IAT piggyback is parsed inline in the cruise
+// case to avoid a duplicate switch label.
+//
+// Scale formulas sourced from VR30 EcuTek tuning literature; treat as
+// reasonable defaults until J2534 capture confirms. Values bounded to plausible
+// physical ranges before emitting to prevent spurious UI flicker.
+void VehicleService::handleVR30Frame(const struct can_frame &f)
+{
+    const canid_t id = f.can_id & CAN_SFF_MASK;
+    bool changed = false;
+
+    switch (id) {
+
+    // 0x55D — VVT temp sensor doubles as oil temp on VR30.
+    // byte 0: temp raw, 1°C/LSB offset -40°C (per EcuTek channel definition)
+    case CAN_VR30_OIL_TEMP: {
+        if (f.can_dlc < 1) break;
+        double tC = static_cast<double>(f.data[0]) - 40.0;
+        double tF = tC * 9.0 / 5.0 + 32.0;
+        if (tF > -40.0 && tF < 400.0 && std::fabs(tF - m_oilTempF) > 0.5) {
+            m_oilTempF = tF;
+            changed = true;
+        }
+        break;
+    }
+
+    // 0x59A — TCM trans fluid temp.
+    // byte 0: temp raw, 1°C/LSB offset -40°C
+    case CAN_VR30_TRANS_TEMP: {
+        if (f.can_dlc < 1) break;
+        double tC = static_cast<double>(f.data[0]) - 40.0;
+        double tF = tC * 9.0 / 5.0 + 32.0;
+        if (tF > -40.0 && tF < 400.0 && std::fabs(tF - m_transTempF) > 0.5) {
+            m_transTempF = tF;
+            changed = true;
+        }
+        break;
+    }
+
+    // 0x55C — Electronic wastegate position.
+    // byte 0: position % (0-100 direct)
+    case CAN_VR30_WASTEGATE: {
+        if (f.can_dlc < 1) break;
+        double pct = qBound(0.0, static_cast<double>(f.data[0]), 100.0);
+        if (std::fabs(pct - m_wastegatePercent) > 0.5) {
+            m_wastegatePercent = pct;
+            changed = true;
+        }
+        break;
+    }
+
+    // 0xFFFF — UNVERIFIED placeholder for ignition advance / knock retard.
+    // No real frame ID known yet. Log only — DO NOT fabricate values.
+    case CAN_VR30_IGN_KNOCK:
+        qDebug() << "[VehicleService] VR30 ign/knock frame UNVERIFIED — TODO J2534 capture";
+        break;
+
+    default:
+        break;
+    }
+
+    if (changed) emit vr30TelemetryChanged();
+}
+
+// ─── Performance timer (0-60 + 1/4 mile) ────────────────────────────────────
+// State machine ticks at 10Hz. Detects launch (stationary → throttle > 50% with
+// speed crossing 2 mph), then integrates wheel speed to track distance for the
+// 1/4 mile and watches for the target speed (60 mph / 100 km/h based on
+// SettingsService.distanceUnit — but VehicleService is unit-agnostic, so we
+// always trigger at 60 mph and let the QML layer relabel). Quarter-mile time
+// and trap speed latched on first crossing.
+//
+// Per spec: in-memory only; cleared on ignition off (handled by the lambda
+// in start()). No persistence.
+void VehicleService::onPerfTick()
+{
+    if (!m_ignitionOn) return;
+    updatePerformanceTimer();
+}
+
+void VehicleService::updatePerformanceTimer()
+{
+    const float speed = m_speed;       // mph (already converted in CAN parser)
+    const double throttle = m_throttlePct;  // 0-100; stub until pedal ID confirmed
+    const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+
+    // Arm condition: throttle high while ~stationary
+    if (!m_perfRunActive) {
+        if (speed < 2.0f && throttle > 50.0) {
+            m_perfRunArmed = true;
+        }
+        // Trigger: speed crosses 2 mph while armed
+        if (m_perfRunArmed && speed >= 2.0f) {
+            m_perfRunActive      = true;
+            m_perfRunArmed       = false;
+            m_perfRunStartMs     = nowMs;
+            m_perfRunElapsedSec  = 0.0;
+            m_perfRunDistanceMi  = 0.0;
+            m_zeroToSixtySec     = 0.0;
+            m_quarterMileSec     = 0.0;
+            m_quarterMileTrapMph = 0.0;
+            emit perfTimerChanged();
+        }
+        return;
+    }
+
+    // Active run — accumulate
+    const double elapsed = (nowMs - m_perfRunStartMs) / 1000.0;
+    m_perfRunElapsedSec = elapsed;
+    // Integrate mph * dt_hours → miles (10Hz tick: dt = 0.1s = 1/36000 hr)
+    m_perfRunDistanceMi += speed / 36000.0;
+
+    // 0-60 trigger (60 mph hardcoded — QML layer relabels for metric users)
+    if (m_zeroToSixtySec <= 0.0 && speed >= 60.0f) {
+        m_zeroToSixtySec = elapsed;
+        qDebug("[VehicleService] 0-60: %.2fs", m_zeroToSixtySec);
+    }
+
+    // 1/4 mile trigger (0.25 mi)
+    if (m_quarterMileSec <= 0.0 && m_perfRunDistanceMi >= 0.25) {
+        m_quarterMileSec     = elapsed;
+        m_quarterMileTrapMph = speed;
+        qDebug("[VehicleService] 1/4 mile: %.2fs @ %.1f mph",
+               m_quarterMileSec, m_quarterMileTrapMph);
+    }
+
+    // End run: either both targets hit, or driver lifted (speed dropped below 2)
+    if ((m_zeroToSixtySec > 0.0 && m_quarterMileSec > 0.0)
+            || (elapsed > 1.0 && speed < 2.0f)
+            || elapsed > 60.0) {
+        m_perfRunActive = false;
+    }
+
+    emit perfTimerChanged();
+}
+
+void VehicleService::resetPerformanceTimer()
+{
+    m_perfRunActive      = false;
+    m_perfRunArmed       = false;
+    m_perfRunElapsedSec  = 0.0;
+    m_perfRunDistanceMi  = 0.0;
+    m_zeroToSixtySec     = 0.0;
+    m_quarterMileSec     = 0.0;
+    m_quarterMileTrapMph = 0.0;
+    emit perfTimerChanged();
+}
+
+// ─── BCM-unlock comfort writes (UNVERIFIED PLACEHOLDERS — log only) ────────
+// Three features piggy-back on undocumented BCM commands:
+//   1) Walk-away auto-fold mirrors (CAN_MIRROR_FOLD)
+//   2) Comfort window close on lock-hold (CAN_WINDOW_COMMAND × 4)
+//   3) One-touch up/down for all 4 windows (gated by toggle)
+// All IDs are 0xFFFF placeholders — senders log the intended frame and bail.
+void VehicleService::sendMirrorFold()
+{
+    qWarning() << "[VehicleService] sendMirrorFold: CAN_MIRROR_FOLD (0xFFFF) "
+                  "UNVERIFIED — no frame sent. Sniff during mirror-fold-switch press.";
+}
+
+void VehicleService::sendWindowOneTouch(uint8_t window, bool up)
+{
+    qWarning() << "[VehicleService] sendWindowOneTouch: CAN_WINDOW_COMMAND (0xFFFF) "
+                  "UNVERIFIED — no frame sent. window=" << window << "up=" << up;
+    (void)window; (void)up;
+}
+
+void VehicleService::sendWindowCloseAll()
+{
+    qWarning() << "[VehicleService] sendWindowCloseAll: comfort close all 4 — UNVERIFIED";
+    for (uint8_t w = 0; w < 4; ++w)
+        sendWindowOneTouch(w, /*up=*/true);
+}
+
+void VehicleService::onDoorsLockedForMirrorFold(bool locked)
+{
+    if (!locked) return;
+    if (!m_settings || !m_settings->mirrorFoldLock()) return;
+    sendMirrorFold();
+}
+
+void VehicleService::onKeyFobLockHoldForWindowClose()
+{
+    if (!m_settings || !m_settings->fobLockHoldCloses()) return;
+    sendWindowCloseAll();
 }
 
 // ─── Bose wake ─────────────────────────────────────────────────────────────

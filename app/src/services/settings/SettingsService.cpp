@@ -1,12 +1,16 @@
 #include "SettingsService.h"
 #include "../profile/ProfileService.h"
 
+#include <QDir>
 #include <QFile>
+#include <QFileInfo>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLoggingCategory>
 #include <QSaveFile>
 #include <QStandardPaths>
+#include <QTextStream>
 #include <QVariantMap>
 
 Q_LOGGING_CATEGORY(lcSettings, "q60nav.settings")
@@ -14,14 +18,38 @@ Q_LOGGING_CATEGORY(lcSettings, "q60nav.settings")
 // 5-second debounce before writing to disk
 static constexpr int SAVE_DEBOUNCE_MS = 5000;
 
+// Uptime ticks 1 Hz — drives QML "Uptime: 1h 23m" label
+static constexpr int UPTIME_TICK_MS = 1000;
+
+// Hardcoded build identity — bumped per release
+static const char *kSoftwareVersion = "0.2.0-dev";
+
+// Map data version is read from this file at startup, if present
+static const char *kMapVersionFile = "/opt/nav/tiles/version.txt";
+
 // ---------------------------------------------------------------------------
 SettingsService::SettingsService(QObject *parent)
     : QObject(parent)
     , m_saveTimer(new QTimer(this))
+    , m_uptimeTimer(new QTimer(this))
 {
     m_saveTimer->setSingleShot(true);
     m_saveTimer->setInterval(SAVE_DEBOUNCE_MS);
     connect(m_saveTimer, &QTimer::timeout, this, &SettingsService::onSaveTimerFired);
+
+    // System metadata — frozen at construct time
+    m_softwareVersion = QString::fromLatin1(kSoftwareVersion);
+    m_mapDataVersion  = readMapDataVersion();
+    m_buildDate       = QStringLiteral(__DATE__ " " __TIME__);
+    m_bootTime        = QDateTime::currentMSecsSinceEpoch();
+
+    // Seed fictional bluetooth device list — UI shell pending BlueZ wire-up
+    seedDefaultBtDevices();
+
+    // Live uptime tick — 1 Hz emit so the System sub-page label updates
+    m_uptimeTimer->setInterval(UPTIME_TICK_MS);
+    connect(m_uptimeTimer, &QTimer::timeout, this, &SettingsService::onUptimeTimerFired);
+    m_uptimeTimer->start();
 }
 
 // ---------------------------------------------------------------------------
@@ -155,6 +183,16 @@ void SettingsService::onSaveTimerFired()
     writeToProfile();
 }
 
+void SettingsService::onUptimeTimerFired()
+{
+    emit uptimeChanged();
+}
+
+qint64 SettingsService::uptimeMs() const
+{
+    return QDateTime::currentMSecsSinceEpoch() - m_bootTime;
+}
+
 // ---------------------------------------------------------------------------
 // armSaveTimer — restart debounce on every property change
 // ---------------------------------------------------------------------------
@@ -170,6 +208,41 @@ QString SettingsService::settingsFilePath() const
 {
     const QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     return dir + QStringLiteral("/settings.json");
+}
+
+// ---------------------------------------------------------------------------
+// readMapDataVersion — read /opt/nav/tiles/version.txt if present
+// ---------------------------------------------------------------------------
+QString SettingsService::readMapDataVersion() const
+{
+    QFile f(QString::fromLatin1(kMapVersionFile));
+    if (!f.exists() || !f.open(QIODevice::ReadOnly))
+        return QStringLiteral("unknown");
+    QTextStream ts(&f);
+    const QString v = ts.readLine().trimmed();
+    return v.isEmpty() ? QStringLiteral("unknown") : v;
+}
+
+// ---------------------------------------------------------------------------
+// seedDefaultBtDevices — fictional pairing-list shim
+// Names mirror the phone-agent contact style: "Phone (Driver)", etc.
+// ---------------------------------------------------------------------------
+void SettingsService::seedDefaultBtDevices()
+{
+    m_btDevices.clear();
+
+    auto makeDev = [](const QString &name, const QString &mac, int prio, bool connected) {
+        QVariantMap m;
+        m["name"]      = name;
+        m["mac"]       = mac;
+        m["priority"]  = prio;
+        m["connected"] = connected;
+        return m;
+    };
+
+    m_btDevices.append(makeDev(QStringLiteral("Phone (Driver)"),    QStringLiteral("AA:BB:CC:00:00:01"), 0, true));
+    m_btDevices.append(makeDev(QStringLiteral("Phone (Passenger)"), QStringLiteral("AA:BB:CC:00:00:02"), 1, false));
+    m_btDevices.append(makeDev(QStringLiteral("AirPods Pro"),       QStringLiteral("AA:BB:CC:00:00:03"), 2, false));
 }
 
 // ---------------------------------------------------------------------------
@@ -198,14 +271,19 @@ void SettingsService::loadFromDisk()
 
     auto iget  = [&](const QString &k, int  def)  { return root.contains(k) ? root.value(k).toInt(def)  : def; };
     auto bget  = [&](const QString &k, bool def)  { return root.contains(k) ? root.value(k).toBool(def) : def; };
+    auto sget  = [&](const QString &k, const QString &def) {
+        return root.contains(k) ? root.value(k).toString(def) : def;
+    };
 
     m_upperBrightness       = iget("upperBrightness",       80);
     m_lowerBrightness       = iget("lowerBrightness",       80);
     m_dayNightMode          = iget("dayNightMode",           0);
+    m_autoDimThreshold      = iget("autoDimThreshold",     100);
     m_timeFormat            = iget("timeFormat",             0);
     m_gpsSync               = bget("gpsSync",             true);
     m_clockHour             = iget("clockHour",             12);
     m_clockMinute           = iget("clockMinute",            0);
+    m_timezoneOffset        = iget("timezoneOffset",        -5);
     m_distanceUnit          = iget("distanceUnit",           0);
     m_tempUnit              = iget("tempUnit",               0);
     m_fuelUnit              = iget("fuelUnit",               0);
@@ -218,6 +296,10 @@ void SettingsService::loadFromDisk()
     m_clickSounds           = bget("clickSounds",         true);
     m_navPromptVolume       = iget("navPromptVolume",       80);
     m_vdcEnabled            = bget("vdcEnabled",          true);
+    m_ascEnabled            = bget("ascEnabled",          true);
+    if (root.contains("trackModeConfig"))
+        m_trackModeConfig   = root.value("trackModeConfig").toString(m_trackModeConfig);
+    m_speedAlertThreshold   = iget("speedAlertThreshold",    5);
     m_lightShutoff          = iget("lightShutoff",           2);
     m_headlightSensitivity  = iget("headlightSensitivity",   1);
     m_drlEnabled            = bget("drlEnabled",          true);
@@ -237,10 +319,45 @@ void SettingsService::loadFromDisk()
     m_powerWindowAutoOpen   = bget("powerWindowAutoOpen", true);
     m_seatbeltReminder      = bget("seatbeltReminder",    true);
     m_parkAssistChimeVolume = iget("parkAssistChimeVolume",  2);
+    m_fobLockHoldCloses     = bget("fobLockHoldCloses",  false);
+    m_allWindowsOneTouch    = bget("allWindowsOneTouch", false);
     m_mapOrientation        = iget("mapOrientation",         0);
     m_speedLimitDisplay     = bget("speedLimitDisplay",   true);
     m_mapDetailLevel        = iget("mapDetailLevel",         1);
     m_maintenanceInterval   = iget("maintenanceInterval",    1);
+    m_language              = iget("language",               0);
+    m_driveModePersonalConfig = sget("driveModePersonalConfig", QString());
+
+    // Bluetooth — replace seeded list if persisted one is present
+    if (root.contains(QStringLiteral("btDevices")) && root.value(QStringLiteral("btDevices")).isArray()) {
+        const QJsonArray arr = root.value(QStringLiteral("btDevices")).toArray();
+        QVariantList loaded;
+        for (const QJsonValue &v : arr) {
+            const QJsonObject o = v.toObject();
+            QVariantMap m;
+            m["name"]      = o.value("name").toString();
+            m["mac"]       = o.value("mac").toString();
+            m["priority"]  = o.value("priority").toInt(0);
+            m["connected"] = o.value("connected").toBool(false);
+            loaded.append(m);
+        }
+        if (!loaded.isEmpty()) {
+            m_btDevices = loaded;
+            emit btDevicesChanged();
+        }
+    }
+
+    // Audio presets — JSON string blob (may be stored as either a raw string
+    // field or a nested object that we serialize back to a string).
+    if (root.contains("audioPresets")) {
+        const QJsonValue v = root.value("audioPresets");
+        if (v.isString()) {
+            m_audioPresets = v.toString();
+        } else if (v.isObject()) {
+            m_audioPresets = QString::fromUtf8(
+                QJsonDocument(v.toObject()).toJson(QJsonDocument::Compact));
+        }
+    }
 
     qCInfo(lcSettings) << "Loaded settings from disk";
 }
@@ -254,10 +371,12 @@ void SettingsService::saveToDisk()
     root["upperBrightness"]       = m_upperBrightness;
     root["lowerBrightness"]       = m_lowerBrightness;
     root["dayNightMode"]          = m_dayNightMode;
+    root["autoDimThreshold"]      = m_autoDimThreshold;
     root["timeFormat"]            = m_timeFormat;
     root["gpsSync"]               = m_gpsSync;
     root["clockHour"]             = m_clockHour;
     root["clockMinute"]           = m_clockMinute;
+    root["timezoneOffset"]        = m_timezoneOffset;
     root["distanceUnit"]          = m_distanceUnit;
     root["tempUnit"]              = m_tempUnit;
     root["fuelUnit"]              = m_fuelUnit;
@@ -270,6 +389,9 @@ void SettingsService::saveToDisk()
     root["clickSounds"]           = m_clickSounds;
     root["navPromptVolume"]       = m_navPromptVolume;
     root["vdcEnabled"]            = m_vdcEnabled;
+    root["ascEnabled"]            = m_ascEnabled;
+    root["trackModeConfig"]       = m_trackModeConfig;
+    root["speedAlertThreshold"]   = m_speedAlertThreshold;
     root["lightShutoff"]          = m_lightShutoff;
     root["headlightSensitivity"]  = m_headlightSensitivity;
     root["drlEnabled"]            = m_drlEnabled;
@@ -289,10 +411,36 @@ void SettingsService::saveToDisk()
     root["powerWindowAutoOpen"]   = m_powerWindowAutoOpen;
     root["seatbeltReminder"]      = m_seatbeltReminder;
     root["parkAssistChimeVolume"] = m_parkAssistChimeVolume;
+    root["fobLockHoldCloses"]     = m_fobLockHoldCloses;
+    root["allWindowsOneTouch"]    = m_allWindowsOneTouch;
     root["mapOrientation"]        = m_mapOrientation;
     root["speedLimitDisplay"]     = m_speedLimitDisplay;
     root["mapDetailLevel"]        = m_mapDetailLevel;
-    root["maintenanceInterval"]   = m_maintenanceInterval;
+    root["maintenanceInterval"]     = m_maintenanceInterval;
+    root["language"]                = m_language;
+    root["driveModePersonalConfig"] = m_driveModePersonalConfig;
+
+    // Bluetooth list
+    QJsonArray bt;
+    for (const QVariant &v : m_btDevices) {
+        const QVariantMap d = v.toMap();
+        QJsonObject o;
+        o["name"]      = d.value("name").toString();
+        o["mac"]       = d.value("mac").toString();
+        o["priority"]  = d.value("priority").toInt();
+        o["connected"] = d.value("connected").toBool();
+        bt.append(o);
+    }
+    root["btDevices"] = bt;
+
+    // Audio presets — stored as a nested object when possible (more readable)
+    if (!m_audioPresets.isEmpty()) {
+        const QJsonDocument apDoc = QJsonDocument::fromJson(m_audioPresets.toUtf8());
+        if (apDoc.isObject())
+            root["audioPresets"] = apDoc.object();
+        else
+            root["audioPresets"] = m_audioPresets;  // fall back to raw string
+    }
 
     const QJsonDocument doc(root);
     const QString path = settingsFilePath();
@@ -312,6 +460,102 @@ void SettingsService::saveToDisk()
     }
 
     qCInfo(lcSettings) << "Settings saved to" << path;
+}
+
+// ---------------------------------------------------------------------------
+// resetToDefaults — wipe state, delete JSON, re-emit all Changed signals
+// ---------------------------------------------------------------------------
+void SettingsService::resetToDefaults()
+{
+    qCInfo(lcSettings) << "Factory reset requested — wiping settings";
+
+    // Cancel any pending debounced save before we nuke state
+    m_saveTimer->stop();
+
+    // Reassign to compiled defaults (mirrors header initializers)
+    m_upperBrightness       = 80;
+    m_lowerBrightness       = 80;
+    m_dayNightMode          = 0;
+    m_autoDimThreshold      = 100;
+    m_timeFormat            = 0;
+    m_gpsSync               = true;
+    m_clockHour             = 12;
+    m_clockMinute           = 0;
+    m_timezoneOffset        = -5;
+    m_distanceUnit          = 0;
+    m_tempUnit              = 0;
+    m_fuelUnit              = 0;
+    m_voiceGuidance         = true;
+    m_voiceVolume           = 70;
+    m_routePref             = 0;
+    m_avoidTolls            = false;
+    m_avoidHighways         = false;
+    m_poiIconsOnMap         = true;
+    m_clickSounds           = true;
+    m_navPromptVolume       = 80;
+    m_vdcEnabled            = true;
+    m_lightShutoff          = 2;
+    m_headlightSensitivity  = 1;
+    m_drlEnabled            = true;
+    m_approachLighting      = true;
+    m_approachLightDuration = 1;
+    m_welcomeLighting       = true;
+    m_interiorLightTimer    = 1;
+    m_autoLockSpeed         = 1;
+    m_autoUnlockPark        = true;
+    m_autoUnlockKeyRemoval  = false;
+    m_fobLockAll            = true;
+    m_mirrorTiltReverse     = true;
+    m_mirrorFoldLock        = false;
+    m_rainSensorSensitivity = 3;
+    m_wiperDelay            = 3;
+    m_seatMemoryOnUnlock    = true;
+    m_powerWindowAutoOpen   = true;
+    m_seatbeltReminder      = true;
+    m_parkAssistChimeVolume = 2;
+    m_mapOrientation        = 0;
+    m_speedLimitDisplay     = true;
+    m_mapDetailLevel        = 1;
+    m_maintenanceInterval   = 1;
+    m_language              = 0;
+    seedDefaultBtDevices();
+
+    // Delete settings.json — preferring AppDataLocation copy; also wipe
+    // the legacy /opt/nav/config/settings.json mentioned in the spec if
+    // it exists. Failure to remove either is logged, not fatal.
+    const QString primary = settingsFilePath();
+    QFile primaryFile(primary);
+    if (primaryFile.exists() && !primaryFile.remove())
+        qCWarning(lcSettings) << "Could not delete" << primary;
+
+    QFile legacyFile(QStringLiteral("/opt/nav/config/settings.json"));
+    if (legacyFile.exists() && !legacyFile.remove())
+        qCWarning(lcSettings) << "Could not delete /opt/nav/config/settings.json";
+
+    // Re-emit every group signal so QML rebinds to fresh defaults
+    emitAllChanged();
+
+    qCInfo(lcSettings) << "Factory reset complete";
+}
+
+void SettingsService::emitAllChanged()
+{
+    emit displayChanged();
+    emit clockChanged();
+    emit unitsChanged();
+    emit navChanged();
+    emit audioSettingsChanged();
+    emit vehicleChanged();
+    emit lightsChanged();
+    emit locksChanged();
+    emit mirrorsChanged();
+    emit wipersChanged();
+    emit comfortChanged();
+    emit mapSettingsChanged();
+    emit maintenanceChanged();
+    emit btDevicesChanged();
+    emit languageChanged();
+    emit uptimeChanged();
 }
 
 // ============================================================================
@@ -338,12 +582,14 @@ void SettingsService::set##name(bool v) {        \
 SETTER_INT (UpperBrightness,       upperBrightness,       displayChanged)
 SETTER_INT (LowerBrightness,       lowerBrightness,       displayChanged)
 SETTER_INT (DayNightMode,          dayNightMode,          displayChanged)
+SETTER_INT (AutoDimThreshold,      autoDimThreshold,      displayChanged)
 
 // Clock
 SETTER_INT (TimeFormat,            timeFormat,            clockChanged)
 SETTER_BOOL(GpsSync,               gpsSync,               clockChanged)
 SETTER_INT (ClockHour,             clockHour,             clockChanged)
 SETTER_INT (ClockMinute,           clockMinute,           clockChanged)
+SETTER_INT (TimezoneOffset,        timezoneOffset,        clockChanged)
 
 // Units
 SETTER_INT (DistanceUnit,          distanceUnit,          unitsChanged)
@@ -364,6 +610,9 @@ SETTER_INT (NavPromptVolume,       navPromptVolume,       audioSettingsChanged)
 
 // Vehicle
 SETTER_BOOL(VdcEnabled,            vdcEnabled,            vehicleChanged)
+
+// Speed alert — routed through navChanged() since the badge lives in NavigationView
+SETTER_INT (SpeedAlertThreshold,   speedAlertThreshold,   navChanged)
 
 // Lights
 SETTER_INT (LightShutoff,          lightShutoff,          lightsChanged)
@@ -393,6 +642,8 @@ SETTER_BOOL(SeatMemoryOnUnlock,    seatMemoryOnUnlock,    comfortChanged)
 SETTER_BOOL(PowerWindowAutoOpen,   powerWindowAutoOpen,   comfortChanged)
 SETTER_BOOL(SeatbeltReminder,      seatbeltReminder,      comfortChanged)
 SETTER_INT (ParkAssistChimeVolume, parkAssistChimeVolume, comfortChanged)
+SETTER_BOOL(FobLockHoldCloses,     fobLockHoldCloses,     comfortChanged)
+SETTER_BOOL(AllWindowsOneTouch,    allWindowsOneTouch,    comfortChanged)
 
 // Map
 SETTER_INT (MapOrientation,        mapOrientation,        mapSettingsChanged)
@@ -402,5 +653,120 @@ SETTER_INT (MapDetailLevel,        mapDetailLevel,        mapSettingsChanged)
 // Maintenance
 SETTER_INT (MaintenanceInterval,   maintenanceInterval,   maintenanceChanged)
 
+// Language
+SETTER_INT (Language,              language,              languageChanged)
+
 #undef SETTER_INT
 #undef SETTER_BOOL
+
+// ============================================================================
+// Bluetooth UI actions — mock list manipulation. TODO: wire to BlueZ.
+// ============================================================================
+
+void SettingsService::btForgetDevice(const QString &mac)
+{
+    // TODO: wire to BlueZ — call org.bluez.Device1.Remove on the adapter
+    for (int i = 0; i < m_btDevices.size(); ++i) {
+        if (m_btDevices.at(i).toMap().value("mac").toString() == mac) {
+            m_btDevices.removeAt(i);
+            emit btDevicesChanged();
+            armSaveTimer();
+            return;
+        }
+    }
+}
+
+void SettingsService::btSetPriority(const QString &mac, int delta)
+{
+    // TODO: wire to BlueZ — priority controls AVRCP / HFP fallback order
+    int idx = -1;
+    for (int i = 0; i < m_btDevices.size(); ++i) {
+        if (m_btDevices.at(i).toMap().value("mac").toString() == mac) {
+            idx = i;
+            break;
+        }
+    }
+    if (idx < 0) return;
+
+    const int swap = idx + ((delta > 0) ? -1 : 1);
+    if (swap < 0 || swap >= m_btDevices.size()) return;
+
+    m_btDevices.swapItemsAt(idx, swap);
+
+    // Rewrite priority field to match new ordering
+    for (int i = 0; i < m_btDevices.size(); ++i) {
+        QVariantMap m = m_btDevices.at(i).toMap();
+        m["priority"] = i;
+        m_btDevices[i] = m;
+    }
+
+    emit btDevicesChanged();
+    armSaveTimer();
+}
+
+void SettingsService::btToggleConnect(const QString &mac)
+{
+    // TODO: wire to BlueZ — org.bluez.Device1.Connect / Disconnect
+    for (int i = 0; i < m_btDevices.size(); ++i) {
+        QVariantMap d = m_btDevices.at(i).toMap();
+        if (d.value("mac").toString() == mac) {
+            d["connected"] = !d.value("connected").toBool();
+            m_btDevices[i] = d;
+            emit btDevicesChanged();
+            armSaveTimer();
+            return;
+        }
+    }
+}
+
+void SettingsService::btAddMockDevice(const QString &name)
+{
+    // TODO: wire to BlueZ — this stand-in fires when pairing-mode "accepts"
+    // a device. Real flow listens for org.bluez.Adapter1.DeviceFound signals.
+    QVariantMap m;
+    m["name"]      = name.isEmpty() ? QStringLiteral("New Device") : name;
+    m["mac"]       = QStringLiteral("AA:BB:CC:%1:%2:%3")
+                        .arg(QString::number(QDateTime::currentMSecsSinceEpoch() & 0xFF, 16).toUpper().rightJustified(2, '0'),
+                             QString::number((QDateTime::currentMSecsSinceEpoch() >> 8) & 0xFF, 16).toUpper().rightJustified(2, '0'),
+                             QString::number((QDateTime::currentMSecsSinceEpoch() >> 16) & 0xFF, 16).toUpper().rightJustified(2, '0'));
+    m["priority"]  = m_btDevices.size();
+    m["connected"] = false;
+    m_btDevices.append(m);
+    emit btDevicesChanged();
+    armSaveTimer();
+}
+
+// Audio presets — manual setter (string type, no SETTER_* macro)
+void SettingsService::setAudioPresets(const QString &v)
+{
+    if (m_audioPresets == v) return;
+    m_audioPresets = v;
+    emit audioPresetsChanged();
+    armSaveTimer();
+}
+
+// ── Drive mode (Personal config) ──────────────────────────────────────────
+// QString setter (JSON blob — opaque to this class).
+void SettingsService::setDriveModePersonalConfig(const QString &json)
+{
+    if (m_driveModePersonalConfig == json) return;
+    m_driveModePersonalConfig = json;
+    emit driveModePersonalConfigChanged();
+    armSaveTimer();
+}
+
+void SettingsService::setAscEnabled(bool v)
+{
+    if (m_ascEnabled == v) return;
+    m_ascEnabled = v;
+    emit ascEnabledChanged();
+    armSaveTimer();
+}
+
+void SettingsService::setTrackModeConfig(const QString &v)
+{
+    if (m_trackModeConfig == v) return;
+    m_trackModeConfig = v;
+    emit trackModeConfigChanged();
+    armSaveTimer();
+}

@@ -7,6 +7,7 @@
 #include "../../services/vehicle/VehicleService.h"
 #include "../../services/audio/AudioService.h"
 #include "../../services/network/NetworkService.h"
+#include "../../services/parking/ParkingService.h"
 
 #include <QTimer>
 #include <QDateTime>
@@ -16,12 +17,14 @@ StatusBridge::StatusBridge(NavigationService *nav,
                             VehicleService   *vehicle,
                             AudioService     *audio,
                             NetworkService   *network,
+                            ParkingService   *parking,
                             QObject *parent)
     : QObject(parent)
     , m_nav(nav)
     , m_vehicle(vehicle)
     , m_audio(audio)
     , m_network(network)
+    , m_parking(parking)
     , m_clockTimer(new QTimer(this))
 {
     // ── Navigation ──────────────────────────────────────────────────────
@@ -132,6 +135,15 @@ StatusBridge::StatusBridge(NavigationService *nav,
     m_clockTimer->start();
     onClockTick(); // populate immediately
 
+    // ── Parking → Navigation forwarding ─────────────────────────────────
+    // ParkingService::navigateToCar() emits navigateRequested(lat, lon, label);
+    // forward to NavigationService::routeTo so the existing route-start path
+    // handles the request (Valhalla query, map overlay, turn-by-turn).
+    if (m_parking) {
+        connect(m_parking, &ParkingService::navigateRequested,
+                m_nav,     &NavigationService::routeTo);
+    }
+
     // ── Network ──────────────────────────────────────────────────────────
     if (m_network) {
         connect(m_network, &NetworkService::onlineChanged, this, [this](bool online) {
@@ -177,6 +189,19 @@ void StatusBridge::onReverseEngaged(bool reverse)
     m_reverseActive = reverse;
     emit reverseActiveChanged(reverse);
     // Lower screen camera view is triggered in QML by binding reverseActive
+}
+
+// ─── AVM activation ────────────────────────────────────────────────────────
+// Triggered from QML by corner-badge tap or, eventually, from VehicleService
+// when gear=R AND the AVM steering-wheel button is held. The actual camera
+// pipeline (4× V4L2 feeds) wires later — this is the activation channel that
+// both screens listen on so the upper-screen overlay and lower-screen tab can
+// react in lockstep.
+void StatusBridge::setAvmActive(bool active)
+{
+    if (m_avmActive == active) return;
+    m_avmActive = active;
+    emit avmActiveChanged(active);
 }
 
 // ─── Phone call events ─────────────────────────────────────────────────────

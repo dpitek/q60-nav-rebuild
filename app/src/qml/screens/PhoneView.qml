@@ -4,12 +4,25 @@
 // All StatusBridge bindings preserved exactly.
 import QtQuick 6.6
 import QtQuick.Controls 6.6
+import "../components"
 
 Item {
     id: root
     anchors.fill: parent
 
     Rectangle { anchors.fill: parent; color: "#000000" }
+
+    // ── Shared contacts + recent calls data source ───────────────────────────
+    // Mock data lives in ContactsModel.qml; same component is also embedded by
+    // IncomingCallView for caller-ID resolution. Real PBAP binding pending
+    // BlueZ on hardware. See backlog.
+    ContactsModel { id: phoneData }
+
+    // Exposed for parents / other QML to drive caller-ID lookups against the
+    // same fixture, e.g. `phoneView.lookupCallerName(incomingNumber)`.
+    property alias contactsModel: phoneData.contacts
+    property alias recentsModel:  phoneData.recents
+    function lookupCallerName(number) { return phoneData.lookupCallerName(number) }
 
     // ── 3-tab sub-navigation ─────────────────────────────────────────────────
     property int activeTab: 0   // 0=Dial 1=Contacts 2=Recent
@@ -256,7 +269,10 @@ Item {
                     }
                 }
 
-                // Contacts list
+                // Contacts list — backed by shared ContactsModel.
+                // Rows: avatar, name, number, type pill. Tap to reveal Dial pill.
+                // Row touch target = 56px (per spec). Filter applied client-side
+                // against name OR number substring.
                 ListView {
                     id: contactsList
                     anchors { left: parent.left; right: parent.right; leftMargin: 12; rightMargin: 12 }
@@ -265,26 +281,22 @@ Item {
                     spacing: 2
 
                     property int pendingIndex: -1
+                    model: root.contactsModel
 
-                    model: ListModel {
-                        ListElement { cname: "Sarah Johnson";  cnumber: "+1 (919) 555-0147" }
-                        ListElement { cname: "Mike Chen";      cnumber: "+1 (704) 555-0193" }
-                        ListElement { cname: "Mom";            cnumber: "+1 (910) 555-0281" }
-                        ListElement { cname: "Work";           cnumber: "+1 (919) 555-0134" }
-                        ListElement { cname: "David Park";     cnumber: "+1 (919) 555-0162" }
-                        ListElement { cname: "KellyAnne";      cnumber: "+1 (919) 555-0199" }
-                    }
-
-                    // Filter by search
                     delegate: Column {
                         width: contactsList.width
                         spacing: 0
-                        visible: contactSearch.text.length === 0
-                                 || cname.toLowerCase().indexOf(contactSearch.text.toLowerCase()) >= 0
 
-                        // Contact row
+                        // Filter: empty query shows all; otherwise match name OR number.
+                        property string _q: contactSearch.text.toLowerCase()
+                        visible: _q.length === 0
+                                 || name.toLowerCase().indexOf(_q) >= 0
+                                 || number.toLowerCase().indexOf(_q) >= 0
+                        height: visible ? implicitHeight : 0
+
+                        // Contact row (56px tall — touch target per Q60 UI spec)
                         Rectangle {
-                            width: parent.width; height: 48; color: "transparent"
+                            width: parent.width; height: 56; color: "transparent"
                             radius: 10
 
                             Rectangle {
@@ -294,27 +306,45 @@ Item {
                             }
 
                             Row {
-                                anchors { verticalCenter: parent.verticalCenter; left: parent.left; leftMargin: 4 }
+                                anchors { verticalCenter: parent.verticalCenter; left: parent.left; leftMargin: 4; right: typePill.left; rightMargin: 8 }
                                 spacing: 10
 
                                 // Avatar circle
                                 Rectangle {
-                                    width: 36; height: 36; radius: 18
+                                    width: 40; height: 40; radius: 20
+                                    anchors.verticalCenter: parent.verticalCenter
                                     color: {
                                         var colors = ["#0A84FF","#BF5AF2","#30D158","#FF9F0A","#FF453A"]
-                                        return colors[cname.charCodeAt(0) % colors.length]
+                                        return colors[name.charCodeAt(0) % colors.length]
                                     }
                                     Text {
                                         anchors.centerIn: parent
-                                        text: cname.charAt(0).toUpperCase()
+                                        text: name.charAt(0).toUpperCase()
                                         color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 16; weight: Font.Bold }
                                     }
                                 }
 
                                 Column {
                                     anchors.verticalCenter: parent.verticalCenter; spacing: 2
-                                    Text { text: cname; color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 15; weight: Font.Medium } }
-                                    Text { text: cnumber; color: "#8E8E93"; font { family: "Roboto"; pixelSize: 12 } }
+                                    Text { text: name; color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 15; weight: Font.Medium } }
+                                    Text { text: number; color: "#8E8E93"; font { family: "Roboto"; pixelSize: 12 } }
+                                }
+                            }
+
+                            // Type pill (mobile / home / work)
+                            Rectangle {
+                                id: typePill
+                                anchors { right: parent.right; verticalCenter: parent.verticalCenter; rightMargin: 8 }
+                                width: typeLbl.width + 16; height: 20; radius: 10
+                                color: "#1C1C1E"
+                                border { color: Qt.rgba(1, 1, 1, 0.15); width: 1 }
+                                Text {
+                                    id: typeLbl
+                                    anchors.centerIn: parent
+                                    text: type
+                                    color: type === "mobile" ? "#0A84FF"
+                                           : type === "work"  ? "#FF9F0A" : "#30D158"
+                                    font { family: "Roboto"; pixelSize: 10; weight: Font.SemiBold; capitalization: Font.AllUppercase }
                                 }
                             }
 
@@ -338,14 +368,15 @@ Item {
 
                             Text {
                                 id: confirmLbl; anchors.centerIn: parent
-                                text: "Call " + cname + "?  ✓ Dial"
+                                text: "Call " + name + "?  ✓ Dial"
                                 color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
                             }
                             MouseArea {
                                 anchors.fill: parent
                                 onClicked: {
                                     contactsList.pendingIndex = -1
-                                    // TODO: initiate BT HFP call to cnumber
+                                    // TODO: initiate BT HFP call to `number` once
+                                    // AudioService PBAP/HFP wiring lands.
                                 }
                             }
                         }
@@ -407,7 +438,9 @@ Item {
                     }
                 }
 
-                // Recent calls list
+                // Recent calls list — shared recentsModel filtered per sub-tab.
+                // Rows that don't match the active sub-tab collapse to zero height
+                // so the ListView stays the same model but only shows the slice.
                 ListView {
                     id: recentList
                     anchors { left: parent.left; right: parent.right; leftMargin: 12; rightMargin: 12 }
@@ -415,19 +448,24 @@ Item {
                     clip: true; spacing: 2
 
                     property int pendingIndex: -1
-
-                    model: {
-                        var sub = parent.recentSubTab
-                        if (sub === 0) return dialedModel
-                        if (sub === 1) return receivedModel
-                        return missedModel
+                    // 0=Dialed → "dialed", 1=Received → "received", 2=Missed → "missed"
+                    readonly property string activeType: {
+                        var sub = parent.parent.recentSubTab
+                        if (sub === 0) return "dialed"
+                        if (sub === 1) return "received"
+                        return "missed"
                     }
+
+                    model: root.recentsModel
 
                     delegate: Column {
                         width: recentList.width; spacing: 0
+                        visible: callType === recentList.activeType
+                        height: visible ? implicitHeight : 0
 
+                        // 56px row (touch target per Q60 UI spec)
                         Rectangle {
-                            width: parent.width; height: 50; color: "transparent"
+                            width: parent.width; height: 56; color: "transparent"
 
                             Rectangle {
                                 anchors.fill: parent; radius: 10
@@ -436,30 +474,45 @@ Item {
                             }
 
                             Row {
-                                anchors { verticalCenter: parent.verticalCenter; left: parent.left; leftMargin: 4 }
+                                anchors { verticalCenter: parent.verticalCenter; left: parent.left; leftMargin: 4; right: durLbl.left; rightMargin: 8 }
                                 spacing: 10
 
-                                // Colored type dot
-                                Rectangle {
-                                    width: 10; height: 10; radius: 5
+                                // Call-type icon (arrow direction + tint)
+                                Text {
                                     anchors.verticalCenter: parent.verticalCenter
-                                    color: callType === "missed" ? "#FF453A"
-                                           : callType === "received" ? "#30D158" : "#0A84FF"
+                                    text: callType === "missed"   ? "✕"
+                                          : callType === "received" ? "↙"
+                                                                    : "↗"
+                                    color: callType === "missed"   ? "#FF453A"
+                                           : callType === "received" ? "#30D158"
+                                                                     : "#0A84FF"
+                                    font { family: "Roboto"; pixelSize: 18; weight: Font.Bold }
+                                    width: 20; horizontalAlignment: Text.AlignHCenter
                                 }
 
                                 Column {
                                     anchors.verticalCenter: parent.verticalCenter; spacing: 2
-                                    Text { text: callerName; color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 15; weight: Font.Medium } }
-                                    Text { text: callTime; color: "#8E8E93"; font { family: "Roboto"; pixelSize: 11 } }
+                                    // Display the name when present, else the raw number
+                                    Text {
+                                        text: (name && name.length > 0) ? name : number
+                                        color: callType === "missed" ? "#FF453A" : "#FFFFFF"
+                                        font { family: "Roboto"; pixelSize: 15; weight: Font.Medium }
+                                    }
+                                    Text {
+                                        text: timestamp
+                                        color: "#8E8E93"
+                                        font { family: "Roboto"; pixelSize: 11 }
+                                    }
                                 }
+                            }
 
-                                Item { width: 1 }  // spacer
-
-                                Text {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: callDuration; color: "#636366"
-                                    font { family: "Roboto"; pixelSize: 11 }
-                                }
+                            // Call duration (blank for missed)
+                            Text {
+                                id: durLbl
+                                anchors { right: parent.right; verticalCenter: parent.verticalCenter; rightMargin: 8 }
+                                text: duration
+                                color: "#636366"
+                                font { family: "Roboto"; pixelSize: 11 }
                             }
 
                             MouseArea {
@@ -468,7 +521,7 @@ Item {
                             }
                         }
 
-                        // Call confirmation pill
+                        // Call confirmation pill (tap to call back)
                         Rectangle {
                             anchors.horizontalCenter: parent.horizontalCenter
                             height: recentList.pendingIndex === index ? 30 : 0
@@ -478,44 +531,18 @@ Item {
                             Behavior on height { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
                             Text {
                                 id: recentConfirmLbl; anchors.centerIn: parent
-                                text: "Call " + callerName + "?  ✓ Dial"
+                                text: "Call " + ((name && name.length > 0) ? name : number) + " back?  ✓ Dial"
                                 color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
                             }
                             MouseArea {
                                 anchors.fill: parent
                                 onClicked: {
                                     recentList.pendingIndex = -1
-                                    // TODO: initiate BT HFP call
+                                    // TODO: initiate BT HFP call to `number` once
+                                    // AudioService HFP wiring lands.
                                 }
                             }
                         }
-                    }
-
-                    ListModel {
-                        id: dialedModel
-                        ListElement { callerName: "KellyAnne";    callTime: "Today 2:14 PM";    callDuration: "4:32";  callType: "dialed" }
-                        ListElement { callerName: "Work";         callTime: "Today 10:07 AM";   callDuration: "8:11";  callType: "dialed" }
-                        ListElement { callerName: "Mike Chen";    callTime: "Yesterday 6:44 PM"; callDuration: "1:28"; callType: "dialed" }
-                        ListElement { callerName: "Mom";          callTime: "Yesterday 12:00 PM"; callDuration: "12:04"; callType: "dialed" }
-                        ListElement { callerName: "David Park";   callTime: "May 10 3:22 PM";   callDuration: "0:42";  callType: "dialed" }
-                    }
-
-                    ListModel {
-                        id: receivedModel
-                        ListElement { callerName: "Sarah Johnson"; callTime: "Today 9:15 AM";    callDuration: "3:17";  callType: "received" }
-                        ListElement { callerName: "Mom";           callTime: "Today 8:02 AM";    callDuration: "6:50";  callType: "received" }
-                        ListElement { callerName: "KellyAnne";    callTime: "Yesterday 7:30 PM"; callDuration: "2:05"; callType: "received" }
-                        ListElement { callerName: "Work";         callTime: "Yesterday 9:00 AM"; callDuration: "15:33"; callType: "received" }
-                        ListElement { callerName: "David Park";   callTime: "May 11 4:05 PM";   callDuration: "0:58";  callType: "received" }
-                    }
-
-                    ListModel {
-                        id: missedModel
-                        ListElement { callerName: "Unknown";       callTime: "Today 7:44 AM";    callDuration: "";      callType: "missed" }
-                        ListElement { callerName: "Mike Chen";     callTime: "Yesterday 5:20 PM"; callDuration: "";     callType: "missed" }
-                        ListElement { callerName: "Sarah Johnson"; callTime: "May 11 11:30 AM";  callDuration: "";      callType: "missed" }
-                        ListElement { callerName: "+1 (910) 555-0999"; callTime: "May 10 8:00 PM"; callDuration: "";   callType: "missed" }
-                        ListElement { callerName: "Work";          callTime: "May 10 8:45 AM";   callDuration: "";      callType: "missed" }
                     }
                 }
             }

@@ -9,6 +9,9 @@
 #include <QDBusObjectPath>
 #endif
 
+class SettingsService;
+class VehicleService;
+
 class AudioService : public QObject {
     Q_OBJECT
 
@@ -22,6 +25,10 @@ class AudioService : public QObject {
     Q_PROPERTY(QString      fmStation    READ fmStation    NOTIFY fmChanged)
     Q_PROPERTY(double       fmFrequency  READ fmFrequency  NOTIFY fmChanged)
     Q_PROPERTY(QString      rdsText      READ rdsText      NOTIFY fmChanged)
+    // RDS-decoded two-line display: station name (PS/RT0) + song title (RT segment).
+    // Stub parser populates these from the radiofc.out IPC stream — see onFmProxyData().
+    Q_PROPERTY(QString      fmStationName READ fmStationName NOTIFY fmChanged)
+    Q_PROPERTY(QString      fmSongTitle   READ fmSongTitle   NOTIFY fmChanged)
     Q_PROPERTY(QString      sxmChannel   READ sxmChannel   NOTIFY sxmChanged)
     Q_PROPERTY(QString      sxmName      READ sxmName      NOTIFY sxmChanged)
     Q_PROPERTY(QString      sxmCategory  READ sxmCategory  NOTIFY sxmChanged)
@@ -60,6 +67,13 @@ public:
     ~AudioService() override;
     void start();
 
+    // Wire persistence + vehicle-speed consumer.  Both optional — pass nullptr
+    // in unit tests or when running without those services constructed.
+    // SettingsService: presets are loaded immediately and written back via the
+    //                  service's debounced save path whenever they change.
+    // VehicleService:  read-only — we subscribe to speedChanged for SSV gain.
+    void wireDependencies(SettingsService *settings, VehicleService *vehicle);
+
     // Existing accessors
     AudioSource source()       const { return m_source; }
     int         volume()       const { return m_volume; }
@@ -70,6 +84,8 @@ public:
     QString     fmStation()    const { return m_fmStation; }
     double      fmFrequency()  const { return m_fmFrequency; }
     QString     rdsText()      const { return m_rdsText; }
+    QString     fmStationName() const { return m_fmStationName; }
+    QString     fmSongTitle()   const { return m_fmSongTitle; }
     QString     sxmChannel()   const { return m_sxmChannel; }
     QString     sxmName()      const { return m_sxmName; }
     QString     sxmCategory()  const { return m_sxmCategory; }
@@ -153,11 +169,16 @@ private slots:
     void onBluetoothMetadata(const QString &title, const QString &artist);
     void onBluetoothProperties(const QString &iface, const QVariantMap &props,
                                 const QStringList &invalidated);
+    void onVehicleSpeedChanged(float kph);
 
 private:
     void blueZMediaCmd(const QString &method);
     void sendProxyCommand(const QString &daemon, const QString &cmd);
     void initPresets();
+    void loadPresetsFromSettings();
+    void writePresetsToSettings();
+    void applySpeedGain();
+    void parseRdsLine(const QString &line);
     static QVariantMap makePreset(double freq, const QString &name);
 
     // DENSO proxy daemons
@@ -180,6 +201,8 @@ private:
     QString m_fmStation;
     double  m_fmFrequency = 96.1;
     QString m_rdsText;
+    QString m_fmStationName;   // RDS PS (program service name)
+    QString m_fmSongTitle;     // RDS RT segment (song / now-playing)
     QString m_sxmChannel;
     QString m_sxmName;
     QString m_sxmCategory;
@@ -209,4 +232,14 @@ private:
     // BT device state
     QString m_btDeviceName;
     bool    m_btConnected = false;
+
+    // External services (non-owning) wired via wireDependencies().
+    SettingsService *m_settings = nullptr;
+    VehicleService  *m_vehicle  = nullptr;
+
+    // Last-known vehicle speed (kph) — drives SSV gain calc
+    float m_speedKph = 0.0f;
+
+    // Suppress preset write-back while we're loading from settings
+    bool m_loadingPresets = false;
 };

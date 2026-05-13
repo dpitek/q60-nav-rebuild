@@ -1,5 +1,5 @@
 # Q60 Nav Rebuild — Build Status
-Last updated: 2026-05-12
+Last updated: 2026-05-13
 
 ---
 
@@ -19,25 +19,46 @@ Last updated: 2026-05-12
 - [x] `restore-logan1.sh` — 10-second recovery from Mac via USB adapter
 - [x] Watchdog: `watchdog-pet.sh` pets iTCO every 20s, init.d as respawn
 
-### C++ Services (all .h + .cpp complete)
-- [x] `VehicleService` — SocketCAN (can0/can1/can2), CAN frame parsing, HVAC write via r51-ecu confirmed path (0x540/0x541), Bose wake; 5 new IDs wired: ignition (0x292), doors/trunk (0x358), wipers (0x35D), cruise+coolant (0x551), BCM extended/battery (0x625); UDS door lock/unlock via 0x745; ButtonLogger on all 3 buses
-- [x] `NavigationService` — GPSD TCP socket, Valhalla HTTP client, route parsing, rerouting
-- [x] `AudioService` — BlueZ D-Bus AVRCP (guarded with `HAVE_QT_DBUS`), DENSO proxy IPC, ALSA volume
-- [x] `SearchService` — offline geocoding on port 4000 (Photon/Pelias-compatible, graceful if absent)
-- [x] `StatusBridge` — full signal wiring, clock, cross-screen coordination
-- [x] `MapLibreItem` — QQuickItem Phase 3 stub; correct `RendererFrontend` / `OffscreenBackend` API (no HeadlessFrontend); EGL wiring TODO
+### C++ Services (13 total — all .h + .cpp complete)
+2026-05-13 P1/P2 sprint added: TripLoggerService + ParkingService.
 
-### QML UI (all screens fully implemented)
-- [x] `NavigationView` — turn HUD, TurnArrow, approaching-turn pulse, SpeedWidget, reverse overlay
-- [x] `ControlHubView` — TabBar component, auto-switch on call/reverse, live status bar
-- [x] `ClimateView` — dual temp zones, fan bar, AC/recirc/mode, seat heat
-- [x] `AudioView` — BT/FM/AM/SXM/AUX, media controls, volume slider
-- [x] `NavCompanionView` — ft/mi countdown, ETA, remaining, speed vs limit, rerouting banner
-- [x] `PhoneView` — active call display, mute/end/keypad, DTMF overlay, call timer
-- [x] `IncomingCallView` — incoming call screen with answer/decline
+
+- [x] `VehicleService` (66 Q_PROPERTYs) — SocketCAN (can0/can1/can2); CAN parsing for ignition (0x292), doors (0x358), wipers (0x35D), cruise+coolant (0x551), BCM/battery (0x625), TPMS (0x385), oil life (0x54C), fuel economy (0x554), drive mode (0x2DC), ATTESA torque split (0x1CA), key slot (0x35B); HVAC write via r51-ecu path (0x540/0x541); UDS door lock/unlock via 0x745; ADAS aid frame (0x47D). ButtonLogger on all 3 buses
+- [x] `NavigationService` (11 Q_PROPERTYs) — GPSD TCP, Valhalla HTTP, route parsing, rerouting, upcoming lane-info stub for lane guidance widget
+- [x] `AudioService` (30 Q_PROPERTYs) — BlueZ D-Bus AVRCP (guarded with `HAVE_QT_DBUS`), DENSO proxy IPC, ALSA volume; SSV speed-gain consumer, RDS PS/RT decode (FM dual-line), per-source 6-preset memory persisted via SettingsService
+- [x] `SearchService` — offline geocoding on port 4000 (Photon/Pelias-compatible, graceful if absent)
+- [x] `ProfileService` (11 Q_PROPERTYs) — driver profile persistence; key-fob slot binding
+- [x] `SettingsService` (53 Q_PROPERTYs) — JSON persistence, atomic write, 5s debounce, profile sync; added: per-screen brightness, day/night-auto, clock 12h/24h + timezone, units mph/kmh/°F/°C/MPG, BT device list (UI shell), language, software/map/build version, uptime, speed-alert threshold, audio presets blob, drive-mode personal config blob, factory reset
+- [x] `NetworkService` (5 Q_PROPERTYs) — Wi-Fi vs LTE TCU auto-detect, mode flag persistence
+- [x] `WeatherService` (10 Q_PROPERTYs) — open-API current + forecast, CAN ambient temp fallback
+- [x] `FuelService` (7 Q_PROPERTYs) — fuel level tracker, low-fuel banner trigger
+- [x] `TripLoggerService` (15 Q_PROPERTYs) — per-ignition-cycle GPX writer; trip A/B meters; history index in `/data/q60nav/trips/`
+- [x] `ParkingService` (4 Q_PROPERTYs) — last-parked GPS coord + timestamp; `navigateToCar()` invokable
+- [x] `StatusBridge` (21 Q_PROPERTYs) — full signal wiring, clock, cross-screen coordination, call routing, AVM activation
+- [x] `MapLibreItem` (8 Q_PROPERTYs) — QQuickItem Phase 3 stub; `RendererFrontend` / `OffscreenBackend` API correct; EGL pbuffer wiring TODO
+
+### QML UI (15 screens + 7 components — all implemented)
+
+**Upper screen (NavigationView 800×480):**
+- [x] `NavigationView` — turn HUD, TurnArrow, approaching-turn pulse, SpeedWidget, cruise bubble, rerouting banner
+- [x] `RearCameraView` — loaded via Loader, full 800×480, 3-zone trapezoid guides, isolated `CameraFeed.qml` (sole QtMultimedia import)
+- [x] `IncomingCallView` — overlay on both screens (z:100)
 - [x] `VoiceCommandView` — voice activation overlay
-- [x] `VehicleStatusView` — door diagram (all 4 + trunk), fuel arc, coolant bar (°F live), RPM; all bound to real VehicleService properties
-- [x] Components: `TurnArrow`, `SpeedWidget`, `FanControl`, `TempZone`, `TabBar`, `StatusBar`
+
+**Lower screen (ControlHubView 800×420 — 5-tab nav):**
+- [x] `ControlHubView` — 5-tab bottom nav (Home/Audio/Phone/Climate/Vehicle); auto-switch on call/reverse; status bar
+- [x] `NavCompanionView` (Home) — ft/mi countdown, ETA, remaining, speed vs limit
+- [x] `AudioView` — BT/FM/AM/SXM/AUX, OEM transport layout, pinned preset bar
+- [x] `PhoneView` — DTMF pad, contacts/recent stubs, persistent 88px answer/end/mute panel
+- [x] `ClimateView` — dual temp zones, full-width fan bar, AC/recirc/mode, seat heat
+- [x] `VehicleStatusView` — drive mode, door diagram, fuel arc, coolant bar, RPM (bound to VehicleService)
+
+**Settings & Info sub-screens (reachable from gear icon / Info button):**
+- [x] `SettingsView` — display/nav/audio/system sub-panels; backed by SettingsService persistence
+- [x] `ProfileView` — driver profile picker, key-fob slot binding
+- [x] `InfoView` — firmware, CAN status, GPS fix, uptime
+
+**Components:** `TurnArrow`, `SpeedWidget`, `FanControl`, `TempZone`, `TabBar`, `StatusBar`, `WelcomeOverlay`, `CameraFeed`
 
 ### Device Init System
 - [x] `inittab` — SysV runlevel 5, watchdog respawn
@@ -169,18 +190,35 @@ Read IDs confirmed via opendbc/carhack/Leaf AZE0 DBC cross-reference. **Write pa
 
 | Frame | ID | Status | Notes |
 |---|---|---|---|
-| Speed, RPM, brake, gear, cluster | 0x280, 0x1F9, 0x354, 0x421, 0x5C5 | CONFIRMED read | Cross-platform Nissan/Infiniti |
+| Steering angle | 0x002 | CONFIRMED read | |
+| Steering torque | 0x185 | CONFIRMED read | |
+| RPM | 0x1F9 | CONFIRMED read | |
+| Speed | 0x280 | CONFIRMED read | |
+| Wheel speed front | 0x284 | CONFIRMED read | |
+| Wheel speed rear | 0x285 | CONFIRMED read | |
 | Ignition state | 0x292 | Q50_LIKELY | bit0=ACC bit1=IGN bit2=START |
+| Brake | 0x354 | CONFIRMED read | |
 | Door / trunk open | 0x358 | Q50_LIKELY | byte 0 bits 0-4, all 5 states parsed |
 | Wiper state | 0x35D | Q50_LIKELY | byte 2: 0=off 1=slow 2=fast 3=one-shot |
-| Cruise + coolant temp | 0x551 | Q50_LIKELY | byte 0 cruise bits, byte 6 coolant (0.5°C/LSB -40°C) |
-| BCM extended (battery/defrost) | 0x625 | Q50_LIKELY READ ONLY | byte 1 defrost, byte 2 battery ×0.1V; was mislabeled CAN_SEAT_HEAT |
+| Key slot detect | 0x35B | UNVERIFIED | BCM key slot broadcast (ProfileService) |
+| TPMS — 4 tire PSI | 0x385 | Q50_LIKELY | Per-corner pressure broadcast |
+| Gear | 0x421 | CONFIRMED read | |
+| Cluster | 0x5C5 | CONFIRMED read | |
+| Outside temp | 0x510 | CONFIRMED read | |
 | HVAC status read | 0x54A, 0x54B | CONFIRMED read | Leaf AZE0 DBC |
 | HVAC write (temp/mode) | 0x540 | Q50_LIKELY write | From r51-ecu (R51 Pathfinder, same Denso amp) |
 | HVAC write (fan) | 0x541 | Q50_LIKELY write | From r51-ecu |
-| Body / BCM | 0x60D | CONFIRMED read | carhack 370Z |
+| Cruise + coolant temp | 0x551 | Q50_LIKELY | byte 0 cruise bits, byte 6 coolant (0.5°C/LSB -40°C) |
+| Oil life | 0x54C | Q50_LIKELY | 0.0–100.0 % |
+| Fuel economy | 0x554 | Q50_LIKELY | Trip + instantaneous MPG |
+| Drive mode (active broadcast) | 0x266 | UNVERIFIED | Current mode |
+| Drive mode (command) | 0x2DC | Q50_LIKELY | Mode selector write |
+| ATTESA AWD torque split | 0x1CA | Q50_LIKELY | Front/rear % |
+| BCM body status | 0x60D | CONFIRMED read | carhack 370Z |
+| BCM extended (battery/defrost) | 0x625 | Q50_LIKELY READ ONLY | byte 1 defrost, byte 2 battery ×0.1V |
 | AV buttons | 0x681 | Q50_LIKELY | Leaf AV-CAN DBC |
 | BCM door lock (UDS) | 0x745 | Q50_LIKELY write | Service 0x30 DID 0xBF00; warns before sending |
+| ADAS aid control (BSW/LDW/etc) | 0x47D | UNVERIFIED write | Composed in `sendADASFrame()` |
 | Bose wake | 0x3B3 | UNVERIFIED | Sniff AV-CAN at amp connector |
 | Seat heat write | 0xFFFF | UNVERIFIED PLACEHOLDER | Blocked until J2534 capture |
 

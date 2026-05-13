@@ -16,6 +16,9 @@
 #include <QObject>
 #include <QTimer>
 #include <QString>
+#include <QStringList>
+#include <QVariantList>
+#include <QDateTime>
 
 class ProfileService;
 
@@ -24,17 +27,21 @@ class SettingsService : public QObject
     Q_OBJECT
 
     // ── Display ────────────────────────────────────────────────────────────
-    Q_PROPERTY(int  upperBrightness READ upperBrightness WRITE setUpperBrightness NOTIFY displayChanged)
-    Q_PROPERTY(int  lowerBrightness READ lowerBrightness WRITE setLowerBrightness NOTIFY displayChanged)
-    Q_PROPERTY(int  dayNightMode    READ dayNightMode    WRITE setDayNightMode    NOTIFY displayChanged)
+    Q_PROPERTY(int  upperBrightness   READ upperBrightness   WRITE setUpperBrightness   NOTIFY displayChanged)
+    Q_PROPERTY(int  lowerBrightness   READ lowerBrightness   WRITE setLowerBrightness   NOTIFY displayChanged)
+    Q_PROPERTY(int  dayNightMode      READ dayNightMode      WRITE setDayNightMode      NOTIFY displayChanged)
     // 0=Auto 1=Day 2=Night
+    Q_PROPERTY(int  autoDimThreshold  READ autoDimThreshold  WRITE setAutoDimThreshold  NOTIFY displayChanged)
+    // lux threshold (0–1000) — engages day mode below this value when dayNightMode=Auto
 
     // ── Clock ──────────────────────────────────────────────────────────────
-    Q_PROPERTY(int  timeFormat   READ timeFormat   WRITE setTimeFormat   NOTIFY clockChanged)
+    Q_PROPERTY(int  timeFormat     READ timeFormat     WRITE setTimeFormat     NOTIFY clockChanged)
     // 0=12h 1=24h
-    Q_PROPERTY(bool gpsSync      READ gpsSync      WRITE setGpsSync      NOTIFY clockChanged)
-    Q_PROPERTY(int  clockHour    READ clockHour    WRITE setClockHour    NOTIFY clockChanged)
-    Q_PROPERTY(int  clockMinute  READ clockMinute  WRITE setClockMinute  NOTIFY clockChanged)
+    Q_PROPERTY(bool gpsSync        READ gpsSync        WRITE setGpsSync        NOTIFY clockChanged)
+    Q_PROPERTY(int  clockHour      READ clockHour      WRITE setClockHour      NOTIFY clockChanged)
+    Q_PROPERTY(int  clockMinute    READ clockMinute    WRITE setClockMinute    NOTIFY clockChanged)
+    Q_PROPERTY(int  timezoneOffset READ timezoneOffset WRITE setTimezoneOffset NOTIFY clockChanged)
+    // hours offset from UTC, -12 to +14
 
     // ── Units ──────────────────────────────────────────────────────────────
     Q_PROPERTY(int distanceUnit READ distanceUnit WRITE setDistanceUnit NOTIFY unitsChanged)
@@ -42,7 +49,7 @@ class SettingsService : public QObject
     Q_PROPERTY(int tempUnit     READ tempUnit     WRITE setTempUnit     NOTIFY unitsChanged)
     // 0=°F 1=°C
     Q_PROPERTY(int fuelUnit     READ fuelUnit     WRITE setFuelUnit     NOTIFY unitsChanged)
-    // 0=MPG 1=L/100km
+    // 0=MPG 1=L/100km 2=km/L
 
     // ── Navigation ────────────────────────────────────────────────────────
     Q_PROPERTY(bool voiceGuidance   READ voiceGuidance   WRITE setVoiceGuidance   NOTIFY navChanged)
@@ -59,6 +66,17 @@ class SettingsService : public QObject
 
     // ── Vehicle ───────────────────────────────────────────────────────────
     Q_PROPERTY(bool vdcEnabled READ vdcEnabled WRITE setVdcEnabled NOTIFY vehicleChanged)
+    // Active Sound Control (Bose engine sound enhancement) — persisted mirror of
+    // VehicleService.ascEnabled. On boot, apply via VehicleService::setAscEnabled.
+    Q_PROPERTY(bool ascEnabled READ ascEnabled WRITE setAscEnabled NOTIFY ascEnabledChanged)
+    // Track-mode composite preferences JSON blob (schema documented in cpp).
+    // Same pattern as audioPresets / driveModePersonalConfig (manual setter).
+    Q_PROPERTY(QString trackModeConfig READ trackModeConfig WRITE setTrackModeConfig NOTIFY trackModeConfigChanged)
+
+    // ── Speed alert ───────────────────────────────────────────────────────
+    // Threshold (mph) added on top of the posted speed limit before the speed
+    // badge turns red and the "⚠ SPEED" warning pill animates in. Default 5.
+    Q_PROPERTY(int speedAlertThreshold READ speedAlertThreshold WRITE setSpeedAlertThreshold NOTIFY navChanged)
 
     // ── Lights ────────────────────────────────────────────────────────────
     Q_PROPERTY(int  lightShutoff           READ lightShutoff           WRITE setLightShutoff           NOTIFY lightsChanged)
@@ -96,6 +114,9 @@ class SettingsService : public QObject
     Q_PROPERTY(bool seatbeltReminder       READ seatbeltReminder       WRITE setSeatbeltReminder       NOTIFY comfortChanged)
     Q_PROPERTY(int  parkAssistChimeVolume  READ parkAssistChimeVolume  WRITE setParkAssistChimeVolume  NOTIFY comfortChanged)
     // 0=Off 1=Low 2=Med 3=High
+    // BCM-unlock comfort toggles (factory disables on US firmware; placeholder CAN writes)
+    Q_PROPERTY(bool fobLockHoldCloses      READ fobLockHoldCloses      WRITE setFobLockHoldCloses      NOTIFY comfortChanged)
+    Q_PROPERTY(bool allWindowsOneTouch     READ allWindowsOneTouch     WRITE setAllWindowsOneTouch     NOTIFY comfortChanged)
 
     // ── Map ───────────────────────────────────────────────────────────────
     Q_PROPERTY(int  mapOrientation    READ mapOrientation    WRITE setMapOrientation    NOTIFY mapSettingsChanged)
@@ -107,6 +128,35 @@ class SettingsService : public QObject
     // ── Maintenance ───────────────────────────────────────────────────────
     Q_PROPERTY(int maintenanceInterval READ maintenanceInterval WRITE setMaintenanceInterval NOTIFY maintenanceChanged)
     // 0=3k 1=5k 2=7.5k 3=10k
+
+    // ── Bluetooth (UI shell — real BlueZ pairing pending hardware) ───────
+    // Devices are stored as a list of QVariantMap rows:
+    //   { "name": "Phone (Driver)", "mac": "AA:BB:CC:DD:EE:FF",
+    //     "priority": 0, "connected": false }
+    Q_PROPERTY(QVariantList btDevices READ btDevices NOTIFY btDevicesChanged)
+
+    // ── Language (UI shell — real i18n binding is post-MVP) ──────────────
+    Q_PROPERTY(int language READ language WRITE setLanguage NOTIFY languageChanged)
+    // 0=English 1=Spanish 2=French 3=Japanese
+
+    // ── System (read-only build / runtime metadata) ──────────────────────
+    Q_PROPERTY(QString softwareVersion READ softwareVersion CONSTANT)
+    Q_PROPERTY(QString mapDataVersion  READ mapDataVersion  CONSTANT)
+    Q_PROPERTY(QString buildDate       READ buildDate       CONSTANT)
+    Q_PROPERTY(qint64  uptimeMs        READ uptimeMs        NOTIFY uptimeChanged)
+
+    // ── Audio presets (per-source 6-slot preset memory) ────────────────────
+    // JSON-encoded blob owned by AudioService; this is the persistence handle.
+    Q_PROPERTY(QString audioPresets READ audioPresets WRITE setAudioPresets NOTIFY audioPresetsChanged)
+
+    // ── Drive mode (Personal config) ──────────────────────────────────────
+    // JSON-encoded sliders for the 6th drive mode ("Personal"). Schema:
+    //   { "throttle": 0-100, "steering": 0-100,
+    //     "trace":    0-100, "engineBrake": 0-100, "asm": 0-100 }
+    Q_PROPERTY(QString driveModePersonalConfig
+               READ driveModePersonalConfig
+               WRITE setDriveModePersonalConfig
+               NOTIFY driveModePersonalConfigChanged)
 
 public:
     explicit SettingsService(QObject *parent = nullptr);
@@ -126,14 +176,26 @@ public:
     // Force immediate save (bypasses debounce)
     Q_INVOKABLE void saveNow();
 
+    // Factory reset — wipe in-memory state, delete settings.json on disk,
+    // re-emit every Changed signal so QML rebinds to fresh defaults.
+    Q_INVOKABLE void resetToDefaults();
+
+    // ── Bluetooth UI actions (mock — TODO: wire to BlueZ) ────────────────
+    Q_INVOKABLE void btForgetDevice(const QString &mac);
+    Q_INVOKABLE void btSetPriority(const QString &mac, int delta); // +1 up, -1 down
+    Q_INVOKABLE void btToggleConnect(const QString &mac);
+    Q_INVOKABLE void btAddMockDevice(const QString &name);          // pairing-flow shim
+
     // ── Property accessors ──────────────────────────────────────────────
     int  upperBrightness()       const { return m_upperBrightness; }
     int  lowerBrightness()       const { return m_lowerBrightness; }
     int  dayNightMode()          const { return m_dayNightMode; }
+    int  autoDimThreshold()      const { return m_autoDimThreshold; }
     int  timeFormat()            const { return m_timeFormat; }
     bool gpsSync()               const { return m_gpsSync; }
     int  clockHour()             const { return m_clockHour; }
     int  clockMinute()           const { return m_clockMinute; }
+    int  timezoneOffset()        const { return m_timezoneOffset; }
     int  distanceUnit()          const { return m_distanceUnit; }
     int  tempUnit()              const { return m_tempUnit; }
     int  fuelUnit()              const { return m_fuelUnit; }
@@ -146,6 +208,9 @@ public:
     bool clickSounds()           const { return m_clickSounds; }
     int  navPromptVolume()       const { return m_navPromptVolume; }
     bool vdcEnabled()            const { return m_vdcEnabled; }
+    bool ascEnabled()            const { return m_ascEnabled; }
+    QString trackModeConfig()    const { return m_trackModeConfig; }
+    int  speedAlertThreshold()   const { return m_speedAlertThreshold; }
     int  lightShutoff()          const { return m_lightShutoff; }
     int  headlightSensitivity()  const { return m_headlightSensitivity; }
     bool drlEnabled()            const { return m_drlEnabled; }
@@ -165,19 +230,31 @@ public:
     bool powerWindowAutoOpen()   const { return m_powerWindowAutoOpen; }
     bool seatbeltReminder()      const { return m_seatbeltReminder; }
     int  parkAssistChimeVolume() const { return m_parkAssistChimeVolume; }
+    bool fobLockHoldCloses()     const { return m_fobLockHoldCloses; }
+    bool allWindowsOneTouch()    const { return m_allWindowsOneTouch; }
     int  mapOrientation()        const { return m_mapOrientation; }
     bool speedLimitDisplay()     const { return m_speedLimitDisplay; }
     int  mapDetailLevel()        const { return m_mapDetailLevel; }
-    int  maintenanceInterval()   const { return m_maintenanceInterval; }
+    int     maintenanceInterval()       const { return m_maintenanceInterval; }
+    int     language()                  const { return m_language; }
+    QVariantList btDevices()            const { return m_btDevices; }
+    QString softwareVersion()           const { return m_softwareVersion; }
+    QString mapDataVersion()            const { return m_mapDataVersion; }
+    QString buildDate()                 const { return m_buildDate; }
+    qint64  uptimeMs()                  const;
+    QString audioPresets()              const { return m_audioPresets; }
+    QString driveModePersonalConfig()   const { return m_driveModePersonalConfig; }
 
     // ── Setters (each arms the save debounce) ───────────────────────────
     void setUpperBrightness(int v);
     void setLowerBrightness(int v);
     void setDayNightMode(int v);
+    void setAutoDimThreshold(int v);
     void setTimeFormat(int v);
     void setGpsSync(bool v);
     void setClockHour(int v);
     void setClockMinute(int v);
+    void setTimezoneOffset(int v);
     void setDistanceUnit(int v);
     void setTempUnit(int v);
     void setFuelUnit(int v);
@@ -190,6 +267,9 @@ public:
     void setClickSounds(bool v);
     void setNavPromptVolume(int v);
     void setVdcEnabled(bool v);
+    void setAscEnabled(bool v);                       // manual setter — same pattern as audioPresets
+    void setTrackModeConfig(const QString &v);        // manual setter
+    void setSpeedAlertThreshold(int v);
     void setLightShutoff(int v);
     void setHeadlightSensitivity(int v);
     void setDrlEnabled(bool v);
@@ -209,10 +289,15 @@ public:
     void setPowerWindowAutoOpen(bool v);
     void setSeatbeltReminder(bool v);
     void setParkAssistChimeVolume(int v);
+    void setFobLockHoldCloses(bool v);
+    void setAllWindowsOneTouch(bool v);
     void setMapOrientation(int v);
     void setSpeedLimitDisplay(bool v);
     void setMapDetailLevel(int v);
     void setMaintenanceInterval(int v);
+    void setLanguage(int v);
+    void setAudioPresets(const QString &v);
+    void setDriveModePersonalConfig(const QString &json);
 
 signals:
     void displayChanged();
@@ -221,6 +306,8 @@ signals:
     void navChanged();
     void audioSettingsChanged();
     void vehicleChanged();
+    void ascEnabledChanged();
+    void trackModeConfigChanged();
     void lightsChanged();
     void locksChanged();
     void mirrorsChanged();
@@ -228,24 +315,35 @@ signals:
     void comfortChanged();
     void mapSettingsChanged();
     void maintenanceChanged();
+    void btDevicesChanged();
+    void languageChanged();
+    void uptimeChanged();
+    void audioPresetsChanged();
+    void driveModePersonalConfigChanged();
 
 private slots:
     void onSaveTimerFired();
+    void onUptimeTimerFired();
 
 private:
     QString settingsFilePath() const;
     void    loadFromDisk();
     void    saveToDisk();
     void    armSaveTimer();
+    void    seedDefaultBtDevices();
+    void    emitAllChanged();
+    QString readMapDataVersion() const;
 
     // ── Data members — defaults match SettingsView.qml ─────────────────
     int  m_upperBrightness       = 80;
     int  m_lowerBrightness       = 80;
     int  m_dayNightMode          = 0;
+    int  m_autoDimThreshold      = 100;   // lux
     int  m_timeFormat            = 0;
     bool m_gpsSync               = true;
     int  m_clockHour             = 12;
     int  m_clockMinute           = 0;
+    int  m_timezoneOffset        = -5;    // EST default
     int  m_distanceUnit          = 0;
     int  m_tempUnit              = 0;
     int  m_fuelUnit              = 0;
@@ -258,6 +356,16 @@ private:
     bool m_clickSounds           = true;
     int  m_navPromptVolume       = 80;
     bool m_vdcEnabled            = true;
+    // Active Sound Control — true matches factory default (engine sound ON).
+    bool m_ascEnabled            = true;
+    // Track-mode preferences JSON — defaults match VehicleService::TrackModePreferences.
+    QString m_trackModeConfig    = QStringLiteral(
+        "{\"throttleMap\":\"max\","
+        "\"atessaBias\":\"rwd_pref\","
+        "\"ascOff\":true,"
+        "\"audioProfile\":\"dry\","
+        "\"gaugesSubTab\":\"track\"}");
+    int  m_speedAlertThreshold   = 5;
     int  m_lightShutoff          = 2;
     int  m_headlightSensitivity  = 1;
     bool m_drlEnabled            = true;
@@ -277,11 +385,24 @@ private:
     bool m_powerWindowAutoOpen   = true;
     bool m_seatbeltReminder      = true;
     int  m_parkAssistChimeVolume = 2;
+    bool m_fobLockHoldCloses     = false;  // JDM/EU comfort close — US firmware disables
+    bool m_allWindowsOneTouch    = false;  // factory only one-touches driver window
     int  m_mapOrientation        = 0;
     bool m_speedLimitDisplay     = true;
     int  m_mapDetailLevel        = 1;
     int  m_maintenanceInterval   = 1;
+    int  m_language              = 0;
+    QVariantList m_btDevices;             // seeded in ctor
+    QString m_audioPresets;               // JSON blob — empty = use AudioService compiled defaults
+    QString m_driveModePersonalConfig;    // JSON; empty == defaults (50 across all 5 axes)
+
+    // System metadata (set in ctor, never mutates after)
+    QString m_softwareVersion;
+    QString m_mapDataVersion;
+    QString m_buildDate;
+    qint64  m_bootTime           = 0;     // QDateTime::currentMSecsSinceEpoch() at ctor
 
     QTimer        *m_saveTimer   = nullptr;
+    QTimer        *m_uptimeTimer = nullptr;
     ProfileService *m_profileSvc = nullptr;
 };

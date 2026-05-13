@@ -4,8 +4,14 @@
 // BlueZ 5 controlled via D-Bus
 
 #include "AudioService.h"
+#include "../settings/SettingsService.h"
+#include "../vehicle/VehicleService.h"
 #include <QDebug>
 #include <QProcess>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <cmath>
 #ifdef HAVE_QT_DBUS
 #include <QDBusConnection>
 #include <QDBusInterface>
@@ -71,6 +77,13 @@ void AudioService::start()
     // DENSO proxies are started in start.sh — connect to their stdout
     // for status updates via named pipes on /tmp/sxm.sock, /tmp/fm.sock if present.
 
+    // Stub: wire FM/SXM proxy stdout readers. radiofc.out / sxmcgs.out are spawned
+    // by start.sh — we'd attach a QSocketNotifier on /tmp/radiofc.status in the
+    // final integration. For now, if QProcess instances are populated externally,
+    // parse their stdout for status lines.
+    connect(&m_fmProxy,  &QProcess::readyReadStandardOutput, this, &AudioService::onFmProxyData);
+    connect(&m_sxmProxy, &QProcess::readyReadStandardOutput, this, &AudioService::onSxmProxyData);
+
 #ifdef HAVE_QT_DBUS
     // BlueZ D-Bus monitoring
     QDBusConnection bus = QDBusConnection::systemBus();
@@ -82,6 +95,122 @@ void AudioService::start()
     qputenv("PULSE_SINK", "bluez_sink.auto");
 
     qDebug() << "[AudioService] started";
+}
+
+// ─── Dependency wiring (called from main.cpp after all services constructed) ──
+void AudioService::wireDependencies(SettingsService *settings, VehicleService *vehicle)
+{
+    m_settings = settings;
+    m_vehicle  = vehicle;
+
+    if (m_settings) {
+        loadPresetsFromSettings();
+        // Keep our in-memory presets in sync with external mutations (profile
+        // switch, manual edit on disk).  Re-load if the blob changes from
+        // anything other than our own write.
+        connect(m_settings, &SettingsService::audioPresetsChanged, this, [this]() {
+            if (!m_loadingPresets) loadPresetsFromSettings();
+        });
+    }
+
+    if (m_vehicle) {
+        connect(m_vehicle, &VehicleService::speedChanged,
+                this, &AudioService::onVehicleSpeedChanged);
+    }
+}
+
+// ─── Preset persistence ───────────────────────────────────────────────────────
+//
+// Encoding:
+//   {"FM":[{"freq":101.5,"name":"WBOS"}, ...],
+//    "AM":[{"freq":1010.0,"name":""}, ...],
+//    "SXM":[{"freq":22.0,"name":"The Spectrum"}, ...]}
+//
+// SXM stores channel number in "freq" for schema simplicity.
+//
+void AudioService::loadPresetsFromSettings()
+{
+    if (!m_settings) return;
+
+    const QString blob = m_settings->audioPresets();
+    if (blob.isEmpty()) return;  // first boot — keep compiled defaults
+
+    const QJsonDocument doc = QJsonDocument::fromJson(blob.toUtf8());
+    if (!doc.isObject()) {
+        qWarning() << "[AudioService] audioPresets blob is not a JSON object — ignoring";
+        return;
+    }
+
+    auto applyList = [](const QJsonArray &arr, QVariantList &dst) {
+        for (int i = 0; i < 6 && i < arr.size(); ++i) {
+            const QJsonObject o = arr.at(i).toObject();
+            QVariantMap entry = dst[i].toMap();
+            entry["freq"] = o.value("freq").toDouble(0.0);
+            entry["name"] = o.value("name").toString();
+            dst[i] = entry;
+        }
+    };
+
+    m_loadingPresets = true;
+    const QJsonObject root = doc.object();
+    applyList(root.value("FM").toArray(),  m_fmPresets);
+    applyList(root.value("AM").toArray(),  m_amPresets);
+    applyList(root.value("SXM").toArray(), m_sxmPresets);
+    m_loadingPresets = false;
+
+    emit presetsChanged();
+    qDebug() << "[AudioService] Loaded presets from SettingsService";
+}
+
+void AudioService::writePresetsToSettings()
+{
+    if (!m_settings || m_loadingPresets) return;
+
+    auto toArray = [](const QVariantList &src) {
+        QJsonArray arr;
+        for (const QVariant &v : src) {
+            const QVariantMap m = v.toMap();
+            QJsonObject o;
+            o["freq"] = m.value("freq").toDouble();
+            o["name"] = m.value("name").toString();
+            arr.append(o);
+        }
+        return arr;
+    };
+
+    QJsonObject root;
+    root["FM"]  = toArray(m_fmPresets);
+    root["AM"]  = toArray(m_amPresets);
+    root["SXM"] = toArray(m_sxmPresets);
+
+    const QString blob = QString::fromUtf8(
+        QJsonDocument(root).toJson(QJsonDocument::Compact));
+    m_settings->setAudioPresets(blob);
+}
+
+// ─── SSV gain ─────────────────────────────────────────────────────────────────
+// gain = base * (1 + (speed/50) * (sensitivity/5) * 0.3)
+// Applied as a transient multiplier on top of m_volume via ALSA Master.
+// Only effective when ssvLevel > 0.
+void AudioService::onVehicleSpeedChanged(float kph)
+{
+    m_speedKph = kph;
+    applySpeedGain();
+}
+
+void AudioService::applySpeedGain()
+{
+    if (m_ssvLevel <= 0) return;  // SSV off — leave volume alone
+
+    const double sensitivity = m_ssvLevel;          // 1..5
+    const double speed       = std::max(0.0f, m_speedKph);
+    const double factor      = 1.0 + (speed / 50.0) * (sensitivity / 5.0) * 0.3;
+    const int    adjusted    = qBound(0, int(std::lround(m_volume * factor)), 100);
+
+    // Don't store as m_volume — the user's setpoint is sacred.  Apply to ALSA
+    // directly so the slider continues to reflect the user's choice.
+    QString cmd = QString("amixer -q sset Master %1%").arg(adjusted);
+    QProcess::startDetached("sh", {"-c", cmd});
 }
 
 // ─── Source control ────────────────────────────────────────────────────────────
@@ -120,8 +249,13 @@ void AudioService::setVolume(int vol)
     m_volume = qBound(0, vol, 100);
     emit volumeChanged(m_volume);
 
-    QString cmd = QString("amixer -q sset Master %1%").arg(m_volume);
-    QProcess::startDetached("sh", {"-c", cmd});
+    if (m_ssvLevel > 0) {
+        // Let applySpeedGain do the ALSA write — it factors the user setpoint
+        applySpeedGain();
+    } else {
+        QString cmd = QString("amixer -q sset Master %1%").arg(m_volume);
+        QProcess::startDetached("sh", {"-c", cmd});
+    }
 }
 
 void AudioService::setMuted(bool muted)
@@ -235,6 +369,10 @@ void AudioService::setAudioPilot(bool on)
 {
     m_audioPilotOn = on;
     emit boseChanged();
+    // TODO: Bose DSP byte encoding via sound.out IPC not yet reverse-engineered.
+    //       Logging the placeholder command string we'd send.
+    qDebug() << "[AudioService][DSP-TODO] would send to /tmp/sound.cmd:"
+             << QString("AUDIOPILOT %1").arg(on ? 1 : 0);
     sendProxyCommand("audiofc", QString("AUDIOPILOT %1").arg(on ? 1 : 0));
 }
 
@@ -242,6 +380,8 @@ void AudioService::setCenterpoint(bool on)
 {
     m_centerpointOn = on;
     emit boseChanged();
+    qDebug() << "[AudioService][DSP-TODO] would send to /tmp/sound.cmd:"
+             << QString("CENTERPOINT %1").arg(on ? 1 : 0);
     sendProxyCommand("audiofc", QString("CENTERPOINT %1").arg(on ? 1 : 0));
 }
 
@@ -249,6 +389,8 @@ void AudioService::setSurround(bool on)
 {
     m_surroundOn = on;
     emit boseChanged();
+    qDebug() << "[AudioService][DSP-TODO] would send to /tmp/sound.cmd:"
+             << QString("SURROUND %1").arg(on ? 1 : 0);
     sendProxyCommand("audiofc", QString("SURROUND %1").arg(on ? 1 : 0));
 }
 
@@ -256,6 +398,8 @@ void AudioService::setDriverStage(bool on)
 {
     m_driverStageOn = on;
     emit boseChanged();
+    qDebug() << "[AudioService][DSP-TODO] would send to /tmp/sound.cmd:"
+             << QString("DRIVERSTAGE %1").arg(on ? 1 : 0);
     sendProxyCommand("audiofc", QString("DRIVERSTAGE %1").arg(on ? 1 : 0));
 }
 
@@ -264,7 +408,19 @@ void AudioService::setSSVLevel(int level)
 {
     m_ssvLevel = qBound(0, level, 5);
     emit ssvChanged();
+    // TODO: DSP SSV command via sound.out — string below is the placeholder
+    //       IPC payload until the protocol is reverse-engineered.
+    qDebug() << "[AudioService][DSP-TODO] would send to /tmp/sound.cmd:"
+             << QString("SSV %1").arg(m_ssvLevel);
     sendProxyCommand("audiofc", QString("SSV %1").arg(m_ssvLevel));
+
+    // If SSV just turned off, restore master to user's setpoint
+    if (m_ssvLevel == 0) {
+        QString cmd = QString("amixer -q sset Master %1%").arg(m_volume);
+        QProcess::startDetached("sh", {"-c", cmd});
+    } else {
+        applySpeedGain();
+    }
 }
 
 // ─── Preset slots ─────────────────────────────────────────────────────────────
@@ -279,14 +435,24 @@ void AudioService::savePreset(int slot)
     if (!list) return;
 
     QVariantMap entry = (*list)[slot].toMap();
-    entry["freq"] = m_fmFrequency;
-    // Name: leave blank for user to edit later (hardware UI doesn't have text entry)
+    if (m_source == SXM) {
+        // SXM uses channel number stored in "freq"; auto-label from sxmName
+        entry["freq"] = m_sxmChannel.toDouble();
+        if (!m_sxmName.isEmpty()) entry["name"] = m_sxmName;
+    } else {
+        entry["freq"] = m_fmFrequency;
+        // FM auto-label from current station name (if RDS produced one)
+        if (m_source == FM && !m_fmStationName.isEmpty())
+            entry["name"] = m_fmStationName;
+    }
     (*list)[slot] = entry;
 
     m_activePresetIndex = slot;
     emit presetsChanged();
+    writePresetsToSettings();
 
-    qDebug() << "[AudioService] Saved preset" << slot << "=" << m_fmFrequency;
+    qDebug() << "[AudioService] Saved preset" << slot << "for source" << m_source
+             << "freq=" << entry["freq"].toDouble() << "name=" << entry["name"].toString();
 }
 
 void AudioService::recallPreset(int slot)
@@ -379,7 +545,43 @@ void AudioService::onSxmProxyData()
 
 void AudioService::onFmProxyData()
 {
-    // Parse FM proxy: RDS station name, frequency confirmation, RDS text
+    // Parse FM proxy stdout / status pipe for RDS frames.
+    // Expected (stubbed) line formats from radiofc.out:
+    //   "RDS PS WBOS"               → station name (program service)
+    //   "RDS RT Song Title - Artist" → radio text segment
+    //   "FREQ 101.5"                 → frequency confirmation
+    while (m_fmProxy.canReadLine()) {
+        const QString line = QString::fromUtf8(m_fmProxy.readLine()).trimmed();
+        if (!line.isEmpty()) parseRdsLine(line);
+    }
+}
+
+void AudioService::parseRdsLine(const QString &line)
+{
+    // Minimal RDS PS/RT parser — final implementation will live in the DENSO
+    // proxy bridge once the radiofc.out frame format is reverse-engineered.
+    if (line.startsWith("RDS PS ")) {
+        const QString ps = line.mid(7).trimmed();
+        if (ps != m_fmStationName) {
+            m_fmStationName = ps;
+            // Keep m_fmStation in sync for the existing centred-station Text
+            if (m_fmStation != ps) m_fmStation = ps;
+            emit fmChanged();
+        }
+    } else if (line.startsWith("RDS RT ")) {
+        const QString rt = line.mid(7).trimmed();
+        if (rt != m_fmSongTitle) {
+            m_fmSongTitle = rt;
+            m_rdsText     = rt;   // legacy ticker continues to bind to rdsText
+            emit fmChanged();
+        }
+    } else if (line.startsWith("FREQ ")) {
+        const double mhz = line.mid(5).toDouble();
+        if (mhz > 0.0 && qAbs(mhz - m_fmFrequency) > 0.05) {
+            m_fmFrequency = mhz;
+            emit fmChanged();
+        }
+    }
 }
 
 void AudioService::onBluetoothMetadata(const QString &title, const QString &artist)

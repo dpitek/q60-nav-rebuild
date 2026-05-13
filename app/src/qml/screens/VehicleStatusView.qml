@@ -1,5 +1,5 @@
 // VehicleStatusView.qml — Vehicle information center
-// 5 sub-tabs: Info | Drive | ADAS | ATTESA | Diag
+// 6 sub-tabs: Info | Drive | ADAS | ATTESA | Diag | Track
 // Content area: 800×360 (800×420 minus 60px nav bar)
 import QtQuick 6.6
 
@@ -11,13 +11,78 @@ Item {
     Rectangle { anchors.fill: parent; color: "#000000" }
 
     // ── Sub-tab state ──────────────────────────────────────────────────────────
-    property int activeTab: 0   // 0=Info 1=Drive 2=ADAS 3=ATTESA 4=Diag
+    property int activeTab: 0   // 0=Info 1=Drive 2=ADAS 3=ATTESA 4=Diag 5=Track
 
-    // ── Drive-mode personal config local state ────────────────────────────────
-    property int personalEngine:   0   // 0=Standard 1=Sport 2=Eco
-    property int personalSteering: 1   // 0=Light 1=Normal 2=Heavy
-    property int personalTrace:    2   // 0=Off 1=Light 2=Normal
-    property int personalSound:    0   // 0=Off 1=Low 2=High
+    // ── Drive-mode personal config (Q60 "Personal" mode 5-axis tuning) ────────
+    // Loaded from SettingsService.driveModePersonalConfig (JSON) on construction;
+    // changes are persisted back as JSON via setDriveModePersonalConfig().
+    //
+    // Each is 0-2 (Soft / Normal / Sport). Matches what the factory UI exposes.
+    property int personalThrottle:    1   // 0=Std 1=Sport 2=Eco — engine/trans response
+    property int personalSteering:    1   // 0=Light 1=Normal 2=Heavy
+    property int personalTrace:       2   // 0=Off 1=Light 2=Normal — Active Trace Ctrl
+    property int personalEngineBrake: 1   // 0=Off 1=Light 2=Normal — Active Engine Brake
+    property int personalASM:         0   // 0=Off 1=Low 2=High — Active Sound Mgmt
+
+    // Apply config JSON → properties. Empty/invalid resets to compiled defaults.
+    function _applyPersonalConfig(jsonStr) {
+        if (!jsonStr) return
+        try {
+            var p = JSON.parse(jsonStr)
+            if (p && typeof p === "object") {
+                if ("throttle"    in p) root.personalThrottle    = p.throttle
+                if ("steering"    in p) root.personalSteering    = p.steering
+                if ("trace"       in p) root.personalTrace       = p.trace
+                if ("engineBrake" in p) root.personalEngineBrake = p.engineBrake
+                if ("asm"         in p) root.personalASM         = p.asm
+            }
+        } catch (e) {
+            console.warn("VehicleStatusView: malformed driveModePersonalConfig JSON:", e)
+        }
+    }
+
+    // ── ADAS safety: long-press-to-disable + tap-to-enable ────────────────────
+    // Tap to ENABLE a safety aid: fires immediately.
+    // To DISABLE a safety aid: hold 2 seconds. We surface a small toast that
+    // shows the running countdown; releasing early aborts.
+    //
+    // Pattern matches the existing UDS door-lock warning style — we never silently
+    // disable a safety system on a careless tap.
+    property string adasHoldLabel: ""        // label being held; "" = idle
+    property real   adasHoldProgress: 0.0    // 0.0–1.0
+
+    function _fireAdasToggle(setter, currVal) {
+        // Enable: instant. Disable: must come via the 2-sec hold path; bare
+        // taps that try to disable are ignored here.
+        if (!currVal) {
+            // currently OFF → turning ON, fire immediately
+            VehicleService[setter](true)
+            return true
+        }
+        return false   // disable not honored on a quick tap
+    }
+
+    function _persistPersonalConfig() {
+        var p = {
+            throttle:    root.personalThrottle,
+            steering:    root.personalSteering,
+            trace:       root.personalTrace,
+            engineBrake: root.personalEngineBrake,
+            asm:         root.personalASM
+        }
+        SettingsService.driveModePersonalConfig = JSON.stringify(p)
+    }
+
+    Component.onCompleted: {
+        _applyPersonalConfig(SettingsService.driveModePersonalConfig)
+    }
+
+    Connections {
+        target: SettingsService
+        function onDriveModePersonalConfigChanged() {
+            root._applyPersonalConfig(SettingsService.driveModePersonalConfig)
+        }
+    }
 
     // ── Vehicle body config ────────────────────────────────────────────────────
     // Q60 is a 2-door coupe. Set true when VIN detection identifies a 4-door model.
@@ -26,8 +91,14 @@ Item {
     // ── Button log (last 5 entries) ────────────────────────────────────────────
     property var buttonLog: []
 
-    // ── ATTESA history (last 20 front-torque readings) ─────────────────────────
+    // ── ATTESA history (240 samples × 250ms = 60s scrolling window) ────────────
+    // Sampled by a 250ms QML Timer rather than only the atessaChanged signal so
+    // the sparkline has uniform spacing even when the CAN frame stutters.
     property var atessaHistory: []
+    readonly property int atessaHistoryMax: 240
+
+    // Session-best peak front-bias.  Reset on app start; not persisted.
+    property real atessaMaxFront: 0.0
 
     // ── Connections for button log ─────────────────────────────────────────────
     Connections {
@@ -41,11 +112,24 @@ Item {
         function onMuteToggle()    { root._logButton("MUTE TOGGLE") }
         function onVoiceActivate() { root._logButton("VOICE ACTIVATE") }
         function onAtessaChanged() {
+            // Track session peak — fires on every CAN frame so we never miss a spike,
+            // even between the 250ms history samples below.
+            var f = VehicleService.atessaFront
+            if (f > root.atessaMaxFront) root.atessaMaxFront = f
+            if (attesaCanvas.visible) attesaCanvas.requestPaint()
+        }
+    }
+
+    // 250ms ATTESA sampler — uniform spacing for the 60s sparkline window.
+    Timer {
+        interval: 250
+        running: root.activeTab === 3   // only sample while ATTESA tab visible
+        repeat: true
+        onTriggered: {
             var h = root.atessaHistory.slice()
             h.push(VehicleService.atessaFront)
-            if (h.length > 20) h.shift()
+            if (h.length > root.atessaHistoryMax) h.shift()
             root.atessaHistory = h
-            if (attesaCanvas.visible) attesaCanvas.requestPaint()
             if (attesaSparkline.visible) attesaSparkline.requestPaint()
         }
     }
@@ -74,10 +158,10 @@ Item {
             spacing: 4
 
             Repeater {
-                model: ["Info", "Drive", "ADAS", "ATTESA", "Diag"]
+                model: ["Info", "Drive", "ADAS", "ATTESA", "Diag", "Track"]
 
                 Rectangle {
-                    width: 140; height: 36; radius: 18
+                    width: 116; height: 36; radius: 18
                     color: root.activeTab === index ? "#0A84FF" : "transparent"
 
                     Behavior on color {
@@ -391,183 +475,290 @@ Item {
 
                     Rectangle {
                         id: doorFuelDivider
-                        anchors { left: parent.left; right: parent.right; bottom: fuelBarSection.top }
+                        anchors { left: parent.left; right: parent.right; bottom: oilLifeSection.top }
                         height: 1; color: "#2C2C2E"
                     }
 
-                    // Fuel level — horizontal bar (no canvas arc)
+                    // Oil-life circular gauge (replaces fuel bar — no fuelLevel CAN PID
+                    // is plumbed yet, but oil life is and the scope asks for a gauge).
                     Item {
-                        id: fuelBarSection
+                        id: oilLifeSection
                         anchors { bottom: parent.bottom; left: parent.left; right: parent.right
                                   leftMargin: 10; rightMargin: 10 }
                         height: 42
 
+                        function oilColor(pct) {
+                            return pct >= 40 ? "#30D158"
+                                 : pct >= 15 ? "#FF9F0A" : "#FF453A"
+                        }
+
                         Text {
-                            id: fuelWordLabel
+                            id: oilWordLabel
                             anchors { left: parent.left; verticalCenter: parent.verticalCenter }
-                            text: "FUEL"
+                            text: "OIL"
                             color: "#8E8E93"
                             font { family: "Roboto"; pixelSize: 10; capitalization: Font.AllUppercase; letterSpacing: 1 }
                         }
 
-                        Text {
-                            id: fuelPctLabel
-                            anchors { right: parent.right; verticalCenter: parent.verticalCenter }
-                            text: Math.round(VehicleService.fuelLevel * 100) + "%"
-                            color: VehicleService.fuelLevel > 0.25 ? "#FFFFFF"
-                                 : VehicleService.fuelLevel > 0.1  ? "#FF9F0A" : "#FF453A"
-                            font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
+                        // Circular gauge — Canvas (no roundRect; bezier/arc OK)
+                        Canvas {
+                            id: oilGauge
+                            anchors {
+                                left: oilWordLabel.right; verticalCenter: parent.verticalCenter
+                                leftMargin: 8
+                            }
+                            width: 36; height: 36
+
+                            onPaint: {
+                                var ctx = getContext("2d")
+                                ctx.clearRect(0, 0, width, height)
+                                var cx = width / 2, cy = height / 2, r = 14
+                                var pct = Math.max(0, Math.min(100, VehicleService.oilLife))
+
+                                // Track
+                                ctx.beginPath()
+                                ctx.arc(cx, cy, r, 0, Math.PI * 2)
+                                ctx.strokeStyle = "#2C2C2E"; ctx.lineWidth = 4
+                                ctx.stroke()
+
+                                // Progress arc
+                                ctx.beginPath()
+                                var start = -Math.PI / 2
+                                var end   = start + (pct / 100) * Math.PI * 2
+                                ctx.arc(cx, cy, r, start, end, false)
+                                ctx.strokeStyle = oilLifeSection.oilColor(pct)
+                                ctx.lineWidth = 4
+                                ctx.lineCap = "round"
+                                ctx.stroke()
+                            }
+
+                            Connections {
+                                target: VehicleService
+                                function onOilLifeChanged() { oilGauge.requestPaint() }
+                            }
+                            Component.onCompleted: requestPaint()
                         }
 
-                        // Bar background
-                        Rectangle {
-                            anchors {
-                                left: fuelWordLabel.right; right: fuelPctLabel.left
-                                verticalCenter: parent.verticalCenter
-                                leftMargin: 8; rightMargin: 8
-                            }
-                            height: 8; radius: 4; color: "#2C2C2E"
+                        Text {
+                            anchors { left: oilGauge.right; verticalCenter: parent.verticalCenter; leftMargin: 6 }
+                            text: VehicleService.oilLife.toFixed(0) + "%"
+                            color: oilLifeSection.oilColor(VehicleService.oilLife)
+                            font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                        }
 
-                            // Fill
-                            Rectangle {
-                                width: parent.width * VehicleService.fuelLevel
-                                height: parent.height; radius: 4
-                                color: VehicleService.fuelLevel > 0.25 ? "#30D158"
-                                     : VehicleService.fuelLevel > 0.1  ? "#FF9F0A" : "#FF453A"
-                                Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
-                            }
+                        Text {
+                            anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+                            text: "life"
+                            color: "#636366"
+                            font { family: "Roboto"; pixelSize: 10 }
                         }
                     }
                 }
             }
 
-            // ── Middle row: Trip Computer ────────────────────────────────────
+            // ── Middle row: Trip Computer with A/B tabs ──────────────────────
+            // Tabs let the user pick A or B; selected trip drives the stat row +
+            // live instantaneous-MPG bar (sampled from VehicleService.instantMPG).
             Rectangle {
                 id: tripComputer
                 anchors { top: infoTopRow.bottom; left: parent.left; right: parent.right; topMargin: 8; leftMargin: 8; rightMargin: 8 }
-                height: 60; radius: 16; color: "#1C1C1E"
+                height: 72; radius: 16; color: "#1C1C1E"
 
+                // 0 = Trip A, 1 = Trip B
+                property int activeTrip: 0
+
+                function fmtTime(secs) {
+                    if (!secs || secs <= 0) return "—"
+                    var h = Math.floor(secs / 3600)
+                    var m = Math.floor((secs % 3600) / 60)
+                    return h > 0 ? (h + "h" + (m < 10 ? "0" : "") + m + "m")
+                                 : (m + "m")
+                }
+
+                // Tab strip on the left
+                Column {
+                    id: tripTabCol
+                    anchors { left: parent.left; top: parent.top; bottom: parent.bottom; leftMargin: 8; topMargin: 6; bottomMargin: 6 }
+                    width: 50
+                    spacing: 4
+
+                    Repeater {
+                        model: ["A", "B"]
+
+                        Rectangle {
+                            width: parent.width
+                            height: (tripComputer.height - 12 - 4) / 2
+                            radius: 8
+                            color: tripComputer.activeTrip === index ? "#0A84FF" : "#2C2C2E"
+                            Behavior on color { ColorAnimation { duration: 120 } }
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "TRIP " + modelData
+                                color: "#FFFFFF"
+                                font { family: "Roboto"; pixelSize: 10; weight: Font.SemiBold }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: tripComputer.activeTrip = index
+                            }
+                        }
+                    }
+                }
+
+                // Stat columns — distance / avg MPG / avg speed / elapsed time
                 Row {
-                    anchors { fill: parent; leftMargin: 8; rightMargin: 8 }
+                    anchors { left: tripTabCol.right; right: tripResetBtn.left;
+                              top: parent.top; bottom: tripMpgBar.top;
+                              leftMargin: 8; rightMargin: 8; topMargin: 4 }
                     spacing: 0
 
-                    // Trip A
+                    // Each cell takes 1/4 of available width
                     Item {
                         width: parent.width / 4; height: parent.height
-
-                        Row {
-                            anchors.centerIn: parent
-                            spacing: 4
-
-                            Rectangle {
-                                width: 18; height: 18; radius: 9
-                                color: "#2C2C2E"
-                                anchors.verticalCenter: parent.verticalCenter
-                                Text { anchors.centerIn: parent; text: "×"; color: "#8E8E93"; font.pixelSize: 11 }
-                                MouseArea { anchors.fill: parent; onClicked: VehicleService.resetTripA() }
-                            }
-
-                            Column {
-                                spacing: 0
-                                Text {
-                                    text: "A: " + VehicleService.tripAMiles.toFixed(1) + " mi"
-                                    color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 11; weight: Font.SemiBold }
-                                }
-                                Text {
-                                    text: VehicleService.tripAAvgMPG > 0 ? VehicleService.tripAAvgMPG.toFixed(1) + " MPG" : "— MPG"
-                                    color: "#8E8E93"; font { family: "Roboto"; pixelSize: 10 }
-                                }
-                            }
-                        }
-                    }
-
-                    // Divider
-                    Rectangle { width: 1; height: parent.height * 0.6; anchors.verticalCenter: parent.verticalCenter; color: "#2C2C2E" }
-
-                    // Trip B
-                    Item {
-                        width: parent.width / 4; height: parent.height
-
-                        Row {
-                            anchors.centerIn: parent
-                            spacing: 4
-
-                            Rectangle {
-                                width: 18; height: 18; radius: 9
-                                color: "#2C2C2E"
-                                anchors.verticalCenter: parent.verticalCenter
-                                Text { anchors.centerIn: parent; text: "×"; color: "#8E8E93"; font.pixelSize: 11 }
-                                MouseArea { anchors.fill: parent; onClicked: VehicleService.resetTripB() }
-                            }
-
-                            Column {
-                                spacing: 0
-                                Text {
-                                    text: "B: " + VehicleService.tripBMiles.toFixed(1) + " mi"
-                                    color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 11; weight: Font.SemiBold }
-                                }
-                                Text {
-                                    text: VehicleService.tripBAvgMPG > 0 ? VehicleService.tripBAvgMPG.toFixed(1) + " MPG" : "— MPG"
-                                    color: "#8E8E93"; font { family: "Roboto"; pixelSize: 10 }
-                                }
-                            }
-                        }
-                    }
-
-                    // Divider
-                    Rectangle { width: 1; height: parent.height * 0.6; anchors.verticalCenter: parent.verticalCenter; color: "#2C2C2E" }
-
-                    // Avg Speed
-                    Item {
-                        width: parent.width / 4; height: parent.height
-
                         Column {
                             anchors.centerIn: parent; spacing: 0
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
-                                text: VehicleService.tripAAvgSpeed > 0 ? VehicleService.tripAAvgSpeed.toFixed(0) + " MPH" : "— MPH"
-                                color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                                text: (tripComputer.activeTrip === 0 ? VehicleService.tripAMiles : VehicleService.tripBMiles).toFixed(1)
+                                color: "#FFFFFF"
+                                font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
                             }
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
-                                text: "avg speed"
-                                color: "#8E8E93"; font { family: "Roboto"; pixelSize: 10 }
+                                text: "mi"
+                                color: "#8E8E93"
+                                font { family: "Roboto"; pixelSize: 9 }
                             }
                         }
                     }
-
-                    // Divider
-                    Rectangle { width: 1; height: parent.height * 0.6; anchors.verticalCenter: parent.verticalCenter; color: "#2C2C2E" }
-
-                    // Inst MPG
                     Item {
                         width: parent.width / 4; height: parent.height
-
                         Column {
                             anchors.centerIn: parent; spacing: 0
-
-                            Row {
+                            Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
-                                spacing: 3
-                                Text {
-                                    text: VehicleService.instantMPG > 0 ? VehicleService.instantMPG.toFixed(1) : "—"
-                                    color: VehicleService.instantMPG > 25 ? "#30D158"
-                                         : VehicleService.instantMPG > 15 ? "#FF9F0A" : "#FF453A"
-                                    font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                                text: {
+                                    var v = tripComputer.activeTrip === 0 ? VehicleService.tripAAvgMPG : VehicleService.tripBAvgMPG
+                                    return v > 0 ? v.toFixed(1) : "—"
                                 }
-                                Text {
-                                    text: "⚡"
-                                    color: VehicleService.instantMPG > 25 ? "#30D158"
-                                         : VehicleService.instantMPG > 15 ? "#FF9F0A" : "#FF453A"
-                                    font.pixelSize: 12
-                                }
+                                color: "#FFFFFF"
+                                font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
                             }
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
-                                text: "inst MPG"
-                                color: "#8E8E93"; font { family: "Roboto"; pixelSize: 10 }
+                                text: "avg MPG"
+                                color: "#8E8E93"
+                                font { family: "Roboto"; pixelSize: 9 }
                             }
                         }
+                    }
+                    Item {
+                        width: parent.width / 4; height: parent.height
+                        Column {
+                            anchors.centerIn: parent; spacing: 0
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: {
+                                    var v = tripComputer.activeTrip === 0 ? VehicleService.tripAAvgSpeed : VehicleService.tripBAvgSpeed
+                                    return v > 0 ? v.toFixed(0) : "—"
+                                }
+                                color: "#FFFFFF"
+                                font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                            }
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: "avg mph"
+                                color: "#8E8E93"
+                                font { family: "Roboto"; pixelSize: 9 }
+                            }
+                        }
+                    }
+                    Item {
+                        width: parent.width / 4; height: parent.height
+                        Column {
+                            anchors.centerIn: parent; spacing: 0
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: tripComputer.fmtTime(tripComputer.activeTrip === 0 ? VehicleService.tripASeconds : VehicleService.tripBSeconds)
+                                color: "#FFFFFF"
+                                font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                            }
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: "elapsed"
+                                color: "#8E8E93"
+                                font { family: "Roboto"; pixelSize: 9 }
+                            }
+                        }
+                    }
+                }
+
+                // Reset button (right edge) — resets the currently-selected trip.
+                Rectangle {
+                    id: tripResetBtn
+                    anchors { right: parent.right; top: parent.top; rightMargin: 8; topMargin: 6 }
+                    width: 36; height: 22; radius: 6
+                    color: "#2C2C2E"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "RESET"
+                        color: "#8E8E93"
+                        font { family: "Roboto"; pixelSize: 8; weight: Font.SemiBold; letterSpacing: 0.5 }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            if (tripComputer.activeTrip === 0) VehicleService.resetTripA()
+                            else                                VehicleService.resetTripB()
+                        }
+                    }
+                }
+
+                // Live instantaneous-MPG bar at the bottom of the card.
+                Item {
+                    id: tripMpgBar
+                    anchors { left: tripTabCol.right; right: parent.right;
+                              bottom: parent.bottom;
+                              leftMargin: 8; rightMargin: 12; bottomMargin: 6 }
+                    height: 12
+
+                    function mpgColor(v) {
+                        return v > 25 ? "#30D158" : v > 15 ? "#FF9F0A" : "#FF453A"
+                    }
+
+                    Text {
+                        id: mpgLabel
+                        anchors { left: parent.left; verticalCenter: parent.verticalCenter }
+                        text: "inst"
+                        color: "#636366"
+                        font { family: "Roboto"; pixelSize: 9 }
+                    }
+
+                    Rectangle {
+                        anchors { left: mpgLabel.right; right: mpgValue.left;
+                                  verticalCenter: parent.verticalCenter;
+                                  leftMargin: 6; rightMargin: 6 }
+                        height: 5; radius: 3; color: "#2C2C2E"
+
+                        // Fill — cap at 40 MPG for the bar scale (typical Q60 ceiling)
+                        Rectangle {
+                            width: parent.width * Math.min(1.0, Math.max(0.0, VehicleService.instantMPG / 40))
+                            height: parent.height; radius: 3
+                            color: tripMpgBar.mpgColor(VehicleService.instantMPG)
+                            Behavior on width { NumberAnimation { duration: 250 } }
+                        }
+                    }
+
+                    Text {
+                        id: mpgValue
+                        anchors { right: parent.right; verticalCenter: parent.verticalCenter }
+                        text: VehicleService.instantMPG > 0 ? VehicleService.instantMPG.toFixed(1) + " MPG" : "— MPG"
+                        color: tripMpgBar.mpgColor(VehicleService.instantMPG)
+                        font { family: "Roboto"; pixelSize: 9; weight: Font.SemiBold }
                     }
                 }
             }
@@ -575,9 +766,9 @@ Item {
             // ── Bottom row: 5 stat badges ─────────────────────────────────────
             Row {
                 id: statBadgeRow
-                anchors { top: tripComputer.bottom; left: parent.left; right: parent.right; topMargin: 8; leftMargin: 8; rightMargin: 8 }
+                anchors { top: tripComputer.bottom; left: parent.left; right: parent.right; topMargin: 6; leftMargin: 8; rightMargin: 8 }
                 spacing: 6
-                height: 68
+                height: 62
 
                 // Coolant
                 Rectangle {
@@ -815,8 +1006,8 @@ Item {
 
             // Personal config panel (shown when Personal mode active)
             Rectangle {
-                anchors { top: modeGrid.bottom; left: parent.left; right: parent.right; topMargin: 8; leftMargin: 8; rightMargin: 8 }
-                height: 80; radius: 12; color: "#1C1C1E"
+                anchors { top: modeGrid.bottom; left: parent.left; right: parent.right; topMargin: 6; leftMargin: 8; rightMargin: 8 }
+                height: 102; radius: 12; color: "#1C1C1E"
                 visible: VehicleService.driveMode === 5
 
                 Column {
@@ -825,42 +1016,54 @@ Item {
 
                     Repeater {
                         model: [
-                            { label: "Engine/Trans", opts: ["Standard","Sport","Eco"],    prop: "personalEngine" },
-                            { label: "Steering",     opts: ["Light","Normal","Heavy"],    prop: "personalSteering" },
-                            { label: "Trace Ctrl",   opts: ["Off","Light","Normal"],       prop: "personalTrace" },
-                            { label: "Sound Mgmt",   opts: ["Off","Low","High"],           prop: "personalSound" }
+                            { label: "Throttle",     opts: ["Std","Sport","Eco"],   prop: "personalThrottle" },
+                            { label: "Steering",     opts: ["Light","Normal","Heavy"], prop: "personalSteering" },
+                            { label: "Trace Ctrl",   opts: ["Off","Light","Normal"],   prop: "personalTrace" },
+                            { label: "Engine Brake", opts: ["Off","Light","Normal"],   prop: "personalEngineBrake" },
+                            { label: "ASM",          opts: ["Off","Low","High"],       prop: "personalASM" }
                         ]
 
                         Row {
-                            spacing: 6; height: 16
+                            // outerRow captures the per-iteration modelData so the
+                            // inner Repeater (whose modelData rebinds to the opts
+                            // strings) can still reach .prop and .label.
+                            id: outerRow
+                            property var rowData: modelData
+                            spacing: 6; height: 14
 
                             Text {
-                                text: modelData.label
+                                text: outerRow.rowData.label
                                 color: "#8E8E93"
                                 font { family: "Roboto"; pixelSize: 10 }
-                                width: 72
+                                width: 78
                                 verticalAlignment: Text.AlignVCenter; height: parent.height
                             }
 
                             Repeater {
-                                model: modelData.opts
+                                model: outerRow.rowData.opts
 
                                 Rectangle {
-                                    height: 16; radius: 8
+                                    height: 14; radius: 7
                                     width: optLabel.width + 12
-                                    color: root[modelData.prop] === index ? "#0A84FF" : "#2C2C2E"
+                                    color: root[outerRow.rowData.prop] === index ? "#0A84FF" : "#2C2C2E"
 
                                     Text {
                                         id: optLabel
                                         anchors.centerIn: parent
                                         text: modelData
-                                        color: root[modelData.prop] === index ? "#FFFFFF" : "#8E8E93"
+                                        color: root[outerRow.rowData.prop] === index ? "#FFFFFF" : "#8E8E93"
                                         font { family: "Roboto"; pixelSize: 9 }
                                     }
 
                                     MouseArea {
                                         anchors.fill: parent
-                                        onClicked: root[modelData.prop] = index
+                                        // Personal-mode tuning persists immediately —
+                                        // user explicitly confirms by tapping; SettingsService
+                                        // debounces the disk write 5s on its own.
+                                        onClicked: {
+                                            root[outerRow.rowData.prop] = index
+                                            root._persistPersonalConfig()
+                                        }
                                     }
                                 }
                             }
@@ -904,6 +1107,25 @@ Item {
                         color: "#FF9F0A"
                         font { family: "Roboto"; pixelSize: 9; weight: Font.SemiBold }
                     }
+                }
+            }
+
+            // Hint banner (only while a hold is in progress)
+            Rectangle {
+                anchors { top: adasHeader.bottom; horizontalCenter: parent.horizontalCenter; topMargin: 2 }
+                height: 18; radius: 9
+                width: holdHintLbl.width + 16
+                color: "#3A2000"
+                visible: root.adasHoldLabel !== ""
+                z: 10
+
+                Text {
+                    id: holdHintLbl
+                    anchors.centerIn: parent
+                    text: "Hold to disable " + root.adasHoldLabel + " — " +
+                          Math.ceil((1.0 - root.adasHoldProgress) * 2) + "s"
+                    color: "#FF9F0A"
+                    font { family: "Roboto"; pixelSize: 10; weight: Font.SemiBold }
                 }
             }
 
@@ -967,13 +1189,22 @@ Item {
                                     }
                                 }
 
-                                // Toggle switch
+                                // Toggle switch — tap-to-enable / hold-to-disable.
                                 Rectangle {
                                     id: toggleLeft
                                     width: 44; height: 24; radius: 12
                                     anchors.verticalCenter: parent.verticalCenter
                                     color: VehicleService[modelData.propR] ? "#0A84FF" : "#2C2C2E"
                                     Behavior on color { ColorAnimation { duration: 150 } }
+
+                                    // Hold-progress ring (only visible while disabling)
+                                    Rectangle {
+                                        anchors.fill: parent; radius: parent.radius
+                                        border { color: "#FF9F0A"; width: 2 }
+                                        color: "transparent"
+                                        visible: root.adasHoldLabel === modelData.abbr
+                                        opacity: root.adasHoldProgress
+                                    }
 
                                     Rectangle {
                                         id: thumbLeft
@@ -984,9 +1215,46 @@ Item {
                                         Behavior on x { NumberAnimation { duration: 150 } }
                                     }
 
+                                    Timer {
+                                        id: holdTimerLeft
+                                        interval: 50; repeat: true
+                                        property real held: 0
+                                        onTriggered: {
+                                            held += interval
+                                            root.adasHoldProgress = Math.min(1.0, held / 2000)
+                                            if (held >= 2000) {
+                                                stop()
+                                                VehicleService[modelData.setter](false)
+                                                root.adasHoldLabel = ""
+                                                root.adasHoldProgress = 0
+                                                held = 0
+                                            }
+                                        }
+                                    }
+
                                     MouseArea {
                                         anchors.fill: parent
-                                        onClicked: VehicleService[modelData.setter](!VehicleService[modelData.propR])
+                                        onPressed: {
+                                            if (VehicleService[modelData.propR]) {
+                                                // Currently ON → start the 2-sec disable hold.
+                                                root.adasHoldLabel = modelData.abbr
+                                                holdTimerLeft.held = 0
+                                                holdTimerLeft.start()
+                                            }
+                                        }
+                                        onReleased: {
+                                            if (holdTimerLeft.running) holdTimerLeft.stop()
+                                            holdTimerLeft.held = 0
+                                            if (root.adasHoldLabel === modelData.abbr) {
+                                                root.adasHoldLabel = ""
+                                                root.adasHoldProgress = 0
+                                            }
+                                        }
+                                        onClicked: {
+                                            // Single-tap path — enable only.
+                                            root._fireAdasToggle(modelData.setter,
+                                                                 VehicleService[modelData.propR])
+                                        }
                                     }
                                 }
                             }
@@ -1036,11 +1304,20 @@ Item {
                                     }
                                 }
 
+                                // Toggle — tap-to-enable / hold-to-disable.
                                 Rectangle {
                                     width: 44; height: 24; radius: 12
                                     anchors.verticalCenter: parent.verticalCenter
                                     color: VehicleService[modelData.propR] ? "#0A84FF" : "#2C2C2E"
                                     Behavior on color { ColorAnimation { duration: 150 } }
+
+                                    Rectangle {
+                                        anchors.fill: parent; radius: parent.radius
+                                        border { color: "#FF9F0A"; width: 2 }
+                                        color: "transparent"
+                                        visible: root.adasHoldLabel === modelData.abbr
+                                        opacity: root.adasHoldProgress
+                                    }
 
                                     Rectangle {
                                         width: 20; height: 20; radius: 10
@@ -1050,9 +1327,44 @@ Item {
                                         Behavior on x { NumberAnimation { duration: 150 } }
                                     }
 
+                                    Timer {
+                                        id: holdTimerRight
+                                        interval: 50; repeat: true
+                                        property real held: 0
+                                        onTriggered: {
+                                            held += interval
+                                            root.adasHoldProgress = Math.min(1.0, held / 2000)
+                                            if (held >= 2000) {
+                                                stop()
+                                                VehicleService[modelData.setter](false)
+                                                root.adasHoldLabel = ""
+                                                root.adasHoldProgress = 0
+                                                held = 0
+                                            }
+                                        }
+                                    }
+
                                     MouseArea {
                                         anchors.fill: parent
-                                        onClicked: VehicleService[modelData.setter](!VehicleService[modelData.propR])
+                                        onPressed: {
+                                            if (VehicleService[modelData.propR]) {
+                                                root.adasHoldLabel = modelData.abbr
+                                                holdTimerRight.held = 0
+                                                holdTimerRight.start()
+                                            }
+                                        }
+                                        onReleased: {
+                                            if (holdTimerRight.running) holdTimerRight.stop()
+                                            holdTimerRight.held = 0
+                                            if (root.adasHoldLabel === modelData.abbr) {
+                                                root.adasHoldLabel = ""
+                                                root.adasHoldProgress = 0
+                                            }
+                                        }
+                                        onClicked: {
+                                            root._fireAdasToggle(modelData.setter,
+                                                                 VehicleService[modelData.propR])
+                                        }
                                     }
                                 }
                             }
@@ -1287,6 +1599,18 @@ Item {
                     }
                 }
 
+                // Session peak — small caption stat just under the live %s.
+                // "MAX FRONT" — pinned high-water mark since app start.
+                Text {
+                    anchors {
+                        top: parent.top; horizontalCenter: parent.horizontalCenter
+                        topMargin: attesaCanvas.height + attesaCanvas.anchors.topMargin + 48 + 8 + 4
+                    }
+                    text: "session peak front bias: " + root.atessaMaxFront.toFixed(0) + "%"
+                    color: "#636366"
+                    font { family: "Roboto"; pixelSize: 10 }
+                }
+
                 // Sparkline
                 Rectangle {
                     anchors { bottom: parent.bottom; left: parent.left; right: parent.right; bottomMargin: 8; leftMargin: 8; rightMargin: 8 }
@@ -1362,8 +1686,14 @@ Item {
                             anchors { fill: parent; leftMargin: 10 }
                             spacing: 20
 
-                            DiagCell { label: "Gear"; value: VehicleService.gearPosition }
-                            DiagCell { label: "Rev";   value: VehicleService.reverseOn ? "●" : "○"; valColor: VehicleService.reverseOn ? "#0A84FF" : "#8E8E93" }
+                            DiagCell {
+                                label: "Gear"
+                                value: {
+                                    var g = VehicleService.gear
+                                    return g === 1 ? "P" : g === 2 ? "R" : g === 3 ? "N" : g === 4 ? "D" : "—"
+                                }
+                            }
+                            DiagCell { label: "Rev";   value: VehicleService.reverse ? "●" : "○"; valColor: VehicleService.reverse ? "#0A84FF" : "#8E8E93" }
                             DiagCell { label: "Brake"; value: VehicleService.brakePressed ? "●" : "○"; valColor: VehicleService.brakePressed ? "#FF453A" : "#8E8E93" }
                             DiagCell { label: "P-Brake"; value: VehicleService.parkingBrake ? "●" : "○"; valColor: VehicleService.parkingBrake ? "#FF453A" : "#8E8E93" }
                         }
@@ -1378,7 +1708,7 @@ Item {
 
                             DiagCell { label: "Speed"; value: ((VehicleService.speed || 0).toFixed(1)) + " mph" }
                             DiagCell { label: "RPM";   value: (VehicleService.rpm || 0).toString() }
-                            DiagCell { label: "Steer"; value: ((VehicleService.steeringAngle || 0) >= 0 ? "+" : "") + (VehicleService.steeringAngle || 0).toFixed(1) + "°" }
+                            DiagCell { label: "Steer"; value: ((VehicleService.steerAngle || 0) >= 0 ? "+" : "") + (VehicleService.steerAngle || 0).toFixed(1) + "°" }
                         }
                     }
 
@@ -1450,7 +1780,13 @@ Item {
                             anchors { fill: parent; leftMargin: 10 }
                             spacing: 20
 
-                            DiagCell { label: "Wipers"; value: VehicleService.wiperState }
+                            DiagCell {
+                                label: "Wipers"
+                                value: {
+                                    var w = VehicleService.wipersState
+                                    return w === 1 ? "SLOW" : w === 2 ? "FAST" : w === 3 ? "1-SHOT" : "OFF"
+                                }
+                            }
                             DiagCell { label: "R.Defrost"; value: VehicleService.rearDefrostOn ? "ON" : "OFF"; valColor: VehicleService.rearDefrostOn ? "#30D158" : "#8E8E93" }
                         }
                     }
@@ -1520,6 +1856,230 @@ Item {
                                 font { family: "Roboto"; pixelSize: 11 }
                                 height: 18
                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ────────────────────────────────────────────────────────────────────
+        // TAB 5 — TRACK (VR30 telemetry + G-pad + 0-60 timer)
+        // ────────────────────────────────────────────────────────────────────
+        Item {
+            id: tabTrack
+            anchors.fill: parent
+            visible: root.activeTab === 5
+
+            // Display unit (0=imperial / 1=metric) — informs 0-60 vs 0-100 km/h label.
+            // Logic is in the VehicleService (always 60 mph trigger); QML relabels.
+            property int distUnit: typeof SettingsService !== "undefined" ? SettingsService.distanceUnit : 0
+            property string speedTargetLabel: distUnit === 1 ? "0-100 km/h" : "0-60 mph"
+
+            // ── Top half: 7-element mini-gauge grid (2 rows × 4 cols) ────────
+            Grid {
+                id: gaugeGrid
+                anchors { top: parent.top; horizontalCenter: parent.horizontalCenter; topMargin: 6 }
+                columns: 4; rows: 2
+                columnSpacing: 6
+                rowSpacing: 4
+
+                MiniGauge {
+                    label: "Boost"; units: "psi"
+                    value: VehicleService.boostPressurePsi
+                    minValue: 0; maxValue: 25; decimals: 1
+                    arcColor: "#0A84FF"
+                    warning: value > 20
+                }
+                MiniGauge {
+                    label: "Oil"; units: "°F"
+                    value: VehicleService.oilTempF
+                    minValue: 180; maxValue: 280
+                    arcColor: "#FF9F0A"
+                    warning: value > 260
+                }
+                MiniGauge {
+                    label: "Trans"; units: "°F"
+                    value: VehicleService.transTempF
+                    minValue: 160; maxValue: 260
+                    arcColor: "#FF9F0A"
+                    warning: value > 240
+                }
+                MiniGauge {
+                    label: "IAT"; units: "°F"
+                    value: VehicleService.intakeAirTempF
+                    minValue: 60; maxValue: 180
+                    arcColor: "#30D158"
+                    warning: value > 150
+                }
+                MiniGauge {
+                    label: "Ign Adv"; units: "°"
+                    value: VehicleService.ignitionAdvanceDeg
+                    minValue: -10; maxValue: 30
+                    arcColor: "#0A84FF"
+                }
+                MiniGauge {
+                    label: "Knock"; units: "°"
+                    value: VehicleService.knockRetardDeg
+                    minValue: 0; maxValue: 10
+                    arcColor: "#FF453A"
+                    warning: value > 2
+                }
+                MiniGauge {
+                    label: "WG"; units: "%"
+                    value: VehicleService.wastegatePercent
+                    minValue: 0; maxValue: 100
+                    arcColor: "#30D158"
+                }
+                // Reserved 8th cell — empty for future (AFR / lambda)
+                Item { width: 92; height: 86 }
+            }
+
+            // ── Middle: G-pad + readouts row ─────────────────────────────────
+            Item {
+                id: gPadRow
+                anchors { top: gaugeGrid.bottom; left: parent.left; right: parent.right; topMargin: 4 }
+                height: 80
+
+                GPad {
+                    id: gPad
+                    width: 76; height: 76
+                    anchors { verticalCenter: parent.verticalCenter; horizontalCenter: parent.horizontalCenter }
+                }
+
+                // Lateral G readout — left of pad
+                Column {
+                    anchors { right: gPad.left; verticalCenter: gPad.verticalCenter; rightMargin: 14 }
+                    spacing: 0
+                    Text {
+                        anchors.right: parent.right
+                        text: VehicleService.lateralG.toFixed(2) + " g"
+                        color: "#FFFFFF"
+                        font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                    }
+                    Text {
+                        anchors.right: parent.right
+                        text: "LAT"
+                        color: "#8E8E93"
+                        font { family: "Roboto"; pixelSize: 9; capitalization: Font.AllUppercase; letterSpacing: 1 }
+                    }
+                    Text {
+                        anchors.right: parent.right
+                        text: "peak " + Math.abs(VehicleService.peakLateralG).toFixed(2)
+                        color: "#FF9F0A"
+                        font { family: "Roboto"; pixelSize: 10 }
+                    }
+                }
+
+                // Longitudinal G readout — right of pad
+                Column {
+                    anchors { left: gPad.right; verticalCenter: gPad.verticalCenter; leftMargin: 14 }
+                    spacing: 0
+                    Text {
+                        text: VehicleService.longitudinalG.toFixed(2) + " g"
+                        color: "#FFFFFF"
+                        font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                    }
+                    Text {
+                        text: "LONG"
+                        color: "#8E8E93"
+                        font { family: "Roboto"; pixelSize: 9; capitalization: Font.AllUppercase; letterSpacing: 1 }
+                    }
+                    Text {
+                        text: "peak " + Math.abs(VehicleService.peakLongitudinalG).toFixed(2)
+                        color: "#30D158"
+                        font { family: "Roboto"; pixelSize: 10 }
+                    }
+                }
+            }
+
+            // ── Bottom: Performance timer card ───────────────────────────────
+            Rectangle {
+                anchors { bottom: parent.bottom; left: parent.left; right: parent.right
+                          bottomMargin: 4; leftMargin: 8; rightMargin: 8 }
+                height: 76; radius: 12; color: "#1C1C1E"
+
+                Row {
+                    anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
+                    spacing: 12
+
+                    // 0-60 / 0-100 main readout
+                    Column {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 150; spacing: 2
+
+                        Text {
+                            text: tabTrack.speedTargetLabel
+                            color: "#8E8E93"
+                            font { family: "Roboto"; pixelSize: 9; capitalization: Font.AllUppercase; letterSpacing: 1 }
+                        }
+                        Text {
+                            text: VehicleService.zeroToSixtySec > 0
+                                  ? VehicleService.zeroToSixtySec.toFixed(2) + "s"
+                                  : VehicleService.perfRunActive
+                                      ? VehicleService.perfRunElapsedSec.toFixed(2) + "s"
+                                      : "—"
+                            color: VehicleService.zeroToSixtySec > 0 ? "#30D158"
+                                 : VehicleService.perfRunActive       ? "#0A84FF" : "#FFFFFF"
+                            font { family: "Roboto"; pixelSize: 28; weight: Font.Bold }
+                        }
+                    }
+
+                    // Divider
+                    Rectangle { width: 1; height: parent.height * 0.6; anchors.verticalCenter: parent.verticalCenter; color: "#2C2C2E" }
+
+                    // Quarter-mile time
+                    Column {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 110; spacing: 2
+                        Text {
+                            text: "1/4 MILE"
+                            color: "#8E8E93"
+                            font { family: "Roboto"; pixelSize: 9; capitalization: Font.AllUppercase; letterSpacing: 1 }
+                        }
+                        Text {
+                            text: VehicleService.quarterMileSec > 0
+                                  ? VehicleService.quarterMileSec.toFixed(2) + "s" : "—"
+                            color: VehicleService.quarterMileSec > 0 ? "#30D158" : "#FFFFFF"
+                            font { family: "Roboto"; pixelSize: 18; weight: Font.SemiBold }
+                        }
+                    }
+
+                    // Divider
+                    Rectangle { width: 1; height: parent.height * 0.6; anchors.verticalCenter: parent.verticalCenter; color: "#2C2C2E" }
+
+                    // Trap speed
+                    Column {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 110; spacing: 2
+                        Text {
+                            text: "TRAP"
+                            color: "#8E8E93"
+                            font { family: "Roboto"; pixelSize: 9; capitalization: Font.AllUppercase; letterSpacing: 1 }
+                        }
+                        Text {
+                            text: VehicleService.quarterMileTrapMph > 0
+                                  ? VehicleService.quarterMileTrapMph.toFixed(0) + " mph" : "—"
+                            color: VehicleService.quarterMileTrapMph > 0 ? "#30D158" : "#FFFFFF"
+                            font { family: "Roboto"; pixelSize: 18; weight: Font.SemiBold }
+                        }
+                    }
+
+                    // Reset button
+                    Rectangle {
+                        width: 70; height: 32; radius: 16
+                        anchors.verticalCenter: parent.verticalCenter
+                        color: "#2C2C2E"
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "Reset"
+                            color: "#FFFFFF"
+                            font { family: "Roboto"; pixelSize: 11; weight: Font.SemiBold }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: VehicleService.resetPerformanceTimer()
                         }
                     }
                 }

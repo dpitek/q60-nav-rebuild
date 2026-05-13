@@ -344,3 +344,41 @@ void NavigationService::onRerouteTimer()
                      m_destination.latitude(), m_destination.longitude());
     }
 }
+
+// ─── Lane guidance (stub) ──────────────────────────────────────────────────
+// Phase 3: parse the maneuver["lanes"] array out of Valhalla's verbal/visual
+// guidance response. Each lane has a bitfield of valid directions + an
+// "is_preferred" flag. For now we synthesize a plausible lane set based on the
+// upcoming maneuver text so the QML lane-arrow widget can be rendered and
+// styled against realistic mock data.
+QVariantList NavigationService::laneInfo() const
+{
+    QVariantList lanes;
+    if (!m_active || m_nextManeuver.isEmpty() || m_nextDistance <= 0.0)
+        return lanes;
+
+    const QString m = m_nextManeuver.toLower();
+    const bool leftish  = m.contains(QStringLiteral("left"));
+    const bool rightish = m.contains(QStringLiteral("right"));
+
+    auto makeLane = [](const QString &dir, bool active) {
+        QVariantMap lane;
+        lane.insert(QStringLiteral("direction"), dir);
+        lane.insert(QStringLiteral("active"),    active);
+        return lane;
+    };
+
+    if (leftish) {
+        lanes.append(makeLane(QStringLiteral("left"),     true));
+        lanes.append(makeLane(QStringLiteral("straight"), false));
+        lanes.append(makeLane(QStringLiteral("straight"), false));
+    } else if (rightish) {
+        lanes.append(makeLane(QStringLiteral("straight"), false));
+        lanes.append(makeLane(QStringLiteral("straight"), false));
+        lanes.append(makeLane(QStringLiteral("right"),    true));
+    } else {
+        lanes.append(makeLane(QStringLiteral("straight"), true));
+        lanes.append(makeLane(QStringLiteral("straight"), true));
+    }
+    return lanes;
+}
