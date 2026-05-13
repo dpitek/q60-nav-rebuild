@@ -56,34 +56,33 @@ restores the original if the new system fails to start.
 
 ## UI Mockups
 
-An interactive dual-screen HTML prototype lives at [`docs/mockup/index.html`](docs/mockup/index.html).
-Simulates both screens at native resolution — **800×480 upper (8" nav)** / **800×420 lower (7" control hub)** —
-and is the primary design reference for the QML implementation.
+Interactive dual-screen HTML prototype at [`docs/mockup/index.html`](docs/mockup/index.html).
+Both screens render at native resolution — **800×480 upper (8" nav)** / **800×420 lower (7" control hub)** —
+with live OSM tile map, full tab switching, day/night mode, and simulation controls.
+
+**To run:**
+```bash
+cd docs/mockup && python3 -m http.server 8080
+# open http://localhost:8080/index.html
+```
 
 ### Night Mode
 
-| Climate | Audio | Nav Companion |
+| Home + Nav | Climate | Audio |
 |:---:|:---:|:---:|
-| ![Night — Climate](docs/mockups/screenshots/night-climate.png) | ![Night — Audio](docs/mockups/screenshots/night-audio.png) | ![Night — Nav](docs/mockups/screenshots/night-nav.png) |
+| ![Night — Home](docs/mockups/screenshots/night-home.png) | ![Night — Climate](docs/mockups/screenshots/night-climate.png) | ![Night — Audio](docs/mockups/screenshots/night-audio.png) |
 
 ### Day Mode
 
-| Climate | Audio | Nav Companion |
+| Home + Nav | Climate | Audio |
 |:---:|:---:|:---:|
-| ![Day — Climate](docs/mockups/screenshots/day-climate.png) | ![Day — Audio](docs/mockups/screenshots/day-audio.png) | ![Day — Nav](docs/mockups/screenshots/day-nav.png) |
-
-**To run it locally:**
-```bash
-open docs/mockup/index.html   # macOS
-# or: python3 -m http.server 8080 && open http://localhost:8080/docs/mockup/
-```
+| ![Day — Home](docs/mockups/screenshots/day-home.png) | ![Day — Climate](docs/mockups/screenshots/day-climate.png) | ![Day — Audio](docs/mockups/screenshots/day-audio.png) |
 
 **Controls:**
-- **☀️ / 🌙 button** (top-right) — toggles day/night mode
 - **Lower nav bar:** Home · Audio · Phone · Climate · Vehicle — all tabs functional
-- **Reverse sim:** triggers upper screen camera view + lower screen camera placeholder
-- **Cruise sim (Vehicle tab):** shows/hides cruise bubble on upper screen left side
-- **Joystick panel:** brightness, day/night toggle, route start/stop, notification injection
+- **Joystick panel** (upper-right of lower screen) — day/night toggle, brightness, route start/stop, notification injection
+- **Reverse sim:** camera view on upper screen + parking guidelines
+- **Cruise sim (Vehicle tab):** cruise bubble on upper screen left side
 
 ---
 
