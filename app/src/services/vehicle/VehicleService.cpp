@@ -113,6 +113,20 @@ void VehicleService::start()
             this, &VehicleService::onDoorsLockedForMirrorFold);
     connect(this, &VehicleService::keyFobLockHold,
             this, &VehicleService::onKeyFobLockHoldForWindowClose);
+
+    // Rain → auto-up windows (3s grace after wipers transition off→active)
+    connect(this, &VehicleService::wipersBecameActive,
+            this, &VehicleService::onWipersActiveForRainAutoUp);
+
+    // DTC scan timeout — gives all queried ECUs ~1.5s to respond before we
+    // emit dtcsChanged() with whatever came back (or an empty list).
+    m_dtcTimeoutTimer = new QTimer(this);
+    m_dtcTimeoutTimer->setSingleShot(true);
+    m_dtcTimeoutTimer->setInterval(1500);
+    connect(m_dtcTimeoutTimer, &QTimer::timeout, this, [this]() {
+        m_dtcReadInFlight = false;
+        emit dtcsChanged();
+    });
 }
 
 void VehicleService::openCAN(const char *iface, int &sock)
@@ -426,7 +440,16 @@ void VehicleService::parseVehicleFrame(const struct can_frame &f)
         if (f.can_dlc < 3) break;
         // Wiper state
         int ws = qBound(0, static_cast<int>(f.data[2] & 0x03), 3);
-        if (ws != m_wipersState) { m_wipersState = ws; emit wipersStateChanged(ws); }
+        if (ws != m_wipersState) {
+            const int prev = m_wipersState;
+            m_wipersState = ws;
+            emit wipersStateChanged(ws);
+            // Rain heuristic — off (0) → any active wipe state (1=slow, 2=fast)
+            // signals real precipitation. One-shot (3) is user-initiated; ignore.
+            if (prev == 0 && (ws == 1 || ws == 2))
+                emit wipersBecameActive();
+        }
+        m_lastWiperState = ws;
         break;
     }
 
@@ -619,6 +642,11 @@ void VehicleService::parseVehicleFrame(const struct can_frame &f)
     }
 
     default:
+        // DTC scan responses arrive on can0 from ECU response addresses
+        // (request_address + 8). Route any matching frame to the DTC parser
+        // — it self-filters by ID and ignores anything outside known ECUs.
+        if (m_dtcReadInFlight)
+            parseDtcResponse(f);
         break;
     }
 }
@@ -1447,4 +1475,252 @@ void VehicleService::wakeBosse()
     qWarning() << "[VehicleService] Bose wake: CAN_BOSE_WAKE (0x3B3) is UNVERIFIED — sniff AV-CAN at amp connector to confirm";
     uint8_t d[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     sendCANFrame(m_avCanSock, CAN_BOSE_WAKE, d, 8);
+}
+
+// ─── Rain auto-up windows ──────────────────────────────────────────────────
+// Wipers transitioned 0 → 1/2. If autoUpOnRain is enabled, schedule a 3s grace
+// then fire sendWindowCloseAll(). The grace timer is single-shot and reset on
+// repeated triggers within the window so we don't fire mid-close.
+void VehicleService::onWipersActiveForRainAutoUp()
+{
+    if (!m_settings || !m_settings->autoUpOnRain()) return;
+    if (!m_rainAutoUpTimer) {
+        m_rainAutoUpTimer = new QTimer(this);
+        m_rainAutoUpTimer->setSingleShot(true);
+        m_rainAutoUpTimer->setInterval(3000);
+        connect(m_rainAutoUpTimer, &QTimer::timeout, this, [this]() {
+            if (m_wipersState == 0) return;   // user turned them off in grace
+            qWarning() << "[VehicleService] Auto-up rain: closing all windows (UNVERIFIED writes)";
+            sendWindowCloseAll();
+        });
+    }
+    m_rainAutoUpTimer->start();
+}
+
+// ─── BCM Work Support unlock writes (all Q50_HYPOTHESIZED, gated) ──────────
+// Pattern: build single-frame UDS 0x2E (writeDID) request, log it verbosely,
+// transmit only if SettingsService.canVerifiedWrites is true.
+void VehicleService::sendBcmWriteDID(uint16_t did, const uint8_t *data, uint8_t len,
+                                     const char *label)
+{
+    const bool gateOpen = m_settings && m_settings->canVerifiedWrites();
+    QString hexPayload;
+    for (uint8_t i = 0; i < len && i < 4; ++i)
+        hexPayload += QString::asprintf("%02X ", data[i]);
+    qWarning().nospace() << "[VehicleService] BCM write " << label
+                         << " DID=0x" << QString::number(did, 16).rightJustified(4, '0').toUpper()
+                         << " payload=" << hexPayload
+                         << (gateOpen ? " — TRANSMITTING" : " — gate closed, log only");
+    if (!gateOpen) return;
+    // UDS single-frame: PCI (size) | service (0x2E) | DIDhi | DIDlo | data...
+    uint8_t buf[8] = {0};
+    buf[0] = static_cast<uint8_t>(3 + len);
+    buf[1] = 0x2E;
+    buf[2] = static_cast<uint8_t>(did >> 8);
+    buf[3] = static_cast<uint8_t>(did & 0xFF);
+    for (uint8_t i = 0; i < len && i + 4 < 8; ++i)
+        buf[4 + i] = data[i];
+    sendCANFrame(m_vehicleCanSock, UDS_BCM, buf, 8);
+}
+
+void VehicleService::sendBcmRoutine(uint16_t rid, const char *label)
+{
+    const bool gateOpen = m_settings && m_settings->canVerifiedWrites();
+    qWarning().nospace() << "[VehicleService] BCM routine " << label
+                         << " RID=0x" << QString::number(rid, 16).rightJustified(4, '0').toUpper()
+                         << (gateOpen ? " — TRANSMITTING" : " — gate closed, log only");
+    if (!gateOpen) return;
+    // UDS service 0x31 sub-function 0x01 (startRoutine)
+    uint8_t buf[8] = { 0x04, 0x31, 0x01,
+                       static_cast<uint8_t>(rid >> 8),
+                       static_cast<uint8_t>(rid & 0xFF),
+                       0x00, 0x00, 0x00 };
+    sendCANFrame(m_vehicleCanSock, UDS_ECM, buf, 8);
+}
+
+void VehicleService::applyAutoLockThreshold(int mph)
+{
+    const uint8_t v = static_cast<uint8_t>(qBound(0, mph, 60));
+    sendBcmWriteDID(DID_AUTO_LOCK_THRESHOLD, &v, 1, "auto-lock-threshold");
+}
+
+void VehicleService::applyMirrorTiltConfig(int anglePct, bool leftSide, bool rightSide)
+{
+    uint8_t buf[3];
+    buf[0] = static_cast<uint8_t>(qBound(0, anglePct, 100));
+    buf[1] = leftSide  ? 0x01 : 0x00;
+    buf[2] = rightSide ? 0x01 : 0x00;
+    sendBcmWriteDID(DID_MIRROR_TILT_CONFIG, buf, 3, "mirror-tilt");
+}
+
+void VehicleService::applyHornChirpMode(int mode)
+{
+    const uint8_t v = static_cast<uint8_t>(qBound(0, mode, 4));
+    sendBcmWriteDID(DID_HORN_CHIRP_MODE, &v, 1, "horn-chirp");
+}
+
+void VehicleService::applyWelcomeLightSequence(int seq)
+{
+    const uint8_t v = static_cast<uint8_t>(qBound(0, seq, 3));
+    sendBcmWriteDID(DID_WELCOME_LIGHT_SEQ, &v, 1, "welcome-light");
+}
+
+void VehicleService::applyDrlMode(int mode)
+{
+    const uint8_t v = static_cast<uint8_t>(qBound(0, mode, 3));
+    sendBcmWriteDID(DID_DRL_MATRIX, &v, 1, "drl-matrix");
+}
+
+void VehicleService::applyHeadlightDelay(int sec)
+{
+    // Clamp to known presets: 0 / 15 / 30 / 60 / 120 / 180
+    int v = sec;
+    static constexpr int presets[] = { 0, 15, 30, 60, 120, 180 };
+    int best = presets[0], bestDelta = std::abs(v - presets[0]);
+    for (int p : presets) {
+        int d = std::abs(v - p);
+        if (d < bestDelta) { best = p; bestDelta = d; }
+    }
+    uint8_t bytes[2] = {
+        static_cast<uint8_t>((best >> 8) & 0xFF),
+        static_cast<uint8_t>(best & 0xFF)
+    };
+    sendBcmWriteDID(DID_HEADLIGHT_DELAY, bytes, 2, "headlight-delay");
+}
+
+void VehicleService::applyTpmsThresholds(int warnPsi, int critPsi)
+{
+    // TPMS ECU lives at 0x731 — write thresholds via two writeDID calls.
+    // Pattern: use sendBcmWriteDID but route to UDS_TPMS instead of BCM.
+    const bool gateOpen = m_settings && m_settings->canVerifiedWrites();
+    qWarning().nospace() << "[VehicleService] TPMS thresholds: warn=" << warnPsi
+                         << " crit=" << critPsi
+                         << (gateOpen ? " — TRANSMITTING" : " — gate closed, log only");
+    if (!gateOpen) return;
+    uint8_t buf[8] = { 0x04, 0x2E,
+                       static_cast<uint8_t>(DID_TPMS_WARN_THRESHOLD >> 8),
+                       static_cast<uint8_t>(DID_TPMS_WARN_THRESHOLD & 0xFF),
+                       static_cast<uint8_t>(qBound(0, warnPsi, 80)),
+                       0x00, 0x00, 0x00 };
+    sendCANFrame(m_vehicleCanSock, UDS_TPMS, buf, 8);
+    buf[2] = static_cast<uint8_t>(DID_TPMS_CRIT_THRESHOLD >> 8);
+    buf[3] = static_cast<uint8_t>(DID_TPMS_CRIT_THRESHOLD & 0xFF);
+    buf[4] = static_cast<uint8_t>(qBound(0, critPsi, 80));
+    sendCANFrame(m_vehicleCanSock, UDS_TPMS, buf, 8);
+}
+
+// ─── Maintenance reminder resets ───────────────────────────────────────────
+void VehicleService::resetOilLife()       { sendBcmRoutine(RID_RESET_OIL_LIFE,      "oil-life"); }
+void VehicleService::resetTireRotation()  { sendBcmRoutine(RID_RESET_TIRE_ROTATION, "tire-rotation"); }
+void VehicleService::resetBrakeFluid()    { sendBcmRoutine(RID_RESET_BRAKE_FLUID,   "brake-fluid"); }
+void VehicleService::resetAirFilter()     { sendBcmRoutine(RID_RESET_AIR_FILTER,    "air-filter"); }
+void VehicleService::resetCabinFilter()   { sendBcmRoutine(RID_RESET_CABIN_FILTER,  "cabin-filter"); }
+
+// ─── DTC read / clear ──────────────────────────────────────────────────────
+// UDS service 0x19 sub-function 0x02 (reportDTCByStatusMask) with mask 0xFF.
+// Multi-frame responses arrive over CAN ISO-TP — we do simplified parsing of
+// the first-frame payload; longer lists return after the timer.
+void VehicleService::issueDtcScanRequest(canid_t ecu, const char *label)
+{
+    qDebug() << "[VehicleService] DTC scan request →" << label
+             << "ECU=" << QString::number(ecu, 16);
+    uint8_t buf[8] = { 0x03, 0x19, 0x02, 0xFF, 0x00, 0x00, 0x00, 0x00 };
+    sendCANFrame(m_vehicleCanSock, ecu, buf, 8);
+}
+
+void VehicleService::readDtcs()
+{
+    if (m_dtcReadInFlight) return;
+    m_currentDtcs.clear();
+    m_dtcReadInFlight = true;
+    emit dtcsChanged();
+
+    // Broadcast to known ECU addresses; responses arrive via the existing
+    // can0 notifier and are filtered by parseVehicleFrame() / parseDtcResponse().
+    issueDtcScanRequest(UDS_ECM,  "ECM");
+    issueDtcScanRequest(UDS_BCM,  "BCM");
+    issueDtcScanRequest(UDS_TPMS, "TPMS");
+    // Combination meter & ABS often have their own queryable DTC tables —
+    // address candidates 0x743 / 0x740. Add when J2534 confirms.
+
+    m_dtcTimeoutTimer->start();
+}
+
+void VehicleService::clearDtcs()
+{
+    const bool gateOpen = m_settings && m_settings->canVerifiedWrites();
+    qWarning() << "[VehicleService] DTC clear (UDS 0x14)"
+               << (gateOpen ? "— TRANSMITTING" : "— gate closed, log only");
+    if (!gateOpen) {
+        m_currentDtcs.clear();
+        emit dtcsChanged();
+        return;
+    }
+    uint8_t buf[8] = { 0x04, 0x14, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00 };
+    sendCANFrame(m_vehicleCanSock, UDS_BROADCAST_CLEAR, buf, 8);
+    m_currentDtcs.clear();
+    emit dtcsChanged();
+}
+
+void VehicleService::parseDtcResponse(const struct can_frame &f)
+{
+    // Filter: only response frames from known ECUs (request_addr + 8).
+    if (f.can_id != UDS_ECM_RESPONSE &&
+        f.can_id != UDS_BCM_RESPONSE &&
+        f.can_id != UDS_TPMS_RESPONSE)
+        return;
+    if (f.can_dlc < 4) return;
+    // Single-frame UDS positive response: PCI | 0x59 | 0x02 | mask | DTC bytes...
+    // Each DTC is 3 bytes high-byte..low-byte + status byte.
+    if (f.data[1] != 0x59) return;
+    const uint8_t dtcCount = (f.data[0] >= 4) ? (f.data[0] - 3) / 4 : 0;
+    const QString ecu = (f.can_id == UDS_ECM_RESPONSE) ? "ECM"
+                      : (f.can_id == UDS_BCM_RESPONSE) ? "BCM" : "TPMS";
+    for (uint8_t i = 0; i < dtcCount && (4 + i * 4 + 3) < f.can_dlc; ++i) {
+        const uint8_t hi = f.data[4 + i * 4];
+        const uint8_t mid = f.data[5 + i * 4];
+        const uint8_t lo = f.data[6 + i * 4];
+        const uint8_t status = f.data[7 + i * 4];
+        // DTC text format: first 2 bits of high byte determine prefix
+        const char prefixes[4] = { 'P', 'C', 'B', 'U' };
+        QString code = QString::asprintf("%c%01X%02X%02X",
+                                         prefixes[(hi >> 6) & 0x3],
+                                         (hi >> 4) & 0x3,
+                                         (hi & 0x0F) << 4 | (mid >> 4),
+                                         ((mid & 0x0F) << 4) | (lo >> 4));
+        QVariantMap row;
+        row["code"]   = code;
+        row["ecu"]    = ecu;
+        row["desc"]   = dtcDescription(code);
+        row["status"] = (status & 0x01) ? "active" : (status & 0x04 ? "pending" : "stored");
+        m_currentDtcs.append(row);
+    }
+    emit dtcsChanged();
+}
+
+QString VehicleService::dtcDescription(const QString &code)
+{
+    // Small static lookup for common VR30 / Q60 codes. Falls back to generic
+    // OBD-II prefix description so users still get a useful hint.
+    static const struct { const char *code; const char *desc; } table[] = {
+        { "P0299", "Turbocharger underboost — check intake clamps + diverter valves" },
+        { "P0420", "Catalyst efficiency below threshold — likely upstream/downstream O2 sensor" },
+        { "P0455", "EVAP large leak — usually loose gas cap" },
+        { "P0507", "Idle high — throttle body or PCV related" },
+        { "P0011", "VVT intake bank 1 — oil or solenoid related" },
+        { "P0014", "VVT exhaust bank 1 — oil or solenoid related" },
+        { "C1130", "VDC/TCS module — power supply or wheel-speed sensor" },
+        { "U0101", "Lost comm with TCM" },
+        { "U1000", "CAN comm fault — bus fault or ECU offline" },
+        { "B1049", "Front-passenger seatbelt buckle circuit" },
+    };
+    for (const auto &row : table) {
+        if (code == QString::fromLatin1(row.code))
+            return QString::fromLatin1(row.desc);
+    }
+    if (code.startsWith('P')) return QStringLiteral("Powertrain DTC — consult service manual");
+    if (code.startsWith('C')) return QStringLiteral("Chassis DTC — ABS / VDC / steering");
+    if (code.startsWith('B')) return QStringLiteral("Body DTC — BCM / interior systems");
+    if (code.startsWith('U')) return QStringLiteral("Network DTC — CAN bus / ECU comm");
+    return QStringLiteral("Unknown system");
 }

@@ -1,5 +1,5 @@
 # Q60 Nav Rebuild — Build Status
-Last updated: 2026-05-13
+Last updated: 2026-05-13 (post backlog-execution sprint)
 
 ---
 
@@ -21,6 +21,11 @@ Last updated: 2026-05-13
 
 ### C++ Services (13 total — all .h + .cpp complete)
 2026-05-13 P1/P2 sprint added: TripLoggerService + ParkingService.
+2026-05-13 backlog-execution sprint expanded: 11 new BCM-unlock Q_PROPERTYs in
+SettingsService (canVerifiedWrites gate, autoLockSpeedCustom, mirror tilt
+config, hornChirpMode, welcomeLightSequence, drlMode, headlightDelaySec, TPMS
+profile/warn/crit, autoUpOnRain); 7 new BCM CAN writers + 5 maintenance
+routines + DTC read/clear/parse + rain auto-up wiper handler in VehicleService.
 
 
 - [x] `VehicleService` (66 Q_PROPERTYs) — SocketCAN (can0/can1/can2); CAN parsing for ignition (0x292), doors (0x358), wipers (0x35D), cruise+coolant (0x551), BCM/battery (0x625), TPMS (0x385), oil life (0x54C), fuel economy (0x554), drive mode (0x2DC), ATTESA torque split (0x1CA), key slot (0x35B); HVAC write via r51-ecu path (0x540/0x541); UDS door lock/unlock via 0x745; ADAS aid frame (0x47D). ButtonLogger on all 3 buses
@@ -37,7 +42,9 @@ Last updated: 2026-05-13
 - [x] `StatusBridge` (21 Q_PROPERTYs) — full signal wiring, clock, cross-screen coordination, call routing, AVM activation
 - [x] `MapLibreItem` (8 Q_PROPERTYs) — QQuickItem Phase 3 stub; `RendererFrontend` / `OffscreenBackend` API correct; EGL pbuffer wiring TODO
 
-### QML UI (15 screens + 7 components — all implemented)
+### QML UI (18 screens + 8 components — all implemented)
+2026-05-13 backlog-execution sprint added: `QmlKeyboard.qml`, `DestinationSearch.qml`,
+`RoutePreview.qml`, `VehicleSettingsView.qml`.
 
 **Upper screen (NavigationView 800×480):**
 - [x] `NavigationView` — turn HUD, TurnArrow, approaching-turn pulse, SpeedWidget, cruise bubble, rerouting banner
@@ -63,6 +70,9 @@ Last updated: 2026-05-13
 ### Device Init System
 - [x] `inittab` — SysV runlevel 5, watchdog respawn
 - [x] `rcS` — mount vfs, udev, kernel modules
+- [x] `S05-capture-bootstrap` — brings up SocketCAN buses at boot; optional
+  on-device `candump` for first-boot CAN capture (flag-gated to
+  `/data/q60nav/capture-enable`)
 - [x] `S10-gpsd` — GPSD on ttyS0
 - [x] `S20-valhalla` — valhalla-httpd wrapper + valhalla_service on port 8002
 - [x] `S25-geocoder` — C+SQLite offline geocoder on port 4000 (graceful if binary/DB absent; replaces Photon/JVM)

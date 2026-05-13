@@ -308,11 +308,15 @@ void SettingsService::loadFromDisk()
     m_welcomeLighting       = bget("welcomeLighting",     true);
     m_interiorLightTimer    = iget("interiorLightTimer",     1);
     m_autoLockSpeed         = iget("autoLockSpeed",          1);
+    m_autoLockSpeedCustom   = iget("autoLockSpeedCustom",   15);
     m_autoUnlockPark        = bget("autoUnlockPark",      true);
     m_autoUnlockKeyRemoval  = bget("autoUnlockKeyRemoval",false);
     m_fobLockAll            = bget("fobLockAll",          true);
     m_mirrorTiltReverse     = bget("mirrorTiltReverse",   true);
     m_mirrorFoldLock        = bget("mirrorFoldLock",     false);
+    m_mirrorTiltAngle       = iget("mirrorTiltAngle",       30);
+    m_mirrorTiltLeft        = bget("mirrorTiltLeft",     true);
+    m_mirrorTiltRight       = bget("mirrorTiltRight",   false);
     m_rainSensorSensitivity = iget("rainSensorSensitivity",  3);
     m_wiperDelay            = iget("wiperDelay",             3);
     m_seatMemoryOnUnlock    = bget("seatMemoryOnUnlock",  true);
@@ -321,6 +325,17 @@ void SettingsService::loadFromDisk()
     m_parkAssistChimeVolume = iget("parkAssistChimeVolume",  2);
     m_fobLockHoldCloses     = bget("fobLockHoldCloses",  false);
     m_allWindowsOneTouch    = bget("allWindowsOneTouch", false);
+    m_autoUpOnRain          = bget("autoUpOnRain",       false);
+
+    // BCM Work Support unlocks
+    m_canVerifiedWrites     = bget("canVerifiedWrites",  false);
+    m_hornChirpMode         = iget("hornChirpMode",          2);
+    m_welcomeLightSequence  = iget("welcomeLightSequence",   1);
+    m_drlMode               = iget("drlMode",                1);
+    m_headlightDelaySec     = iget("headlightDelaySec",     30);
+    m_tpmsWarnPsi           = iget("tpmsWarnPsi",           30);
+    m_tpmsCritPsi           = iget("tpmsCritPsi",           26);
+    m_tpmsProfile           = iget("tpmsProfile",            0);
     m_mapOrientation        = iget("mapOrientation",         0);
     m_speedLimitDisplay     = bget("speedLimitDisplay",   true);
     m_mapDetailLevel        = iget("mapDetailLevel",         1);
@@ -400,11 +415,15 @@ void SettingsService::saveToDisk()
     root["welcomeLighting"]       = m_welcomeLighting;
     root["interiorLightTimer"]    = m_interiorLightTimer;
     root["autoLockSpeed"]         = m_autoLockSpeed;
+    root["autoLockSpeedCustom"]   = m_autoLockSpeedCustom;
     root["autoUnlockPark"]        = m_autoUnlockPark;
     root["autoUnlockKeyRemoval"]  = m_autoUnlockKeyRemoval;
     root["fobLockAll"]            = m_fobLockAll;
     root["mirrorTiltReverse"]     = m_mirrorTiltReverse;
     root["mirrorFoldLock"]        = m_mirrorFoldLock;
+    root["mirrorTiltAngle"]       = m_mirrorTiltAngle;
+    root["mirrorTiltLeft"]        = m_mirrorTiltLeft;
+    root["mirrorTiltRight"]       = m_mirrorTiltRight;
     root["rainSensorSensitivity"] = m_rainSensorSensitivity;
     root["wiperDelay"]            = m_wiperDelay;
     root["seatMemoryOnUnlock"]    = m_seatMemoryOnUnlock;
@@ -413,6 +432,15 @@ void SettingsService::saveToDisk()
     root["parkAssistChimeVolume"] = m_parkAssistChimeVolume;
     root["fobLockHoldCloses"]     = m_fobLockHoldCloses;
     root["allWindowsOneTouch"]    = m_allWindowsOneTouch;
+    root["autoUpOnRain"]          = m_autoUpOnRain;
+    root["canVerifiedWrites"]     = m_canVerifiedWrites;
+    root["hornChirpMode"]         = m_hornChirpMode;
+    root["welcomeLightSequence"]  = m_welcomeLightSequence;
+    root["drlMode"]               = m_drlMode;
+    root["headlightDelaySec"]     = m_headlightDelaySec;
+    root["tpmsWarnPsi"]           = m_tpmsWarnPsi;
+    root["tpmsCritPsi"]           = m_tpmsCritPsi;
+    root["tpmsProfile"]           = m_tpmsProfile;
     root["mapOrientation"]        = m_mapOrientation;
     root["speedLimitDisplay"]     = m_speedLimitDisplay;
     root["mapDetailLevel"]        = m_mapDetailLevel;
@@ -502,11 +530,15 @@ void SettingsService::resetToDefaults()
     m_welcomeLighting       = true;
     m_interiorLightTimer    = 1;
     m_autoLockSpeed         = 1;
+    m_autoLockSpeedCustom   = 15;
     m_autoUnlockPark        = true;
     m_autoUnlockKeyRemoval  = false;
     m_fobLockAll            = true;
     m_mirrorTiltReverse     = true;
     m_mirrorFoldLock        = false;
+    m_mirrorTiltAngle       = 30;
+    m_mirrorTiltLeft        = true;
+    m_mirrorTiltRight       = false;
     m_rainSensorSensitivity = 3;
     m_wiperDelay            = 3;
     m_seatMemoryOnUnlock    = true;
@@ -518,6 +550,15 @@ void SettingsService::resetToDefaults()
     m_mapDetailLevel        = 1;
     m_maintenanceInterval   = 1;
     m_language              = 0;
+    m_autoUpOnRain          = false;
+    m_canVerifiedWrites     = false;
+    m_hornChirpMode         = 2;
+    m_welcomeLightSequence  = 1;
+    m_drlMode               = 1;
+    m_headlightDelaySec     = 30;
+    m_tpmsWarnPsi           = 30;
+    m_tpmsCritPsi           = 26;
+    m_tpmsProfile           = 0;
     seedDefaultBtDevices();
 
     // Delete settings.json — preferring AppDataLocation copy; also wipe
@@ -556,6 +597,8 @@ void SettingsService::emitAllChanged()
     emit btDevicesChanged();
     emit languageChanged();
     emit uptimeChanged();
+    emit canVerifiedWritesChanged();
+    emit bcmUnlocksChanged();
 }
 
 // ============================================================================
@@ -625,6 +668,7 @@ SETTER_INT (InteriorLightTimer,    interiorLightTimer,    lightsChanged)
 
 // Door Locks
 SETTER_INT (AutoLockSpeed,         autoLockSpeed,         locksChanged)
+SETTER_INT (AutoLockSpeedCustom,   autoLockSpeedCustom,   locksChanged)
 SETTER_BOOL(AutoUnlockPark,        autoUnlockPark,        locksChanged)
 SETTER_BOOL(AutoUnlockKeyRemoval,  autoUnlockKeyRemoval,  locksChanged)
 SETTER_BOOL(FobLockAll,            fobLockAll,            locksChanged)
@@ -632,6 +676,9 @@ SETTER_BOOL(FobLockAll,            fobLockAll,            locksChanged)
 // Mirrors
 SETTER_BOOL(MirrorTiltReverse,     mirrorTiltReverse,     mirrorsChanged)
 SETTER_BOOL(MirrorFoldLock,        mirrorFoldLock,        mirrorsChanged)
+SETTER_INT (MirrorTiltAngle,       mirrorTiltAngle,       mirrorsChanged)
+SETTER_BOOL(MirrorTiltLeft,        mirrorTiltLeft,        mirrorsChanged)
+SETTER_BOOL(MirrorTiltRight,       mirrorTiltRight,       mirrorsChanged)
 
 // Wipers
 SETTER_INT (RainSensorSensitivity, rainSensorSensitivity, wipersChanged)
@@ -644,6 +691,25 @@ SETTER_BOOL(SeatbeltReminder,      seatbeltReminder,      comfortChanged)
 SETTER_INT (ParkAssistChimeVolume, parkAssistChimeVolume, comfortChanged)
 SETTER_BOOL(FobLockHoldCloses,     fobLockHoldCloses,     comfortChanged)
 SETTER_BOOL(AllWindowsOneTouch,    allWindowsOneTouch,    comfortChanged)
+SETTER_BOOL(AutoUpOnRain,          autoUpOnRain,          comfortChanged)
+
+// BCM Work Support unlocks — all gate-related changes emit bcmUnlocksChanged()
+SETTER_INT (HornChirpMode,         hornChirpMode,         bcmUnlocksChanged)
+SETTER_INT (WelcomeLightSequence,  welcomeLightSequence,  bcmUnlocksChanged)
+SETTER_INT (DrlMode,               drlMode,               bcmUnlocksChanged)
+SETTER_INT (HeadlightDelaySec,     headlightDelaySec,     bcmUnlocksChanged)
+SETTER_INT (TpmsWarnPsi,           tpmsWarnPsi,           bcmUnlocksChanged)
+SETTER_INT (TpmsCritPsi,           tpmsCritPsi,           bcmUnlocksChanged)
+SETTER_INT (TpmsProfile,           tpmsProfile,           bcmUnlocksChanged)
+
+// Master gate has its own dedicated signal — UI shows banner state
+void SettingsService::setCanVerifiedWrites(bool v)
+{
+    if (m_canVerifiedWrites == v) return;
+    m_canVerifiedWrites = v;
+    emit canVerifiedWritesChanged();
+    armSaveTimer();
+}
 
 // Map
 SETTER_INT (MapOrientation,        mapOrientation,        mapSettingsChanged)

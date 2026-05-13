@@ -140,6 +140,10 @@ qt6_add_qml_module(q60nav
         src/qml/components/AvmOverlay.qml
         src/qml/components/MiniGauge.qml
         src/qml/components/GPad.qml
+        src/qml/components/QmlKeyboard.qml
+        src/qml/screens/DestinationSearch.qml
+        src/qml/screens/RoutePreview.qml
+        src/qml/screens/VehicleSettingsView.qml
 )
 
 target_include_directories(q60nav PRIVATE

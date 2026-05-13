@@ -1,271 +1,181 @@
 # Q60 Nav — Backlog
+Last reconciled: 2026-05-13 (post PR #1 merge + backlog execution sprint)
 
-Items not targeted for the initial DCU flash. Ordered roughly by priority.
-
----
-
-## Input / UX
-
-### QML On-Screen Keyboard
-- Qt VirtualKeyboard module was NOT built for the i386 target — not available
-- Need a custom `QmlKeyboard.qml` component (QWERTY + numeric layouts)
-- Wire into `NavCompanionView.qml` `TextInput` focus events
-- Wire into any other QML `TextInput` that appears (Settings search, etc.)
-- Design: slide-up overlay, matches Q60 dark theme, 44px+ key targets
-- Consider: key repeat on backspace hold, haptic feedback via CAN (if supported)
+Items not in current scope, ordered by priority. Shipped items have been removed —
+see git log for the full history of merged enhancements.
 
 ---
 
-## Code / Build
+## ✅ Recently Shipped (reference — do not re-add)
 
-### SettingsView persistence
-- All settings changes are in-memory only; no persistence to disk
-- Need QSettings or JSON write-back to `/opt/nav/config/config.json`
-
-### Trip logger wiring
-- InfoView trip history is static mock
-- Wire to GPX log writer triggered on ignition-off (CAN ignition-off frame TBD)
-
-### Destination search / route preview sub-view
-- NavigationView currently has stub `handleBack()` / `handleHome()` functions
-- Needs `DestinationSearch.qml` + `RoutePreview.qml`
-- Wire into NavigationView using a sub-view StackView or Loader
-
-### CAN-based TCU signal strength
-- NetworkService TCU mode returns hardcoded 4 bars — RNDIS gives no signal data
-- Real RSSI lives in Continental BL28NA003 CAN frames (IDs unknown)
-- Requires CAN sniff during active LTE session to identify frame + decode RSSI field
-
----
-
-## Map & POI Coverage Expansion
-
-### SC — South Carolina
-- Vector tiles: build `sc.mbtiles` via `build-map-tiles.sh` (OSM PBF source)
-- POI block: extract OSM nodes for SC, append to POINT047.DAT (same v3 pipeline)
-- Style update: add `mbtiles:///opt/nav/tiles/sc.mbtiles` source to `q60-dark.json`
-- Routing: build Valhalla tiles for SC region
-- Notes: ~180MB tiles estimated; 8–10k POI records expected
-
-### GA — Georgia
-- Same pipeline as SC
-- Notes: ~290MB tiles estimated; Atlanta metro adds routing complexity
-
-### VA — Virginia
-- Same pipeline as SC/GA
-- Notes: ~260MB tiles; includes DC metro fringe (use `vaNorthFence` bbox to crop if needed)
-
-### Combined SE region (stretch goal)
-- Single `se.mbtiles` covering NC+SC+GA+VA — cleaner style config
-- Requires re-running NC tile build with expanded bbox
-- Estimate: ~1.1GB combined
+- ASC toggle (drive mode picker + Audio settings)
+- VR30DDTT track display (boost / oil / IAT / knock / ignition / AFR)
+- ATTESA live torque split (front/rear pie + 60s sparkline)
+- G-meter (G-pad + 0-60 / quarter-mile timer)
+- Composite "Track" drive mode preset
+- Walk-away auto-fold mirrors
+- Comfort window close from key fob (JDM)
+- One-touch up/down for all 4 windows
+- Auto-up windows during rain (wiper-triggered close)
+- DTC read + clear with friendly descriptions
+- Speed-sensitive auto-lock (user threshold)
+- Mirror tilt-on-reverse (angle + per-side toggle)
+- Horn chirp / lock confirmation customization
+- Welcome lighting choreography customizer
+- DRL behavior matrix (BCM Work Support)
+- Auto headlight delay (user slider)
+- Maintenance reminder reset (one-tap per item)
+- TPMS thresholds customizable for track use
+- VehicleSettingsView surfacing all BCM unlocks
+- SettingsService persistence (JSON, debounced, atomic writes)
+- TripLoggerService (per-cycle GPX)
+- ParkingService ("navigate to car")
 
 ---
 
-## Navigation & Routing
+## 🔴 Hardware-gated (block until J2534 bench day)
 
-### HOUSE001 address search for Auger Shell Court
-- Add address record to HOUSE001 B3440BE0.DAT (B-tree, 512-byte pages, ~649 pages)
-- Enables "171 Auger Shell Court" address search on OEM nav
-- Complexity: high — Zenrin B-tree format, no SDK
+### CAN ID verification — capture session prerequisites
+- AV-CAN 0x3F6 and 0x4CE button IDs — UNVERIFIED, need sniff on AV-CAN connector
+- Bose wake frame 0x3B3 — placeholder, sniff at amp connector (trunk)
+- HVAC writes 0x540 / 0x541 — Q50_LIKELY (r51-ecu derived); confirm before live writes
+- ADAS frame 0x47D — UNVERIFIED write path; confirm composition byte-by-byte
+- Drive mode command 0x2DC — Q50_LIKELY write
+- BCM door lock 0x745 UDS — Q50_LIKELY write; service 0x30 DID 0xBF00
+- Key slot detect 0x35B — UNVERIFIED read
+- Bose / DSP frame for ASC toggle — Q50_HYPOTHESIZED ID, capture during diagnostic-menu toggle
+- BCM Work Support unlocks (mirror dip, auto-lock threshold, horn chirp, welcome
+  lighting, DRL matrix, headlight delay) — all Q50_HYPOTHESIZED; gated behind
+  `SettingsService.canVerifiedWrites=false` until capture confirms
 
-### RDSTM001 routing graph for Auger Shell Court and Parkman Grant Drive
-- Add road nodes and links to routing graph (RDSTM001 topology file)
-- Enables turn-by-turn routing to both new streets
-- Complexity: high — proprietary format
+### Capture session checklist
+See `docs/hardware-day-capture-checklist.md` — every J2534 capture target consolidated
+so one bench day unblocks ~20 features.
 
 ---
 
-## Hardware / DCU
+## 🟡 Software-track open
 
-### CAN ID verification
-- AV-CAN 0x3F6 and 0x4CE IDs for joystick/button are UNVERIFIED
-- Requires hardware sniff on AV-CAN connector at first boot
-- Tool: J2534 adapter + candump or socketcan
+### TCU CAN-based signal strength
+- NetworkService TCU mode hardcodes 4 bars (RNDIS gives no signal data)
+- Real RSSI in Continental BL28NA003 CAN frames — IDs unknown
+- Requires CAN sniff during active LTE session
 
 ### MapLibre EGL on Intel GMA 3600
-- Current simulated path uses Mesa softpipe
+- Current path simulated with Mesa softpipe
 - DCU GPU: Intel GMA 3600 (PowerVR SGX545 derivative)
 - May require pvr_dri or software fallback — needs hardware test
-
-### First-boot profile setup
-- WelcomeOverlay triggers on startup; profile selection not yet implemented
-- KeyFob profile matching (key slot → profile ID) requires CAN integration
-
-### TCU USB VID:PID
-- `tcu-detect.sh` will auto-identify and patch udev rule on first boot
-- If `udevadm` sysfs traversal fails, run: `dmesg | grep -i "idVendor\|rndis"` and note the IDs
+- `OffscreenBackend::activate()` in `MapLibreItem.cpp` still a stub
 
 ---
 
-## 🔥 Hidden / Unlocked Capabilities — Beyond Factory
+## 🗺️ Map & POI Coverage Expansion
 
-The factory Clarion DCU exposes a fraction of what the Q60 can actually do. The
-vehicle is full of dealer-programmable BCM options, hidden diagnostic menus, JDM
-features disabled in the US firmware, and CAN PIDs the factory dashboard never
-reads. With our own open-source head unit, we can surface them.
+Out of scope for current sprint — each region is a multi-hour tile-build pipeline.
 
-Research sources: Infiniti Q50/Q60 forums (infinitiq50.org / infinitiq60.org),
-CONSULT-III TSBs (ITB19-002b et al.), EcuTek/UpRev tuning documentation, VR30DDTT
-reference threads, and Nissan/Infiniti dealer service-mode procedures. All items
-below require a J2534 capture pass first to confirm CAN IDs/payloads.
+### SC — South Carolina
+- Vector tiles via `build-map-tiles.sh` (OSM PBF source) → ~180MB
+- POI extract → append to POINT047.DAT (v3 pipeline)
+- Style update: add `mbtiles:///opt/nav/tiles/sc.mbtiles`
+- Routing: Valhalla tiles for SC region
+- 8–10k POI records expected
 
-Ranked by cool factor (10 = "you'll demo this first," 1 = "nice if free").
+### GA — Georgia
+- Same pipeline as SC; ~290MB tiles; Atlanta metro routing complexity
 
----
+### VA — Virginia
+- Same pipeline; ~260MB tiles; DC fringe — crop with `vaNorthFence` bbox
 
-### ⭐ Cool factor 10 — Hero features
-
-#### Disable ASC (fake exhaust) — one-tap toggle
-- Q60 with Bose Performance Series pipes synthesized engine sound through the speakers ("Active Sound Control"). Factory hides the on/off in a deep diagnostic menu (Settings → Seek-up ×3 → press-hold below right scroll arrow ×5s) and gates it behind dealer programming on 2020+.
-- We expose a single toggle on the Drive Mode picker AND in Audio settings. State persists per-profile (your "Sport+" can be loud, Eco can be silent).
-- CAN target: same BCM/DSP channel as ANC. Need J2534 sniff during the diagnostic-menu toggle to capture the frame.
-- Why people want it: tuners charge $50–$150 just to flip this. Goes viral on YouTube/forums.
-
-#### Real-time VR30DDTT track display
-- VR30 (3.0L twin-turbo) exposes a rich telemetry set the factory dash never shows. Via OBD2 enhanced PIDs / extended CAN frames: boost pressure, oil temp (VVT temp sensor), trans fluid temp (TCM PID), intake air temp (IAT), ignition advance, knock retard, wastegate position, MAF, AFR.
-- Full-screen "Track" overlay (lower-screen Vehicle tab → "Track" sub-tab): 3-row dashboard of live needles + a 60-second scrolling history strip for each.
-- Same data EcuTek's ECU Connect app shows — but built in, free, no cable.
-
-#### ATTESA E-TS live torque split (we already have the CAN ID — 0x1CA)
-- Factory dash shows nothing. We have the data path already wired.
-- UI: real-time front/rear torque % pie chart with last-60s sparkline. Live G-arrow overlay. Saves a session-best "max front bias" stat.
-- GT-R fans will lose their minds.
-
-#### G-meter + acceleration history
-- Q60 has a 3-axis G-sensor under the center console feeding ATTESA and ABS (well-documented in the ATTESA technical literature).
-- Read longitudinal/lateral G via CAN. Render a circular G-pad with current dot + peak-hold rings. Reset per ignition cycle.
-- 0–60 / 0–100 / quarter-mile auto-detect using wheel speed (0x284/0x285) + GPS cross-check.
-
-#### Custom "Track" drive mode preset
-- Stock has 6 modes. We can compose a 7th: ATTESA write 0x2DC (we have the ID), maxed throttle map, audio profile = ASC off, climate to ON-NOT-AUTO, gauges to Track sub-tab.
-- One tap activates everything. State per-profile.
+### Combined SE region (stretch)
+- Single `se.mbtiles` covering NC+SC+GA+VA; ~1.1GB combined; cleaner style config
 
 ---
 
-### ⭐ Cool factor 9 — Things that make every drive better
+## 🏠 Topsail house — proprietary nav formats
 
-#### Walk-away auto-fold mirrors
-- Factory has folding mirrors (switch only). Aftermarket modules cost $80–150.
-- We send the BCM fold command on the door-lock CAN frame. Free.
+Both high-complexity (no SDK exists for Zenrin nav DAT files); defer until factory
+nav is fully replaced or someone reverse-engineers the format.
 
-#### Comfort window close from key fob (JDM feature, US-disabled)
-- US firmware allows open-on-unlock-hold but **disables** close-on-lock-hold. JDM/EU firmware allows it. CONSULT-III can flip the BCM option, but it's not in the menu Doug can reach.
-- We synthesize the close commands directly when the fob lock-hold signal arrives on CAN. Bypass the BCM gate.
+### HOUSE001 address record — 171 Auger Shell Court
+- B-tree, 512-byte pages, ~649 pages
+- Would enable factory-nav address search
 
-#### One-touch up/down for ALL windows (factory: driver only)
-- Power window CAN commands exist for all 4 doors. Factory firmware only honors "one-touch" on the driver. We honor it on all 4.
-
-#### Auto-up windows during rain (heuristic)
-- Wiper signal (0x35D — Q50_LIKELY) + window-position read → if wipers go to auto mode and a window is open more than 1cm, fire close command after 3s grace.
-- Strongly user-toggleable; opt-in only.
-
-#### DTC read + clear, with friendly descriptions
-- Factory hides all DTCs unless something major triggers a dash light. We surface them on the Info tab with plain-language explanations (e.g. "P0299 = boost low — check intake clamps").
-- Clear button (with confirmation). The kind of feature people drive 20 miles to a parts store to use.
+### RDSTM001 routing graph — Auger Shell Court + Parkman Grant Drive
+- Add road nodes/links to routing graph
+- Would enable factory-nav turn-by-turn
 
 ---
 
-### ⭐ Cool factor 8 — Quality-of-life unlocks
+## 🔌 Post-v1.0 — major integrations
 
-#### Speed-sensitive auto-lock — user-configurable threshold
-- Factory auto-locks at a hardcoded speed (~15 mph). Make it user-selectable: never / 5 / 10 / 15 / 25 mph / always-on.
+### Apple CarPlay / Android Auto (open-source path)
+- aasdk + OpenAuto on Qt6/Wayland
+- DCU has 2 USB host ports; usbmuxd added to start.sh
+- ~2-3 weeks effort; flag when boot test confirms USB enumeration
+- Audio routes through existing AudioService ALSA/Bose pipeline
 
-#### Mirror tilt-on-reverse — angle + which side
-- BCM exposes a "how far does the mirror dip in reverse" setting. CONSULT-III flips it. We surface as a slider (0-100%) and per-side toggle.
+### Bluetooth hotspot connectivity + deferred sync
+- DCU has no Wi-Fi or cellular; opportunistic sync when phone hotspot available
+- `SyncService` with persisted queue at `/var/lib/q60nav/sync-queue.json`
+- Priorities: album art > routing updates > full rootfs (slot B OTA)
+- ~1 week effort; SyncService skeleton first, items incrementally
 
-#### Horn chirp / lock confirmation customization
-- Factory cycles 2 modes (hazard-only, hazard+horn) via key fob long-hold; CONSULT-III exposes more (silent, double-chirp, lights-only). We expose all of them.
-
-#### Welcome lighting choreography
-- Sequential turn-signal LEDs, ambient lighting wake order, footwell brightness — all CAN-controllable. Build a "Welcome sequence" customizer.
-
-#### DRL behavior — on/off, with parking lights, on signal cancel
-- BCM Work Support menu exposes these on CONSULT-III. Factory UI has only on/off. We expose the full matrix.
-
-#### Auto headlight delay — adjustable
-- Factory has a fixed "lights stay on for X seconds after key off." BCM option to change it. User slider: 0 / 15 / 30 / 60 / 120 / 180 seconds.
-
-#### Maintenance reminder reset built-in
-- Oil life %, tire rotation, brake fluid, air filter, cabin filter — factory requires dealer or button-mash combos. Expose all in Settings → Vehicle → Maintenance with one-tap reset.
-
-#### TPMS thresholds customizable for track use
-- Factory uses placard pressures (~32 psi cold). Track day = 40+ psi hot. Expose per-corner warning thresholds; save profiles ("Street" / "Track" / "Touring").
+### Other post-v1.0
+| Feature | Notes |
+|---|---|
+| OTA update mechanism | Bluetooth sync above, USB-drive fallback |
+| Rear camera integration | Already prototyped; refine guides + low-light tuning |
+| SiriusXM passthrough | sxmcgs.out/sxmfc.out proxies running; wire AudioView |
+| Speed-limit data | OSM tags in Valhalla tiles; expose via NavigationService |
+| Multi-region maps | See "Map & POI Coverage Expansion" section above |
 
 ---
 
-### ⭐ Cool factor 7 — Personalization
+## 🔥 Remaining Hidden / Unlocked Capabilities
 
-#### Per-profile audio DSP linked to drive mode
-- Bose AudioPilot/Centerpoint/SurroundStage/Driver-Stage already toggleable.
-- Bind a DSP profile to each drive mode: Sport+ = drier sound, Standard = full Centerpoint, Snow = max bass for road texture cancellation. Auto-switch on mode change.
+The big "Cool factor 10/9/8" hero features have shipped. Items below are smaller
+unlocks — most still need a J2534 capture session to confirm CAN IDs.
 
-#### Per-profile climate, audio source, drive mode (full I-Key profile)
-- Factory ties some settings to I-Key fob. We extend to everything: last audio source, last station/preset, climate setpoints, drive mode, DSP profile, brightness, units.
-- Profile bound to key-fob slot ID (CAN 0x35B — already in our service).
+### Cool factor 7 — personalization (still open)
+- Per-profile audio DSP linked to drive mode (Sport+ drier, Snow heavy bass)
+- Full I-Key profile sync (climate + audio source + station + DSP + brightness + units)
+- Custom Personal-mode parameters (throttle curve, ATTESA bias, ESC sensitivity)
+- Performance run logger / track history (WOT auto-log; max RPM, peak boost, 0-60, peak G)
+- Live tachometer w/ shift light + customizable redline (top-strip in Sport+)
 
-#### Custom Personal-mode parameters
-- Factory Personal has 5 knobs. We add: throttle pedal response curve (5 presets), ATTESA preferred bias (full RWD / 90/10 / 80/20 / auto), ESC sensitivity for non-track mode.
+### Cool factor 6 — nice-to-have
+- Cylinder-by-cylinder knock log (VR30 enhanced PIDs → 6-bar chart)
+- Wiper park-position adjust (if BCM honors alt position frame)
+- Fuel economy history — 90-day trip chart (easy once TripLogger settles)
+- Battery health trend (voltage 0x625 over sessions, start-crank dip estimate)
+- Tire wear estimator (wheel-speed deltas + ATTESA bias history)
+- "Hide nag screens" mode — flag for user awareness; baseline already does this
 
-#### Performance run logger / Track history
-- Every drive that goes WOT, log a "performance run": max RPM, peak boost, 0–60 time, peak G, max ATTESA front split. Browse history; share as image overlay.
-
-#### Live tachometer w/ shift light + customizable redline
-- Add a top-strip RPM bar on upper screen during Sport/Sport+ with user-configurable shift light point (default 6500 redline). Color sweep green→yellow→red.
-
----
-
-### ⭐ Cool factor 6 — Nice-to-have
-
-#### Cylinder-by-cylinder knock log
-- VR30 exposes per-cylinder ignition timing and knock retard via enhanced PIDs. Surface a 6-bar chart on track screen.
-
-#### Wiper park-position adjust
-- Some Nissan firmware supports two wiper park positions. Expose via Settings → Vehicle if the BCM honors the alt position frame.
-
-#### Fuel economy history — 90-day trip chart
-- Already in audit P3, but worth re-flagging — easy to build once TripLogger lands.
-
-#### Battery health trend
-- We read voltage (0x625). Track over sessions, estimate state-of-health by start-cranking-dip pattern.
-
-#### Tire wear estimator
-- Combine wheel speed deltas (0x284 vs 0x285) under load + ATTESA front-rear bias history → estimate uneven wear. "Front-left wearing 12% faster than rear, consider rotation."
-
-#### "Hide nag screens" mode
-- The factory startup-disclaimer screen is annoying. Replace with instant boot to last-used tab. (Already baseline behavior — flag for user awareness.)
+### Cool factor 5 — niche
+- Hidden diagnostic-menu replicator (touchscreen cal, speaker tests, color bars)
+- BCM option dump / restore (JSON snapshot — for safe experimentation)
+- Driver attention score (ProAssist raw on Info tab)
 
 ---
 
-### ⭐ Cool factor 5 — Niche
+## ⚠️ NOT implementing — hardware-risky / legally problematic
 
-#### Hidden diagnostic-menu replicator
-- Replicate the factory secret-menu functionality (touchscreen calibration, speaker tests, color bars, etc.) but with proper labels. Useful when reselling the car back to factory firmware in the future.
-
-#### BCM option dump / restore
-- Read every BCM Work Support flag, save to JSON, restore on demand. Lets Doug experiment freely without dealer trips to revert.
-
-#### Driver attention score
-- ProAssist "Driver Attention Alert" already monitors steering inputs for fatigue. Surface the raw score on Info tab.
-
----
-
-### ⚠️ Hardware-risky / illegal-in-some-jurisdictions — NOT implementing
-- ESC/VDC permanent disable (legally problematic, dangerous)
-- ECU map flash (wrong hardware path — needs OBD2 tuner cable; not a DCU job)
-- Diagnostic mode write commands that aren't documented (could brick a module)
+- ESC/VDC permanent disable
+- ECU map flash (wrong hardware path — needs OBD2 tuner cable)
+- Undocumented diagnostic writes (could brick a module)
 - TPMS pressure spoofing (could mask a real fault)
-- Air-bag-system writes (we don't even read these; permanent rule)
+- Air-bag-system writes (never read or written, permanent rule)
 
 ---
 
-### Implementation gates
+## Implementation gates
 
-**Before any of the above ships:**
-1. J2534 capture pass with the factory system live, recording every CAN frame around each target action (door lock, drive mode switch, ASC toggle via diagnostic menu, etc.).
+Before any new write path ships:
+1. J2534 capture pass with factory system live, recording every CAN frame around target action.
 2. Confirm read paths produce expected values before adding writes.
 3. Bench-test writes on a dev DCU (no live vehicle) where possible.
-4. Two-step confirmation in UI for anything that affects safety systems or vehicle state changes (lights on, doors lock, etc.).
+4. UI two-step confirmation for anything affecting safety systems.
 
-**Cool factor 10 items are the "demo first" features. Build the J2534 capture
-session around them so the visible payoff matches the verification effort.**
+All new BCM Work Support writes are gated behind `SettingsService.canVerifiedWrites`
+(default false). UI is fully functional; writes are no-op until capture verifies +
+user explicitly enables. See `docs/hardware-day-capture-checklist.md`.

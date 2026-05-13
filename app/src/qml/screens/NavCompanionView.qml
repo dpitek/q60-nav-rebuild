@@ -14,6 +14,9 @@ Item {
     property bool searchActive: false
     property string searchQuery: ""
 
+    // On-screen keyboard handle (injected by ControlHubView)
+    property var keyboard: null
+
     // Destination tapped — drives bottom sheet
     property string sheetDestName: ""
     property string sheetDestAddr: ""
@@ -83,6 +86,7 @@ Item {
                             }
                             onActiveFocusChanged: {
                                 searchActive = activeFocus
+                                if (activeFocus && keyboard) keyboard.show(searchInput)
                             }
                         }
 
