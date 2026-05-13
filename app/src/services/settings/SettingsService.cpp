@@ -293,6 +293,7 @@ void SettingsService::loadFromDisk()
     m_clickSounds           = bget("clickSounds",         true);
     m_navPromptVolume       = iget("navPromptVolume",       80);
     m_vdcEnabled            = bget("vdcEnabled",          true);
+    m_speedAlertThreshold   = iget("speedAlertThreshold",    5);
     m_lightShutoff          = iget("lightShutoff",           2);
     m_headlightSensitivity  = iget("headlightSensitivity",   1);
     m_drlEnabled            = bget("drlEnabled",          true);
@@ -379,6 +380,7 @@ void SettingsService::saveToDisk()
     root["clickSounds"]           = m_clickSounds;
     root["navPromptVolume"]       = m_navPromptVolume;
     root["vdcEnabled"]            = m_vdcEnabled;
+    root["speedAlertThreshold"]   = m_speedAlertThreshold;
     root["lightShutoff"]          = m_lightShutoff;
     root["headlightSensitivity"]  = m_headlightSensitivity;
     root["drlEnabled"]            = m_drlEnabled;
@@ -594,6 +596,9 @@ SETTER_INT (NavPromptVolume,       navPromptVolume,       audioSettingsChanged)
 
 // Vehicle
 SETTER_BOOL(VdcEnabled,            vdcEnabled,            vehicleChanged)
+
+// Speed alert — routed through navChanged() since the badge lives in NavigationView
+SETTER_INT (SpeedAlertThreshold,   speedAlertThreshold,   navChanged)
 
 // Lights
 SETTER_INT (LightShutoff,          lightShutoff,          lightsChanged)

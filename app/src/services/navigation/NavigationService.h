@@ -9,6 +9,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QTcpSocket>
+#include <QVariantList>
 
 struct RouteStep {
     QString instruction;
@@ -29,6 +30,12 @@ class NavigationService : public QObject {
     Q_PROPERTY(double  speedLimit   READ speedLimit      NOTIFY speedLimitChanged)
     Q_PROPERTY(QGeoCoordinate position READ position     NOTIFY positionChanged)
     Q_PROPERTY(bool    rerouting    READ rerouting       NOTIFY reroutingChanged)
+    // Lane guidance for the upcoming maneuver. Each entry is a QVariantMap:
+    //   { "active": bool, "direction": "left"|"straight"|"right"|"slight_left"|... }
+    // Upstream wiring from Valhalla's maneuver["lanes"] JSON is a Phase 3 item;
+    // for now this returns a stubbed list of 3 lanes near a turn so the QML
+    // lane-arrow widget can render against mock data.
+    Q_PROPERTY(QVariantList laneInfo READ laneInfo NOTIFY instructionChanged)
 
 public:
     explicit NavigationService(QObject *parent = nullptr);
@@ -44,6 +51,7 @@ public:
     double  speedLimit()   const { return m_speedLimit; }
     QGeoCoordinate position() const { return m_position; }
     bool    rerouting()    const { return m_rerouting; }
+    QVariantList laneInfo() const;
 
 public slots:
     void routeTo(double lat, double lon, const QString &label);

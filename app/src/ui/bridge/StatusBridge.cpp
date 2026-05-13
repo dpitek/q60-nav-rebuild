@@ -191,6 +191,19 @@ void StatusBridge::onReverseEngaged(bool reverse)
     // Lower screen camera view is triggered in QML by binding reverseActive
 }
 
+// ─── AVM activation ────────────────────────────────────────────────────────
+// Triggered from QML by corner-badge tap or, eventually, from VehicleService
+// when gear=R AND the AVM steering-wheel button is held. The actual camera
+// pipeline (4× V4L2 feeds) wires later — this is the activation channel that
+// both screens listen on so the upper-screen overlay and lower-screen tab can
+// react in lockstep.
+void StatusBridge::setAvmActive(bool active)
+{
+    if (m_avmActive == active) return;
+    m_avmActive = active;
+    emit avmActiveChanged(active);
+}
+
 // ─── Phone call events ─────────────────────────────────────────────────────
 void StatusBridge::onCallStarted()
 {

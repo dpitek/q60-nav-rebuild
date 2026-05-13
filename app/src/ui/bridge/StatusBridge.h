@@ -38,6 +38,8 @@ class StatusBridge : public QObject {
     Q_PROPERTY(bool    networkOnline  READ networkOnline  NOTIFY networkChanged)
     Q_PROPERTY(QString networkType    READ networkType    NOTIFY networkChanged)  // "LTE"/"3G"/"none"
     Q_PROPERTY(int     signalStrength READ signalStrength NOTIFY networkChanged)  // 0-5 bars
+    // Around View Monitor (AVM) — upper screen camera composite overlay
+    Q_PROPERTY(bool    avmActive      READ avmActive      NOTIFY avmActiveChanged)
 
 public:
     explicit StatusBridge(NavigationService *nav,
@@ -68,6 +70,11 @@ public:
     QString timeString()    const { return m_timeString; }
     double latitude()       const { return m_latitude; }
     double longitude()      const { return m_longitude; }
+    bool   avmActive()      const { return m_avmActive; }
+
+    // Setter for AVM activation — invokable from QML (corner badge, lower-screen
+    // Vehicle tab button, or future CAN-driven gear=R + button-held trigger).
+    Q_INVOKABLE void setAvmActive(bool active);
 
 signals:
     void navActiveChanged(bool);
@@ -84,6 +91,7 @@ signals:
     void timeChanged(QString);
     void positionChanged();
     void networkChanged();
+    void avmActiveChanged(bool);
 
     // Cross-screen commands
     void showTurnBanner();      // Lower screen: flash turn arrow overlay
@@ -127,6 +135,7 @@ private:
     QString m_timeString;
     double  m_latitude  = 0.0;
     double  m_longitude = 0.0;
+    bool    m_avmActive = false;
 
     QTimer *m_clockTimer;
     static constexpr double TURN_BANNER_MILES = 0.5;

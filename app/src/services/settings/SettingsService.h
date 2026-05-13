@@ -67,6 +67,11 @@ class SettingsService : public QObject
     // ── Vehicle ───────────────────────────────────────────────────────────
     Q_PROPERTY(bool vdcEnabled READ vdcEnabled WRITE setVdcEnabled NOTIFY vehicleChanged)
 
+    // ── Speed alert ───────────────────────────────────────────────────────
+    // Threshold (mph) added on top of the posted speed limit before the speed
+    // badge turns red and the "⚠ SPEED" warning pill animates in. Default 5.
+    Q_PROPERTY(int speedAlertThreshold READ speedAlertThreshold WRITE setSpeedAlertThreshold NOTIFY navChanged)
+
     // ── Lights ────────────────────────────────────────────────────────────
     Q_PROPERTY(int  lightShutoff           READ lightShutoff           WRITE setLightShutoff           NOTIFY lightsChanged)
     // index: 0=Off 1=30s 2=45s 3=60s 4=90s 5=2m 6=3m
@@ -185,6 +190,7 @@ public:
     bool clickSounds()           const { return m_clickSounds; }
     int  navPromptVolume()       const { return m_navPromptVolume; }
     bool vdcEnabled()            const { return m_vdcEnabled; }
+    int  speedAlertThreshold()   const { return m_speedAlertThreshold; }
     int  lightShutoff()          const { return m_lightShutoff; }
     int  headlightSensitivity()  const { return m_headlightSensitivity; }
     bool drlEnabled()            const { return m_drlEnabled; }
@@ -238,6 +244,7 @@ public:
     void setClickSounds(bool v);
     void setNavPromptVolume(int v);
     void setVdcEnabled(bool v);
+    void setSpeedAlertThreshold(int v);
     void setLightShutoff(int v);
     void setHeadlightSensitivity(int v);
     void setDrlEnabled(bool v);
@@ -318,6 +325,7 @@ private:
     bool m_clickSounds           = true;
     int  m_navPromptVolume       = 80;
     bool m_vdcEnabled            = true;
+    int  m_speedAlertThreshold   = 5;
     int  m_lightShutoff          = 2;
     int  m_headlightSensitivity  = 1;
     bool m_drlEnabled            = true;
