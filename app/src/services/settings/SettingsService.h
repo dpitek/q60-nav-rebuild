@@ -131,6 +131,10 @@ class SettingsService : public QObject
     Q_PROPERTY(QString buildDate       READ buildDate       CONSTANT)
     Q_PROPERTY(qint64  uptimeMs        READ uptimeMs        NOTIFY uptimeChanged)
 
+    // ── Audio presets (per-source 6-slot preset memory) ────────────────────
+    // JSON-encoded blob owned by AudioService; this is the persistence handle.
+    Q_PROPERTY(QString audioPresets READ audioPresets WRITE setAudioPresets NOTIFY audioPresetsChanged)
+
 public:
     explicit SettingsService(QObject *parent = nullptr);
     ~SettingsService() override = default;
@@ -210,6 +214,7 @@ public:
     QString mapDataVersion()     const { return m_mapDataVersion; }
     QString buildDate()          const { return m_buildDate; }
     qint64  uptimeMs()           const;
+    QString audioPresets()       const { return m_audioPresets; }
 
     // ── Setters (each arms the save debounce) ───────────────────────────
     void setUpperBrightness(int v);
@@ -257,6 +262,7 @@ public:
     void setMapDetailLevel(int v);
     void setMaintenanceInterval(int v);
     void setLanguage(int v);
+    void setAudioPresets(const QString &v);
 
 signals:
     void displayChanged();
@@ -275,6 +281,7 @@ signals:
     void btDevicesChanged();
     void languageChanged();
     void uptimeChanged();
+    void audioPresetsChanged();
 
 private slots:
     void onSaveTimerFired();
@@ -336,6 +343,7 @@ private:
     int  m_maintenanceInterval   = 1;
     int  m_language              = 0;
     QVariantList m_btDevices;             // seeded in ctor
+    QString m_audioPresets;               // JSON blob — empty = use AudioService compiled defaults
 
     // System metadata (set in ctor, never mutates after)
     QString m_softwareVersion;

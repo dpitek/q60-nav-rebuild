@@ -337,6 +337,18 @@ void SettingsService::loadFromDisk()
         }
     }
 
+    // Audio presets — JSON string blob (may be stored as either a raw string
+    // field or a nested object that we serialize back to a string).
+    if (root.contains("audioPresets")) {
+        const QJsonValue v = root.value("audioPresets");
+        if (v.isString()) {
+            m_audioPresets = v.toString();
+        } else if (v.isObject()) {
+            m_audioPresets = QString::fromUtf8(
+                QJsonDocument(v.toObject()).toJson(QJsonDocument::Compact));
+        }
+    }
+
     qCInfo(lcSettings) << "Loaded settings from disk";
 }
 
@@ -404,6 +416,15 @@ void SettingsService::saveToDisk()
         bt.append(o);
     }
     root["btDevices"] = bt;
+
+    // Audio presets — stored as a nested object when possible (more readable)
+    if (!m_audioPresets.isEmpty()) {
+        const QJsonDocument apDoc = QJsonDocument::fromJson(m_audioPresets.toUtf8());
+        if (apDoc.isObject())
+            root["audioPresets"] = apDoc.object();
+        else
+            root["audioPresets"] = m_audioPresets;  // fall back to raw string
+    }
 
     const QJsonDocument doc(root);
     const QString path = settingsFilePath();
@@ -691,5 +712,14 @@ void SettingsService::btAddMockDevice(const QString &name)
     m["connected"] = false;
     m_btDevices.append(m);
     emit btDevicesChanged();
+    armSaveTimer();
+}
+
+// Audio presets — manual setter (string type, no SETTER_* macro)
+void SettingsService::setAudioPresets(const QString &v)
+{
+    if (m_audioPresets == v) return;
+    m_audioPresets = v;
+    emit audioPresetsChanged();
     armSaveTimer();
 }
