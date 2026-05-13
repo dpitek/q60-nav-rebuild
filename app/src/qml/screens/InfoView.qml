@@ -7,7 +7,31 @@ Item {
     id: root
     anchors.fill: parent
 
-    property bool hasParkingLocation: true  // show mock parked-location card
+    property bool hasParkingLocation: ParkingService.hasParkingRecord
+
+    // ── Friendly "time ago" formatter for parking timestamp ─────────────────
+    function timeAgo(epochMs) {
+        if (!epochMs) return ""
+        var diffSec = Math.floor((Date.now() - epochMs) / 1000)
+        if (diffSec < 60)        return "just now"
+        if (diffSec < 3600)      return Math.floor(diffSec / 60)   + " min ago"
+        if (diffSec < 86400)     return Math.floor(diffSec / 3600) + " hr ago"
+        return Math.floor(diffSec / 86400) + " d ago"
+    }
+
+    // ── Compact ISO → "Today 7:42 AM" / "MM/DD" formatter ───────────────────
+    function tripWhen(iso) {
+        if (!iso) return ""
+        var d = new Date(iso)
+        if (isNaN(d.getTime())) return iso
+        var now = new Date()
+        var sameDay = d.toDateString() === now.toDateString()
+        var hh = d.getHours() % 12 || 12
+        var mm = d.getMinutes().toString().padStart(2, "0")
+        var ap = d.getHours() < 12 ? "AM" : "PM"
+        if (sameDay) return "Today " + hh + ":" + mm + " " + ap
+        return (d.getMonth() + 1) + "/" + d.getDate() + " " + hh + ":" + mm + " " + ap
+    }
 
     // ── OWM icon code → emoji helper ─────────────────────────────────────────
     function owmEmoji(code) {
@@ -269,13 +293,18 @@ Item {
                             spacing: 2
 
                             Text {
-                                text: "Cary Towne Center  —  2½ hrs ago"
+                                text: ParkingService.hasParkingRecord
+                                      ? "Last parked  —  " + timeAgo(ParkingService.lastParkingTimestamp)
+                                      : "No parking record"
                                 color: "#FFFFFF"
                                 font { family: "Roboto"; pixelSize: 13; weight: Font.Medium }
                                 width: parent.width; elide: Text.ElideRight
                             }
                             Text {
-                                text: "1105 Walnut St, Cary, NC"
+                                text: ParkingService.hasParkingRecord
+                                      ? ParkingService.lastParkingLat.toFixed(5) + ", "
+                                        + ParkingService.lastParkingLon.toFixed(5)
+                                      : ""
                                 color: "#8E8E93"
                                 font { family: "Roboto"; pixelSize: 11 }
                                 width: parent.width; elide: Text.ElideRight
@@ -291,12 +320,15 @@ Item {
                             Text {
                                 id: navBackLabel
                                 anchors.centerIn: parent
-                                text: "Navigate Back"
+                                text: "Navigate"
                                 color: "#FFFFFF"
                                 font { family: "Roboto"; pixelSize: 11; weight: Font.Medium }
                             }
 
-                            MouseArea { anchors.fill: parent; onClicked: { /* no-op */ } }
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: ParkingService.navigateToCar()
+                            }
                         }
                     }
 
@@ -328,12 +360,7 @@ Item {
                     }
 
                     Repeater {
-                        model: [
-                            { when: "Today 7:42 AM",       route: "Home → Work",             dist: "18.4 mi", mpg: "28.6 MPG", dur: "32 min" },
-                            { when: "Yesterday 5:18 PM",   route: "Work → Target",            dist: "4.2 mi",  mpg: "30.1 MPG", dur: "9 min"  },
-                            { when: "2026-05-11",          route: "Home → Topsail Island",    dist: "123.7 mi",mpg: "31.2 MPG", dur: "2h 14m" },
-                            { when: "2026-05-10",          route: "Durham → Home",            dist: "27.1 mi", mpg: "27.8 MPG", dur: "41 min" }
-                        ]
+                        model: TripLoggerService.recentTrips.slice(0, 10)
 
                         delegate: Row {
                             width: parent.width
@@ -344,13 +371,15 @@ Item {
                                 spacing: 1
 
                                 Text {
-                                    text: modelData.when + "  ·  " + modelData.route
+                                    text: tripWhen(modelData.startTime)
                                     color: "#FFFFFF"
                                     font { family: "Roboto"; pixelSize: 12; weight: Font.Medium }
                                     width: parent.width; elide: Text.ElideRight
                                 }
                                 Text {
-                                    text: modelData.dist + "  ·  " + modelData.mpg + "  ·  " + modelData.dur
+                                    text: (modelData.distanceMi || 0).toFixed(1) + " mi  ·  "
+                                          + ((modelData.avgMpg || 0).toFixed(1)) + " MPG  ·  "
+                                          + Math.round((modelData.durationSec || 0) / 60) + " min"
                                     color: "#8E8E93"
                                     font { family: "Roboto"; pixelSize: 11 }
                                 }
@@ -366,7 +395,9 @@ Item {
                     }
 
                     Text {
-                        text: "GPX logs saved on ignition-off  —  TODO: wire to trip logger"
+                        text: TripLoggerService.recentTrips.length === 0
+                              ? "No trips logged yet — drive with ignition cycling on/off to record."
+                              : "GPX logs saved on ignition-off — last 10 trips shown."
                         color: "#3A3A3C"
                         font { family: "Roboto"; pixelSize: 9 }
                     }

@@ -7,6 +7,7 @@
 #include "../../services/vehicle/VehicleService.h"
 #include "../../services/audio/AudioService.h"
 #include "../../services/network/NetworkService.h"
+#include "../../services/parking/ParkingService.h"
 
 #include <QTimer>
 #include <QDateTime>
@@ -16,12 +17,14 @@ StatusBridge::StatusBridge(NavigationService *nav,
                             VehicleService   *vehicle,
                             AudioService     *audio,
                             NetworkService   *network,
+                            ParkingService   *parking,
                             QObject *parent)
     : QObject(parent)
     , m_nav(nav)
     , m_vehicle(vehicle)
     , m_audio(audio)
     , m_network(network)
+    , m_parking(parking)
     , m_clockTimer(new QTimer(this))
 {
     // ── Navigation ──────────────────────────────────────────────────────
@@ -131,6 +134,15 @@ StatusBridge::StatusBridge(NavigationService *nav,
     connect(m_clockTimer, &QTimer::timeout, this, &StatusBridge::onClockTick);
     m_clockTimer->start();
     onClockTick(); // populate immediately
+
+    // ── Parking → Navigation forwarding ─────────────────────────────────
+    // ParkingService::navigateToCar() emits navigateRequested(lat, lon, label);
+    // forward to NavigationService::routeTo so the existing route-start path
+    // handles the request (Valhalla query, map overlay, turn-by-turn).
+    if (m_parking) {
+        connect(m_parking, &ParkingService::navigateRequested,
+                m_nav,     &NavigationService::routeTo);
+    }
 
     // ── Network ──────────────────────────────────────────────────────────
     if (m_network) {

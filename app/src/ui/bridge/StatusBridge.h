@@ -9,6 +9,7 @@ class NavigationService;
 class VehicleService;
 class AudioService;
 class NetworkService;
+class ParkingService;
 
 class StatusBridge : public QObject {
     Q_OBJECT
@@ -43,6 +44,7 @@ public:
                           VehicleService   *vehicle,
                           AudioService     *audio,
                           NetworkService   *network = nullptr,
+                          ParkingService   *parking = nullptr,
                           QObject *parent = nullptr);
 
     bool   networkOnline()   const { return m_networkOnline; }
@@ -102,6 +104,7 @@ private:
     VehicleService    *m_vehicle;
     AudioService      *m_audio;
     NetworkService    *m_network;
+    ParkingService    *m_parking;
 
     bool    m_networkOnline  = false;
     QString m_networkType    = QStringLiteral("none");

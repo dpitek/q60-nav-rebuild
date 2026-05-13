@@ -20,6 +20,8 @@
 #include "services/weather/WeatherService.h"
 #include "services/fuel/FuelService.h"
 #include "services/settings/SettingsService.h"
+#include "services/trip/TripLoggerService.h"
+#include "services/parking/ParkingService.h"
 #include "ui/bridge/StatusBridge.h"
 #include "ui/map/MapLibreItem.h"
 
@@ -59,9 +61,11 @@ int main(int argc, char *argv[])
     WeatherService  weatherSvc;   // OpenWeatherMap current + 5-day forecast
     FuelService     fuelSvc;      // EIA weekly regional gas prices
     SettingsService settingsSvc;  // System + vehicle preference persistence
+    TripLoggerService tripSvc;    // Per-ignition GPX traces + trip computer A/B
+    ParkingService    parkingSvc; // "Where did I park?" — saved on ignition-off
 
     // StatusBridge — shared state between both screens
-    StatusBridge bridge(&navSvc, &vehicleSvc, &audioSvc, &networkSvc);
+    StatusBridge bridge(&navSvc, &vehicleSvc, &audioSvc, &networkSvc, &parkingSvc);
 
     // ── QML Engine ────────────────────────────────────────────────────────
     QQmlApplicationEngine engine;
@@ -76,6 +80,8 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("WeatherService",    &weatherSvc);
     engine.rootContext()->setContextProperty("FuelService",       &fuelSvc);
     engine.rootContext()->setContextProperty("SettingsService",   &settingsSvc);
+    engine.rootContext()->setContextProperty("TripLoggerService", &tripSvc);
+    engine.rootContext()->setContextProperty("ParkingService",    &parkingSvc);
     engine.rootContext()->setContextProperty("StatusBridge",      &bridge);
 
     engine.load(QUrl(QStringLiteral("qrc:/Q60Nav/src/qml/Main.qml")));
@@ -141,6 +147,8 @@ int main(int argc, char *argv[])
     weatherSvc.start();             // OWM fetch; graceful no-op without API key
     fuelSvc.start();                // EIA fetch; hardcoded fallback if no API key
     settingsSvc.start(&profileSvc); // JSON persistence + profile-linked overlay
+    tripSvc.start(&vehicleSvc, &navSvc);    // GPX traces + trip A/B accumulators
+    parkingSvc.start(&vehicleSvc, &navSvc); // Save GPS on ignition-off
 
     return app.exec();
 }

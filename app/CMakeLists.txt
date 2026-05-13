@@ -94,6 +94,8 @@ set(SOURCES
     src/services/weather/WeatherService.cpp
     src/services/fuel/FuelService.cpp
     src/services/settings/SettingsService.cpp
+    src/services/trip/TripLoggerService.cpp
+    src/services/parking/ParkingService.cpp
     src/ui/bridge/StatusBridge.cpp
     src/ui/map/MapLibreItem.cpp
 )
@@ -140,6 +142,8 @@ target_include_directories(q60nav PRIVATE
     src/services/
     src/services/profile/
     src/services/vehicle/
+    src/services/trip/
+    src/services/parking/
     src/ui/
     src/ui/map/         # Qt QML type registration generates '#include <MapLibreItem.h>' — bare filename
 )
