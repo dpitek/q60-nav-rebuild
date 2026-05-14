@@ -5,6 +5,14 @@
 #
 # Designed for busybox sh on the Q60 DCU (Linux 4.19, i386).
 # POSIX sh only — no bashisms.
+#
+# IMPORTANT (factory-version-baseline confirmation 2026-05-14):
+# The lower 7" display has its OWN controller firmware (HW=000000 SW=020024)
+# per Version Info page 6/8. That likely means the two screens enumerate on
+# SEPARATE DRM cards — card0-LVDS-1 (upper, gma500) and card1-XXX-1 (lower,
+# whichever bridge driver). The `for entry in "$DRM_BASE"/card*-*` glob below
+# already enumerates BOTH cards correctly. We strip the card prefix in the
+# output because Weston's [output] section uses the connector name only.
 
 set -e
 

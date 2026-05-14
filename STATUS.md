@@ -132,10 +132,30 @@ routines + DTC read/clear/parse + rain auto-up wiper handler in VehicleService.
 ### Hardware (boot test prerequisites)
 5. **[hardware]** Physical boot test — `deploy-to-image.sh --test` (write kernel + rootfs, flip elilo.conf)
 6. **[hardware]** J2534 CAN sniff — verify all `CAN_*` IDs, especially HVAC write (0x540/0x541) and body status (0x60D). See [`docs/hardware-day-capture-checklist.md`](docs/hardware-day-capture-checklist.md).
-7. **[hardware]** GPS UART probe — confirm ttyS / ttyPCH device for GPSD
-8. **[hardware]** Weston LVDS — dynamic detection will run at boot; verify connector names in `gen-weston-ini.sh` output vs actual DRM driver names
-9. **[hardware]** OEM hidden-menu exploration — exercise factory diag screens BEFORE flashing slot B. Catalog: [`docs/oem-hidden-functions.md`](docs/oem-hidden-functions.md). Pairs with J2534 capture (each hidden screen fires unique CAN frames).
+7. **[hardware]** GPS UART probe — ✅ **CONFIRMED real UART NMEA receiver** via factory diag (`Sensor Information` screen, 2026-05-14). HDOP=6, 3D fix, 8+ sats locked. S10-gpsd probes ttyPCH0..3 then ttyS0 — correct path.
+8. **[hardware]** Weston LVDS — dynamic detection will run at boot. **2nd display has its own controller firmware** (HW 000000 / SW 020024 per factory Version Info pg 6/8); likely enumerates on separate DRM card. `detect-display.sh` iterates all card*-* — verify both screens appear.
+9. **[hardware]** OEM hidden-menu exploration — ✅ **DONE 2026-05-14**, captures in `diag-menu/`. Findings: [`docs/factory-version-baseline.md`](docs/factory-version-baseline.md). Updated [`docs/oem-hidden-functions.md`](docs/oem-hidden-functions.md) with confirmed screen layouts.
 10. **[hardware]** `cat /proc/meminfo` on the live unit. **Settles the 1GB-vs-2GB DDR2 question in 30 seconds** (deep research 2026-05-14: 80% confidence on 1GB, MEDIUM-HIGH; no public teardown confirms a specific Q60 SKU). Current memory tuning (zram 256MB, ulimit -v 512MB, log rotation) is sized for 1GB. If `MemTotal` ≥ 1.8GB: drop NO_CACHEGEN, expand Valhalla cache to 256MB, disable zram. If `MemTotal` < 600MB: pull Valhalla entirely, gut MapLibre.
+
+### Factory baseline (Doug's specific DCU, captured 2026-05-14)
+
+Photos in `diag-menu/` + full table in [`docs/factory-version-baseline.md`](docs/factory-version-baseline.md). Key facts:
+
+| Subsystem | Confirmed value | Project relevance |
+|---|---|---|
+| Nissan Part No. | `283874HK0B` | DCU SKU |
+| OS Version | `97.4002` (DENSO GENIVI) | Factory we replace |
+| Platform Config | `CV37, VQ30T, H` | V37 chassis, coupe, VR30DDTT (Clarion tags it "VQ30T" as generic 3.0L-turbo bucket), High trim |
+| Map version | `15/01/26/01` | **11+ years stale** — our 2026 NC tiles are a major upgrade |
+| Bose Amp | HW 000048 / SW 010000 | `wakeBosse()` targets this exact unit |
+| Combination Meter | SW 041303 | UDS DID responses tied to this fw rev |
+| TCU2 (telematics) | HW 443039 / SW 473232 | NetworkService.tcuMode correct path |
+| **ANC controller** | **SW 010000, Unit ID 2 — separate ECU** | **Not BCM as we assumed.** 3 mics + tach + door inputs. Distinct UDS endpoint. |
+| **ASC controller** | **SW 010000, Unit ID 2 — separate ECU** | **Not BCM.** Our ASC toggle should target this controller's UDS endpoint, not BCM 0x745. Capture during `ANC/ASC Diagnosis` screen toggle. |
+| 2nd display | HW 000000 / SW 020024, Unit ID 2 | Lower 7" panel is its own MCU (likely separate DRM card) |
+| Park Assist data | `----` (not loaded) | Doug's car probably lacks AVM/sonar hardware; gate AvmOverlay accordingly |
+| Beacon | FFFFFF (not equipped) | Japan-market traffic receiver — N/A |
+| Voice Recog | engine 1.10, grammar US001 | Factory has STT/TTS; ours doesn't (future enhancement) |
 
 ---
 

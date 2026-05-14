@@ -124,12 +124,65 @@ or AV-CAN. See Section 11.
 
 ## 8. Version Info tab
 
-Read-only strings the dealer cross-refs to ITB / FOTA bulletins:
-Work Instruction Code · Part Number (matches DCU rear-sticker) · Software
-Code (e.g. P4248-ITGEN5 2.0) · EEPROM · Hardware · PCB · Circuit Check ·
-Color Check · Map DB Version · Build Date. Same 9-display cycle pattern as
-the combination-meter trip-reset self-diag.
-[Source](https://www.infiniti-qatar.com/ownership/guides/faqs/vehicle-personalization/topic2-q5.html)
+Read-only firmware version dump — **8 pages** on Doug's 2017 Q60 (captured
+2026-05-14, photos in `diag-menu/IMG_1112..1119.jpeg`). Pagination shown
+bottom-right as `n/8`. Full transcription in
+[`factory-version-baseline.md`](./factory-version-baseline.md).
+
+Page-by-page contents on V37:
+
+| Page | Contents |
+|---|---|
+| 1/8 | DCU itself: Onload Model ID, Nissan Part No., Atom SW, SH SW, Spare Part |
+| 2/8 | OS Version, BIOS SW, Data-Is, Data-VRMODEL, Data-SPEECH, Data-Sonar |
+| 3/8 | App data: Parkassist, Kwidata, Digitalassist, IME, Mail, Playlist+DB |
+| 4/8 | Navigation: Navi SW, Voice Recog Engine, Voice Synth, voice data |
+| 5/8 | Data Recorder, Beacon HW/SW, Map Version, Spare Part, Unit ID |
+| 6/8 | Audio HW/SW, 2nd display HW/SW |
+| 7/8 | Bose Amp HW/SW, Combination Meter HW/SW |
+| 8/8 | TCU2 HW/SW, ANC SW, ASC SW (each with own Unit ID — separate ECUs) |
+
+**Project value**: each row is an authoritative firmware version for a peer
+ECU. UDS responses can vary by SW version, so this lets us decode captures
+against the exact baseline.
+
+## 8b. Sensor Information page (GPS debug)
+
+`diag-menu/IMG_1111.jpeg`. Live decode from the DCU's GPS UART receiver:
+
+```
+GPS GMT = 26/05/14 12:43:48   Status = 00
+HDOP =  6   GDOP = 2   ALMANAC = 1   DIMENSION = 3   (3D fix)
+[sat]=SNR:status pairs for ~10 sats
+Vgps = ?     (vehicle speed from GPS, m/s)
+Dgps = ?     (differential GPS correction status)
+```
+
+**Project value**: confirms GPS is a real NMEA UART receiver baked into the
+DCU, not a CAN-derived signal. S10-gpsd's UART probe order is correct.
+
+## 8c. ANC/ASC Diagnosis page
+
+`diag-menu/IMG_1121..1122.jpeg`. Two-screen subview with **live ON/OFF
+buttons** for ANC and ASC.
+
+- **Page 1**: "Show controller info and settings" — Part Number, SW Version,
+  Config Results, plus **clickable ON/OFF toggles** for ANC and ASC. Pressing
+  these fires the actual disable frame. **Capture during this press.**
+- **Page 2**: "Show the status of each signal input route" — live status of
+  Mic1, Mic2, Mic3, TACHO (engine RPM), Door Open Signal, plus the
+  Config Results triple (e.g. `CV37,VQ30T,H` on Doug's car).
+
+**Project value**: the live toggle on Page 1 is the ground truth for
+disabling synth-exhaust. Capture the frames sent between the "ON" press and
+the response.
+
+## 8d. Phone subscreen
+
+`diag-menu/IMG_1120.jpeg`. From Confirmation/Adjustment → Phone:
+- Handsfree Volume slider (Low / Mid / High)
+- Voice Microphone Test toggle
+- Onload Model ID (cross-ref against DCU's main model ID)
 
 ## 9. CONSULT-only — boundary callout
 

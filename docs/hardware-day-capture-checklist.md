@@ -130,10 +130,11 @@ the format, then replicate.
 The "demo first" features. Capture is required before our flagged code can fire writes.
 
 ### 3.1 ASC (fake exhaust) toggle — Cool factor 10
-- **Action**: Enter factory diagnostic menu: Settings → press SEEK-UP ×3 → press-hold below right scroll arrow ×5s. ASC toggle should appear.
-- **Capture**: AV-CAN + V-CAN around the moment of toggle.
-- **Target**: BCM/DSP frame — likely AV-CAN. Note ID + payload.
-- **Validate**: toggle changes one specific frame.
+- **Action**: Enter factory diagnostic menu: Settings → press SEEK-UP ×3 → press-hold below right scroll arrow ×5s. Navigate to **ANC/ASC Diagnosis** screen. The screen has **live ON/OFF buttons** (see `diag-menu/IMG_1121.jpeg`). Press the ASC "ON" button to toggle OFF, then back.
+- **Capture**: M-CAN + AV-CAN + V-CAN around the moment of toggle.
+- **Target**: ✅ **CORRECTED 2026-05-14** — ANC and ASC are **separate ECUs** (Unit ID 2 each, distinct from BCM). The factory baseline (Version Info pg 8/8) shows "ANC Soft: 010000" and "ASC Soft: 010000" as independent firmware modules. The toggle frame goes to one of those ECUs, NOT the BCM (0x745). Look for UDS write-DID (service 0x2E) traffic on the M-CAN to a new request ID we haven't seen — that's the ANC/ASC controller's UDS endpoint.
+- **Validate**: toggle changes exactly one frame; the response confirms ECU acked the write.
+- **Bonus**: also capture the ANC/ASC Diagnosis page 2 (`IMG_1122.jpeg`) — it reads Mic1/Mic2/Mic3/TACHO/Door Open status in real time, useful for finding the input-source frames.
 
 ### 3.2 BCM Work Support unlocks (Cool factor 8 bundle)
 
