@@ -1,5 +1,5 @@
 # Q60 Nav — Code Index
-Generated: 2026-05-13 (rationalized against working tree)
+Generated: 2026-05-13 (post backlog-execution sprint)
 
 Quick map of what's where. For build status see [STATUS.md](STATUS.md). For features see [README.md](README.md). For factory parity see [docs/feature-parity-audit.md](docs/feature-parity-audit.md).
 
@@ -9,13 +9,13 @@ Quick map of what's where. For build status see [STATUS.md](STATUS.md). For feat
 
 | Service | Header | Impl | Q_PROPERTYs | Role |
 |---|---|---|---|---|
-| VehicleService | [VehicleService.h](app/src/services/vehicle/VehicleService.h) | [VehicleService.cpp](app/src/services/vehicle/VehicleService.cpp) | 66 | SocketCAN on can0/1/2; all read paths, HVAC write, UDS, ADAS frame |
+| VehicleService | [VehicleService.h](app/src/services/vehicle/VehicleService.h) | [VehicleService.cpp](app/src/services/vehicle/VehicleService.cpp) | 68 | SocketCAN on can0/1/2; all read paths, HVAC write, UDS, ADAS frame, BCM Work Support unlocks, DTC read/clear, maintenance routines, rain auto-up |
 | ButtonLogger | [ButtonLogger.h](app/src/services/vehicle/ButtonLogger.h) | [ButtonLogger.cpp](app/src/services/vehicle/ButtonLogger.cpp) | — | CAN frame audit logger |
 | NavigationService | [NavigationService.h](app/src/services/navigation/NavigationService.h) | [NavigationService.cpp](app/src/services/navigation/NavigationService.cpp) | 10 | GPSD + Valhalla HTTP client |
 | AudioService | [AudioService.h](app/src/services/audio/AudioService.h) | [AudioService.cpp](app/src/services/audio/AudioService.cpp) | 30 | BlueZ AVRCP, DENSO IPC, ALSA, SSV, RDS, per-source presets |
 | SearchService | [SearchService.h](app/src/services/search/SearchService.h) | [SearchService.cpp](app/src/services/search/SearchService.cpp) | 0 | Offline geocoder on :4000 |
 | ProfileService | [ProfileService.h](app/src/services/profile/ProfileService.h) | [ProfileService.cpp](app/src/services/profile/ProfileService.cpp) | 11 | Driver profile + key-fob slot |
-| SettingsService | [SettingsService.h](app/src/services/settings/SettingsService.h) | [SettingsService.cpp](app/src/services/settings/SettingsService.cpp) | 53 | JSON persistence, atomic write, 5s debounce, factory-parity sub-pages |
+| SettingsService | [SettingsService.h](app/src/services/settings/SettingsService.h) | [SettingsService.cpp](app/src/services/settings/SettingsService.cpp) | 64 | JSON persistence, atomic write, 5s debounce, factory-parity sub-pages + BCM Work Support unlocks (canVerifiedWrites gate, mirror tilt, horn chirp, welcome lighting, DRL matrix, headlight delay, TPMS thresholds, autoUpOnRain) |
 | NetworkService | [NetworkService.h](app/src/services/network/NetworkService.h) | [NetworkService.cpp](app/src/services/network/NetworkService.cpp) | 5 | Wi-Fi vs LTE TCU detect |
 | WeatherService | [WeatherService.h](app/src/services/weather/WeatherService.h) | [WeatherService.cpp](app/src/services/weather/WeatherService.cpp) | 10 | Open-API + CAN ambient fallback |
 | FuelService | [FuelService.h](app/src/services/fuel/FuelService.h) | [FuelService.cpp](app/src/services/fuel/FuelService.cpp) | 7 | Fuel level + low-fuel trigger |
@@ -24,7 +24,7 @@ Quick map of what's where. For build status see [STATUS.md](STATUS.md). For feat
 | StatusBridge | [StatusBridge.h](app/src/ui/bridge/StatusBridge.h) | [StatusBridge.cpp](app/src/ui/bridge/StatusBridge.cpp) | 21 | Cross-screen coordination + AVM activation |
 | MapLibreItem | [MapLibreItem.h](app/src/ui/map/MapLibreItem.h) | [MapLibreItem.cpp](app/src/ui/map/MapLibreItem.cpp) | 8 | Phase 3 stub; EGL TODO |
 
-**Total: 241 Q_PROPERTYs across 13 services; ~19,400 LOC across app/src.**
+**Total: 254 Q_PROPERTYs across 13 services; ~20,000+ LOC across app/src.**
 
 ---
 
@@ -33,7 +33,9 @@ Quick map of what's where. For build status see [STATUS.md](STATUS.md). For feat
 ### Upper screen (NavigationView 800×480)
 | File | Role |
 |---|---|
-| [NavigationView.qml](app/src/qml/screens/NavigationView.qml) | Turn HUD, cruise bubble, rerouting banner |
+| [NavigationView.qml](app/src/qml/screens/NavigationView.qml) | Turn HUD, cruise bubble, rerouting banner; sub-view stack drives DestinationSearch + RoutePreview |
+| [DestinationSearch.qml](app/src/qml/screens/DestinationSearch.qml) | Upper-screen destination entry: search bar + category chips + recents |
+| [RoutePreview.qml](app/src/qml/screens/RoutePreview.qml) | Route summary (travel/distance/ETA) + type pills + avoid toggles |
 | [RearCameraView.qml](app/src/qml/screens/RearCameraView.qml) | Dynamic Loader; parking guides |
 | [IncomingCallView.qml](app/src/qml/screens/IncomingCallView.qml) | Call overlay (z:100) |
 | [VoiceCommandView.qml](app/src/qml/screens/VoiceCommandView.qml) | Voice activation overlay |
@@ -47,6 +49,7 @@ Quick map of what's where. For build status see [STATUS.md](STATUS.md). For feat
 | [PhoneView.qml](app/src/qml/screens/PhoneView.qml) | Phone | DTMF + persistent 88px panel |
 | [ClimateView.qml](app/src/qml/screens/ClimateView.qml) | Climate | Dual zones + fan + modes |
 | [VehicleStatusView.qml](app/src/qml/screens/VehicleStatusView.qml) | Vehicle | Drive mode + doors + fuel/coolant/RPM |
+| [VehicleSettingsView.qml](app/src/qml/screens/VehicleSettingsView.qml) | — | BCM Work Support unlocks; DTCs; maintenance routine resets. Reached from Settings → Vehicle Unlocks. |
 
 ### Reachable sub-screens
 | File | Role |
@@ -56,9 +59,9 @@ Quick map of what's where. For build status see [STATUS.md](STATUS.md). For feat
 | [InfoView.qml](app/src/qml/screens/InfoView.qml) | FW / CAN / GPS / uptime |
 
 ### Components (`app/src/qml/components/`)
-TurnArrow · SpeedWidget · FanControl · TempZone · TabBar · StatusBar · WelcomeOverlay · CameraFeed (isolated QtMultimedia) · **ContactsModel** (shared contact list, used by PhoneView + IncomingCallView) · **LaneGuidance** (upper-screen lane arrows) · **JunctionView** (interchange overlay) · **AvmOverlay** (4-camera scaffold with sonar arcs)
+TurnArrow · SpeedWidget · FanControl · TempZone · TabBar · StatusBar · WelcomeOverlay · CameraFeed (isolated QtMultimedia) · **ContactsModel** (shared contact list, used by PhoneView + IncomingCallView) · **LaneGuidance** (upper-screen lane arrows) · **JunctionView** (interchange overlay) · **AvmOverlay** (4-camera scaffold with sonar arcs) · **MiniGauge** (VR30 telemetry gauges) · **GPad** (G-meter circular pad) · **QmlKeyboard** (touchscreen QWERTY + numeric/symbols slide-up; replaces missing Qt VirtualKeyboard on i386)
 
-**Total: 26 QML files (24 + Main.qml registered in CMake; RearCameraView + CameraFeed loaded dynamically via Loader to fail gracefully if QtMultimedia absent).**
+**Total: 30 QML files (28 + Main.qml registered in CMake; RearCameraView + CameraFeed loaded dynamically via Loader to fail gracefully if QtMultimedia absent).**
 
 ---
 
@@ -66,6 +69,9 @@ TurnArrow · SpeedWidget · FanControl · TempZone · TabBar · StatusBar · Wel
 
 ### Build
 - [build-app.sh](scripts/build-app.sh) — compile q60nav i386 inside Docker
+- [build-app-worktree.sh](scripts/build-app-worktree.sh) — build from git worktree, reusing main repo's heavy outputs (Qt6, MapLibre, sysroot)
+- [package-rootfs-worktree.sh](scripts/package-rootfs-worktree.sh) — build rootfs image from worktree, overlaying onto main repo's rootfs base
+- [integrity-check.sh](scripts/integrity-check.sh) — pre-flash audit: ELF arch verification + rootfs structure
 - [build-tiles.sh](scripts/build-tiles.sh) — Valhalla routing tiles
 - [build-map-tiles.sh](scripts/build-map-tiles.sh) — MapLibre vector tiles (tilemaker)
 - [build-geocoder-db.sh](scripts/build-geocoder-db.sh) — SQLite FTS5+rtree geocoder DB
@@ -82,7 +88,8 @@ TurnArrow · SpeedWidget · FanControl · TempZone · TabBar · StatusBar · Wel
 - [deploy-to-image.sh](scripts/deploy-to-image.sh) — write kernel + rootfs to eMMC
 - [deploy-tiles.sh](scripts/deploy-tiles.sh) — push tiles to mounted partition
 - [restore-logan1.sh](scripts/restore-logan1.sh) — emergency factory restore (~10s)
-- [run-simulator.sh](scripts/run-simulator.sh) — Docker x86 desktop simulator
+- [run-simulator.sh](scripts/run-simulator.sh) — Docker x86 desktop simulator (VNC client, port 5900)
+- [run-simulator-web.sh](scripts/run-simulator-web.sh) — Browser-accessible simulator (noVNC over WebSocket, default port 8080). Full mouse + keyboard interactivity. Pass `--port N` to override.
 
 ### Dependencies (`deps/`)
 - [build-qt6-host.sh](deps/build-qt6-host.sh) — host amd64 Qt6 (QT_HOST_PATH)

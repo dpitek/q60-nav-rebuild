@@ -93,7 +93,10 @@ class SettingsService : public QObject
 
     // ── Door Locks ────────────────────────────────────────────────────────
     Q_PROPERTY(int  autoLockSpeed          READ autoLockSpeed          WRITE setAutoLockSpeed          NOTIFY locksChanged)
-    // 0=Off 1=15mph 2=25mph
+    // 0=Off 1=15mph 2=25mph (factory presets)
+    // BCM-unlock: custom threshold in mph — used when autoLockSpeed >= 3 ("Custom").
+    // Range 5..40. Surfaces a slider when "Custom" is selected.
+    Q_PROPERTY(int  autoLockSpeedCustom    READ autoLockSpeedCustom    WRITE setAutoLockSpeedCustom    NOTIFY locksChanged)
     Q_PROPERTY(bool autoUnlockPark         READ autoUnlockPark         WRITE setAutoUnlockPark         NOTIFY locksChanged)
     Q_PROPERTY(bool autoUnlockKeyRemoval   READ autoUnlockKeyRemoval   WRITE setAutoUnlockKeyRemoval   NOTIFY locksChanged)
     Q_PROPERTY(bool fobLockAll             READ fobLockAll             WRITE setFobLockAll             NOTIFY locksChanged)
@@ -101,6 +104,11 @@ class SettingsService : public QObject
     // ── Mirrors ───────────────────────────────────────────────────────────
     Q_PROPERTY(bool mirrorTiltReverse  READ mirrorTiltReverse  WRITE setMirrorTiltReverse  NOTIFY mirrorsChanged)
     Q_PROPERTY(bool mirrorFoldLock     READ mirrorFoldLock     WRITE setMirrorFoldLock     NOTIFY mirrorsChanged)
+    // BCM-unlock: how far the mirror dips on reverse (0=none, 100=max). Default 30.
+    Q_PROPERTY(int  mirrorTiltAngle    READ mirrorTiltAngle    WRITE setMirrorTiltAngle    NOTIFY mirrorsChanged)
+    // BCM-unlock: which side dips. Factory only dips driver side.
+    Q_PROPERTY(bool mirrorTiltLeft     READ mirrorTiltLeft     WRITE setMirrorTiltLeft     NOTIFY mirrorsChanged)
+    Q_PROPERTY(bool mirrorTiltRight    READ mirrorTiltRight    WRITE setMirrorTiltRight    NOTIFY mirrorsChanged)
 
     // ── Wipers ────────────────────────────────────────────────────────────
     Q_PROPERTY(int rainSensorSensitivity READ rainSensorSensitivity WRITE setRainSensorSensitivity NOTIFY wipersChanged)
@@ -117,6 +125,9 @@ class SettingsService : public QObject
     // BCM-unlock comfort toggles (factory disables on US firmware; placeholder CAN writes)
     Q_PROPERTY(bool fobLockHoldCloses      READ fobLockHoldCloses      WRITE setFobLockHoldCloses      NOTIFY comfortChanged)
     Q_PROPERTY(bool allWindowsOneTouch     READ allWindowsOneTouch     WRITE setAllWindowsOneTouch     NOTIFY comfortChanged)
+    // BCM-unlock: auto-close any open window when wipers go active + window
+    // position > 1cm open. Opt-in, 3s grace then sends comfort-close to all.
+    Q_PROPERTY(bool autoUpOnRain           READ autoUpOnRain           WRITE setAutoUpOnRain           NOTIFY comfortChanged)
 
     // ── Map ───────────────────────────────────────────────────────────────
     Q_PROPERTY(int  mapOrientation    READ mapOrientation    WRITE setMapOrientation    NOTIFY mapSettingsChanged)
@@ -128,6 +139,31 @@ class SettingsService : public QObject
     // ── Maintenance ───────────────────────────────────────────────────────
     Q_PROPERTY(int maintenanceInterval READ maintenanceInterval WRITE setMaintenanceInterval NOTIFY maintenanceChanged)
     // 0=3k 1=5k 2=7.5k 3=10k
+
+    // ── BCM Work Support unlocks (Cool factor 8 bundle) ──────────────────────
+    // All writes gated by canVerifiedWrites — defaults to false until J2534
+    // capture confirms the BCM frame layouts. UI fully exercises the values;
+    // VehicleService::applyBcm* simply no-ops + logs until the gate flips.
+    //
+    // Master gate. Default false. User toggles on after capture session.
+    Q_PROPERTY(bool canVerifiedWrites      READ canVerifiedWrites      WRITE setCanVerifiedWrites      NOTIFY canVerifiedWritesChanged)
+    // Horn chirp / lock confirmation mode.
+    //   0=Silent  1=Hazards only  2=Hazards + horn (factory)  3=Double chirp  4=Lights only
+    Q_PROPERTY(int  hornChirpMode          READ hornChirpMode          WRITE setHornChirpMode          NOTIFY bcmUnlocksChanged)
+    // Welcome lighting choreography. 0=Off 1=Sweep 2=Fade-in 3=Cascade.
+    Q_PROPERTY(int  welcomeLightSequence   READ welcomeLightSequence   WRITE setWelcomeLightSequence   NOTIFY bcmUnlocksChanged)
+    // DRL behavior matrix.
+    //   0=Off  1=Always on  2=With parking lights  3=Cancel on turn signal
+    Q_PROPERTY(int  drlMode                READ drlMode                WRITE setDrlMode                NOTIFY bcmUnlocksChanged)
+    // Auto-headlight delay (sec) — how long headlights stay on after ignition off.
+    // Valid presets: 0 / 15 / 30 / 60 / 120 / 180. Other values clamped on apply.
+    Q_PROPERTY(int  headlightDelaySec      READ headlightDelaySec      WRITE setHeadlightDelaySec      NOTIFY bcmUnlocksChanged)
+    // TPMS thresholds (per-corner) — user-overrides the placard ~32 psi default.
+    // psi values. tpmsProfile is a UI hint (0=Street 1=Track 2=Touring) that
+    // updates the values when changed.
+    Q_PROPERTY(int  tpmsWarnPsi            READ tpmsWarnPsi            WRITE setTpmsWarnPsi            NOTIFY bcmUnlocksChanged)
+    Q_PROPERTY(int  tpmsCritPsi            READ tpmsCritPsi            WRITE setTpmsCritPsi            NOTIFY bcmUnlocksChanged)
+    Q_PROPERTY(int  tpmsProfile            READ tpmsProfile            WRITE setTpmsProfile            NOTIFY bcmUnlocksChanged)
 
     // ── Bluetooth (UI shell — real BlueZ pairing pending hardware) ───────
     // Devices are stored as a list of QVariantMap rows:
@@ -219,11 +255,15 @@ public:
     bool welcomeLighting()       const { return m_welcomeLighting; }
     int  interiorLightTimer()    const { return m_interiorLightTimer; }
     int  autoLockSpeed()         const { return m_autoLockSpeed; }
+    int  autoLockSpeedCustom()   const { return m_autoLockSpeedCustom; }
     bool autoUnlockPark()        const { return m_autoUnlockPark; }
     bool autoUnlockKeyRemoval()  const { return m_autoUnlockKeyRemoval; }
     bool fobLockAll()            const { return m_fobLockAll; }
     bool mirrorTiltReverse()     const { return m_mirrorTiltReverse; }
     bool mirrorFoldLock()        const { return m_mirrorFoldLock; }
+    int  mirrorTiltAngle()       const { return m_mirrorTiltAngle; }
+    bool mirrorTiltLeft()        const { return m_mirrorTiltLeft; }
+    bool mirrorTiltRight()       const { return m_mirrorTiltRight; }
     int  rainSensorSensitivity() const { return m_rainSensorSensitivity; }
     int  wiperDelay()            const { return m_wiperDelay; }
     bool seatMemoryOnUnlock()    const { return m_seatMemoryOnUnlock; }
@@ -232,6 +272,15 @@ public:
     int  parkAssistChimeVolume() const { return m_parkAssistChimeVolume; }
     bool fobLockHoldCloses()     const { return m_fobLockHoldCloses; }
     bool allWindowsOneTouch()    const { return m_allWindowsOneTouch; }
+    bool autoUpOnRain()          const { return m_autoUpOnRain; }
+    bool canVerifiedWrites()     const { return m_canVerifiedWrites; }
+    int  hornChirpMode()         const { return m_hornChirpMode; }
+    int  welcomeLightSequence()  const { return m_welcomeLightSequence; }
+    int  drlMode()               const { return m_drlMode; }
+    int  headlightDelaySec()     const { return m_headlightDelaySec; }
+    int  tpmsWarnPsi()           const { return m_tpmsWarnPsi; }
+    int  tpmsCritPsi()           const { return m_tpmsCritPsi; }
+    int  tpmsProfile()           const { return m_tpmsProfile; }
     int  mapOrientation()        const { return m_mapOrientation; }
     bool speedLimitDisplay()     const { return m_speedLimitDisplay; }
     int  mapDetailLevel()        const { return m_mapDetailLevel; }
@@ -278,11 +327,15 @@ public:
     void setWelcomeLighting(bool v);
     void setInteriorLightTimer(int v);
     void setAutoLockSpeed(int v);
+    void setAutoLockSpeedCustom(int v);
     void setAutoUnlockPark(bool v);
     void setAutoUnlockKeyRemoval(bool v);
     void setFobLockAll(bool v);
     void setMirrorTiltReverse(bool v);
     void setMirrorFoldLock(bool v);
+    void setMirrorTiltAngle(int v);
+    void setMirrorTiltLeft(bool v);
+    void setMirrorTiltRight(bool v);
     void setRainSensorSensitivity(int v);
     void setWiperDelay(int v);
     void setSeatMemoryOnUnlock(bool v);
@@ -291,6 +344,15 @@ public:
     void setParkAssistChimeVolume(int v);
     void setFobLockHoldCloses(bool v);
     void setAllWindowsOneTouch(bool v);
+    void setAutoUpOnRain(bool v);
+    void setCanVerifiedWrites(bool v);
+    void setHornChirpMode(int v);
+    void setWelcomeLightSequence(int v);
+    void setDrlMode(int v);
+    void setHeadlightDelaySec(int v);
+    void setTpmsWarnPsi(int v);
+    void setTpmsCritPsi(int v);
+    void setTpmsProfile(int v);
     void setMapOrientation(int v);
     void setSpeedLimitDisplay(bool v);
     void setMapDetailLevel(int v);
@@ -320,6 +382,8 @@ signals:
     void uptimeChanged();
     void audioPresetsChanged();
     void driveModePersonalConfigChanged();
+    void canVerifiedWritesChanged();
+    void bcmUnlocksChanged();
 
 private slots:
     void onSaveTimerFired();
@@ -374,11 +438,15 @@ private:
     bool m_welcomeLighting       = true;
     int  m_interiorLightTimer    = 1;
     int  m_autoLockSpeed         = 1;
+    int  m_autoLockSpeedCustom   = 15;   // mph
     bool m_autoUnlockPark        = true;
     bool m_autoUnlockKeyRemoval  = false;
     bool m_fobLockAll            = true;
     bool m_mirrorTiltReverse     = true;
     bool m_mirrorFoldLock        = false;
+    int  m_mirrorTiltAngle       = 30;   // 0..100 %
+    bool m_mirrorTiltLeft        = true;
+    bool m_mirrorTiltRight       = false;
     int  m_rainSensorSensitivity = 3;
     int  m_wiperDelay            = 3;
     bool m_seatMemoryOnUnlock    = true;
@@ -387,6 +455,17 @@ private:
     int  m_parkAssistChimeVolume = 2;
     bool m_fobLockHoldCloses     = false;  // JDM/EU comfort close — US firmware disables
     bool m_allWindowsOneTouch    = false;  // factory only one-touches driver window
+    bool m_autoUpOnRain          = false;  // opt-in: close open windows when wipers go active
+
+    // BCM Work Support unlocks — all defaults match factory behavior.
+    bool m_canVerifiedWrites     = false;  // master gate — flip ON after J2534 confirms IDs
+    int  m_hornChirpMode         = 2;      // 2 = factory: hazards + horn
+    int  m_welcomeLightSequence  = 1;      // 1 = sweep (factory-ish)
+    int  m_drlMode               = 1;      // 1 = always on (factory)
+    int  m_headlightDelaySec     = 30;
+    int  m_tpmsWarnPsi           = 30;
+    int  m_tpmsCritPsi           = 26;
+    int  m_tpmsProfile           = 0;      // 0=Street 1=Track 2=Touring
     int  m_mapOrientation        = 0;
     bool m_speedLimitDisplay     = true;
     int  m_mapDetailLevel        = 1;

@@ -1,8 +1,10 @@
 #!/bin/sh
 # rcS — System initialization (runs once at boot before runlevel scripts)
 # For Q60 Nav Rebuild on Linux 4.19
-
-set -e
+#
+# IMPORTANT: this script must not exit non-zero. The watchdog is armed by
+# start.sh later; if rcS fails the boot enters an indeterminate state and
+# the boot counter never decrements. Use `|| true` on every fallible command.
 
 # Mount essential virtual filesystems
 mount -t proc proc /proc 2>/dev/null || true
@@ -15,14 +17,32 @@ mount -t tmpfs -o nosuid,nodev,size=64M tmpfs /tmp 2>/dev/null || true
 mkdir -p /dev/pts
 mount -t devpts devpts /dev/pts 2>/dev/null || true
 
-# Mount FAT32 boot partition (read-write — needed for boot counter)
+# Mount FAT32 boot partition + any fstab entries (data is `nofail` — see fstab).
 mount -a 2>/dev/null || true
+
+# ─── First-boot directory bootstrap ───────────────────────────────────────
+# If /data isn't mounted (partition missing on a fresh image, not yet
+# formatted, or hardware variant without that partition), fall back to
+# /var/lib/q60nav-data so every service that writes under /data still works.
+if ! mountpoint -q /data 2>/dev/null; then
+    mkdir -p /var/lib/q60nav-data 2>/dev/null
+    if [ ! -d /data ] || [ -z "$(ls -A /data 2>/dev/null)" ]; then
+        rm -rf /data 2>/dev/null
+        ln -sfn /var/lib/q60nav-data /data 2>/dev/null || mkdir -p /data
+    fi
+    echo "[rcS] /data partition not mounted — using fallback at /var/lib/q60nav-data"
+fi
+
+# Required runtime directories — every service expects these.
+mkdir -p /var/log /var/run /var/lib /var/lib/q60nav 2>/dev/null
+mkdir -p /data/q60nav /data/q60nav/trips /data/q60nav/captures \
+         /data/q60nav/parking /data/q60nav/logs 2>/dev/null
 
 # Set hostname
 echo q60nav > /proc/sys/kernel/hostname 2>/dev/null || true
 
-# Seed RNG
-[ -f /var/lib/random-seed ] && cat /var/lib/random-seed > /dev/urandom
+# Seed RNG (optional, fail-safe)
+[ -f /var/lib/random-seed ] && cat /var/lib/random-seed > /dev/urandom 2>/dev/null
 
 # Load essential kernel modules
 modprobe iTCO_wdt    2>/dev/null || true
@@ -37,3 +57,4 @@ udevadm trigger --type=devices    2>/dev/null || true
 udevadm settle --timeout=8        2>/dev/null || true
 
 echo "[rcS] System init complete"
+exit 0

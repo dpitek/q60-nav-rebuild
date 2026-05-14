@@ -21,10 +21,16 @@
 
 class SearchService : public QObject {
     Q_OBJECT
+    // Last successful search results — QVariantList of QVariantMaps with
+    // keys "name", "addr", "lat", "lon". QML binds to this for live results.
+    // Empty until search() completes successfully.
+    Q_PROPERTY(QVariantList results READ results NOTIFY resultsChanged)
 
 public:
     explicit SearchService(QObject *parent = nullptr);
     void start();
+
+    QVariantList results() const { return m_results; }
 
 public slots:
     // Free-text search — emits resultsReady or searchError
@@ -37,6 +43,7 @@ signals:
     void resultsReady(const QJsonArray &results);
     void reverseResult(const QString &address);
     void searchError(const QString &error);
+    void resultsChanged();
 
 private slots:
     void onSearchReply();
@@ -44,6 +51,7 @@ private slots:
 
 private:
     QNetworkAccessManager *m_nam;
+    QVariantList m_results;
 
     // Geocoding service port (Nominatim-lite or Photon)
     // Valhalla port 8002 is NOT used here

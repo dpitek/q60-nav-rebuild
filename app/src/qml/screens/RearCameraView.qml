@@ -292,14 +292,14 @@ Item {
         }
     }
 
-    // ── Reverse speed readout (shown only when VehicleService.reverseSpeed exists) ──
-    // Using a Loader so it doesn't throw if the property is absent on the service.
+    // ── Reverse speed readout — driven by VehicleService.speed (CAN frame 0x280) ──
+    // Active whenever reverse is engaged. Loader keeps this dormant when the
+    // camera isn't shown.
     Loader {
         id: speedLoader
         anchors { top: rBadge.bottom; left: parent.left; topMargin: 8; leftMargin: 14 }
         z:    10
-        active: typeof VehicleService !== "undefined" &&
-                typeof VehicleService.reverseSpeed !== "undefined"
+        active: typeof VehicleService !== "undefined"
 
         sourceComponent: Component {
             Column {
@@ -307,7 +307,7 @@ Item {
 
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text:  VehicleService.reverseSpeed.toFixed(1)
+                    text:  VehicleService.speed.toFixed(1)
                     color: "#FFFFFF"
                     font { family: "Roboto"; pixelSize: 20; weight: Font.SemiBold }
                 }

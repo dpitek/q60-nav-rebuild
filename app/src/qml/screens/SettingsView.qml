@@ -136,6 +136,7 @@ Item {
                 SubPageRow { label: "Navigation"; icon: "➤";  onClicked: pageStack.push(navigationPage) }
                 SubPageRow { label: "Audio";      icon: "♫";  onClicked: pageStack.push(audioPage) }
                 SubPageRow { label: "Vehicle";    icon: "🚗"; onClicked: pageStack.push(vehiclePage) }
+                SubPageRow { label: "Vehicle Unlocks"; icon: "🔓"; onClicked: pageStack.push(vehicleUnlocksPage) }
                 SubPageRow { label: "Language";   icon: "🌐"; onClicked: pageStack.push(languagePage) }
                 SubPageRow { label: "System";     icon: "ⓘ";  onClicked: pageStack.push(systemPage) }
 
@@ -1001,14 +1002,16 @@ Item {
                     valueColor: VehicleService.ignitionOn ? "#30D158" : "#8E8E93"
                 }
 
-                // GPS fix — NavigationService.position.isValid() is the lock signal
+                // GPS fix — QGeoCoordinate::isValid() is a method, not a property.
+                // Without the parens it returns the function reference (always truthy)
+                // so the "No fix" branch never showed pre-2026-05-13 audit fix.
                 InfoRow {
                     label: "GPS Fix"
-                    value: NavigationService.position.isValid
+                    value: NavigationService.position.isValid()
                            ? (NavigationService.position.latitude.toFixed(4)
                               + ", " + NavigationService.position.longitude.toFixed(4))
                            : "No fix"
-                    valueColor: NavigationService.position.isValid ? "#30D158" : "#FF9F0A"
+                    valueColor: NavigationService.position.isValid() ? "#30D158" : "#FF9F0A"
                 }
 
                 InfoRow {
@@ -1297,6 +1300,21 @@ Item {
         z: 101
         onVisibleChanged: {
             if (!visible) root.profileViewVisible = false
+        }
+    }
+
+    // ── VEHICLE UNLOCKS (BCM Work Support + DTCs + maintenance resets) ───────
+    // The full-screen VehicleSettingsView replaces the SubPage chrome since it
+    // owns its own header. Pushed as a bare wrapper so StackView still drives
+    // the in/out transitions.
+    Component {
+        id: vehicleUnlocksPage
+        Item {
+            anchors.fill: parent
+            VehicleSettingsView {
+                anchors.fill: parent
+                onClosed: pageStack.pop()
+            }
         }
     }
 

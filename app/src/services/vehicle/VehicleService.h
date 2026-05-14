@@ -125,6 +125,14 @@ class VehicleService : public QObject {
     Q_PROPERTY(bool   perfRunActive      READ perfRunActive      NOTIFY perfTimerChanged)
     Q_PROPERTY(double perfRunElapsedSec  READ perfRunElapsedSec  NOTIFY perfTimerChanged)
 
+    // ── Diagnostic Trouble Codes (DTCs) ───────────────────────────────────
+    // QVariantList of QVariantMap rows:
+    //   { "code": "P0299", "ecu": "ECM", "desc": "Turbocharger underboost",
+    //     "status": "active" | "pending" | "stored", "freezeFrameMs": <int> }
+    // Populated by readDtcs() — UDS service 0x19 across known ECU addresses.
+    Q_PROPERTY(QVariantList currentDtcs READ currentDtcs NOTIFY dtcsChanged)
+    Q_PROPERTY(bool dtcReadInFlight READ dtcReadInFlight NOTIFY dtcsChanged)
+
 public:
     explicit VehicleService(QObject *parent = nullptr);
     ~VehicleService();
@@ -293,6 +301,36 @@ public slots:
     // Performance timer
     Q_INVOKABLE void resetPerformanceTimer();
 
+    // ── BCM Work Support unlocks (Cool factor 8 bundle) ──────────────────
+    // All apply* methods log the intended frame and only transmit when the
+    // SettingsService canVerifiedWrites gate is true. UI is fully exercised
+    // even with the gate off — bench-day captures unlock the actual writes.
+    Q_INVOKABLE void applyAutoLockThreshold(int mph);
+    Q_INVOKABLE void applyMirrorTiltConfig(int anglePct, bool leftSide, bool rightSide);
+    Q_INVOKABLE void applyHornChirpMode(int mode);
+    Q_INVOKABLE void applyWelcomeLightSequence(int seq);
+    Q_INVOKABLE void applyDrlMode(int mode);
+    Q_INVOKABLE void applyHeadlightDelay(int sec);
+    Q_INVOKABLE void applyTpmsThresholds(int warnPsi, int critPsi);
+
+    // ── Maintenance reminder resets (UDS service 0x31 routine controls) ──
+    // Each routine ID is Q50_LIKELY. Logged + gated by canVerifiedWrites.
+    Q_INVOKABLE void resetOilLife();
+    Q_INVOKABLE void resetTireRotation();
+    Q_INVOKABLE void resetBrakeFluid();
+    Q_INVOKABLE void resetAirFilter();
+    Q_INVOKABLE void resetCabinFilter();
+
+    // ── DTCs ─────────────────────────────────────────────────────────────
+    // Trigger a fresh UDS service 0x19 scan across ECU addresses. Populates
+    // m_currentDtcs and emits dtcsChanged. Non-blocking (uses async CAN reads).
+    // While in-flight, dtcReadInFlight = true.
+    Q_INVOKABLE void readDtcs();
+    // UDS service 0x14 clear DTCs broadcast. Gated by canVerifiedWrites.
+    Q_INVOKABLE void clearDtcs();
+    QVariantList currentDtcs() const { return m_currentDtcs; }
+    bool dtcReadInFlight() const { return m_dtcReadInFlight; }
+
 signals:
     void driverTempChanged(float);
     void passengerTempChanged(float);
@@ -378,6 +416,10 @@ signals:
     void vr30TelemetryChanged();
     void gMeterChanged();
     void perfTimerChanged();
+    // DTCs
+    void dtcsChanged();
+    // Wiper transitioned to active state (auto-up rain trigger)
+    void wipersBecameActive();
 
 private slots:
     void onVehicleCanData();
@@ -388,6 +430,9 @@ private slots:
     // BCM-unlock comfort feature handlers — all placeholder CAN writes
     void onDoorsLockedForMirrorFold(bool locked);
     void onKeyFobLockHoldForWindowClose();
+    // Rain → auto-up windows. Triggered when wipers transition off→active and
+    // SettingsService.autoUpOnRain is true. 3s grace via QTimer then closes all.
+    void onWipersActiveForRainAutoUp();
 
 private:
     void openCAN(const char *iface, int &sock);
@@ -407,6 +452,15 @@ private:
     void sendMirrorFold();
     void sendWindowCloseAll();
     void sendWindowOneTouch(uint8_t window, bool up);  // window 0..3 = DRV/PAS/RL/RR
+    // BCM Work Support write helpers (UDS service 0x2E write-DID; service 0x31 routines)
+    // All gated by canVerifiedWrites; log-only when gate off.
+    void sendBcmWriteDID(uint16_t did, const uint8_t *data, uint8_t len, const char *label);
+    void sendBcmRoutine(uint16_t rid, const char *label);
+    // DTC scan helpers (UDS service 0x19, subfunc 0x02 — report DTCs by status mask)
+    void issueDtcScanRequest(canid_t ecu, const char *label);
+    void parseDtcResponse(const struct can_frame &f);
+    // Friendly-description lookup — small static table of common Nissan/Infiniti DTCs.
+    static QString dtcDescription(const QString &code);
 
     ButtonLogger m_buttonLog;        // hardware button diagnostic logger
     bool m_ignitionOffSent = false;  // debounce: only emit ignitionOff() once per cycle
@@ -492,6 +546,17 @@ private:
     // Gates BCM-unlock comfort features (mirror fold, comfort window close,
     // all-windows one-touch). Nullable; features no-op when unset.
     SettingsService *m_settings = nullptr;
+
+    // ── DTC scan state ────────────────────────────────────────────────────
+    QVariantList m_currentDtcs;
+    bool         m_dtcReadInFlight = false;
+    QTimer      *m_dtcTimeoutTimer = nullptr;
+
+    // ── Rain auto-up debounce state ───────────────────────────────────────
+    // Wiper transitions to active → 3s grace timer → sendWindowCloseAll().
+    // Held by QTimer so multiple wiper-state hits don't stack closes.
+    QTimer *m_rainAutoUpTimer = nullptr;
+    int     m_lastWiperState  = 0;
 
     // ── VR30 telemetry state ────────────────────────────────────────────────
     double m_boostPressurePsi    = 0.0;
@@ -742,6 +807,32 @@ private:
     static constexpr canid_t UDS_COMBINATION_METER = 0x743; // CONFIRMED cross-platform
     static constexpr canid_t UDS_BCM               = 0x745; // CONFIRMED cross-platform
     static constexpr canid_t UDS_BCM_RESPONSE       = 0x74D; // CONFIRMED (request+8)
+    static constexpr canid_t UDS_ECM               = 0x7E0; // CONFIRMED OBD-II standard
+    static constexpr canid_t UDS_ECM_RESPONSE      = 0x7E8;
+    static constexpr canid_t UDS_TPMS              = 0x731; // Q50_LIKELY (Continental TPMS ECU)
+    static constexpr canid_t UDS_TPMS_RESPONSE     = 0x739;
+    static constexpr canid_t UDS_BROADCAST_CLEAR   = 0x7DF; // OBD-II functional broadcast — service 0x14
+
+    // ── BCM Work Support DIDs (Cool factor 8 bundle — Q50_HYPOTHESIZED) ──
+    // These data identifier candidates are derived from CONSULT-III TSB
+    // references (ITB19-002b BCM customization) but lack public byte layouts.
+    // Apply methods compose UDS 0x2E (writeDID) frames using these IDs;
+    // canVerifiedWrites=false means the frame is logged but not transmitted.
+    static constexpr uint16_t DID_AUTO_LOCK_THRESHOLD = 0x0D10; // Q50_HYPOTHESIZED
+    static constexpr uint16_t DID_MIRROR_TILT_CONFIG  = 0x0E10; // Q50_HYPOTHESIZED
+    static constexpr uint16_t DID_HORN_CHIRP_MODE     = 0x0E20; // Q50_HYPOTHESIZED
+    static constexpr uint16_t DID_WELCOME_LIGHT_SEQ   = 0x0E30; // Q50_HYPOTHESIZED
+    static constexpr uint16_t DID_DRL_MATRIX          = 0x0F10; // Q50_HYPOTHESIZED
+    static constexpr uint16_t DID_HEADLIGHT_DELAY     = 0x0E80; // Q50_HYPOTHESIZED
+    static constexpr uint16_t DID_TPMS_WARN_THRESHOLD = 0x2300; // Q50_HYPOTHESIZED (TPMS ECU)
+    static constexpr uint16_t DID_TPMS_CRIT_THRESHOLD = 0x2301; // Q50_HYPOTHESIZED
+
+    // Maintenance reset routine IDs (UDS service 0x31, sub 0x01 startRoutine)
+    static constexpr uint16_t RID_RESET_OIL_LIFE      = 0x0301; // Q50_LIKELY
+    static constexpr uint16_t RID_RESET_TIRE_ROTATION = 0x0302; // Q50_HYPOTHESIZED
+    static constexpr uint16_t RID_RESET_BRAKE_FLUID   = 0x0303; // Q50_HYPOTHESIZED
+    static constexpr uint16_t RID_RESET_AIR_FILTER    = 0x0304; // Q50_HYPOTHESIZED
+    static constexpr uint16_t RID_RESET_CABIN_FILTER  = 0x0305; // Q50_HYPOTHESIZED
 
     // ── Climate shortcuts / steering wheel / plasmacluster / rain sensor ────
     // No confirmed public write paths for Q50/Q60. BLOCKED until J2534 capture.

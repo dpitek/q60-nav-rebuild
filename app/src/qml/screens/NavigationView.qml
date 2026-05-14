@@ -580,14 +580,53 @@ Item {
         }
     }
 
-    // ── Commander back / home stubs ─────────────────────────────────────────
-    // Sub-view stack (destination search, route preview, etc.) is not yet
-    // implemented. Replace these with push/pop logic when those views land.
+    // ── Sub-view stack: DestinationSearch + RoutePreview ────────────────────
+    // 0 = none (idle map). 1 = DestinationSearch. 2 = RoutePreview.
+    property int subView: 0
+    property string pendingDestName: ""
+    property string pendingDestAddr: ""
+    property real   pendingDestLat: 0.0
+    property real   pendingDestLon: 0.0
+
+    // Open destination search — called by external triggers (back-button long-hold,
+    // upper-screen tap on idle, voice command "Find …", etc.)
+    function openDestinationSearch() { subView = 1 }
+
+    DestinationSearch {
+        anchors.fill: parent
+        z: 60
+        visible: subView === 1
+        onClosed: subView = 0
+        onDestinationChosen: function(name, addr, lat, lon) {
+            pendingDestName = name
+            pendingDestAddr = addr
+            pendingDestLat  = lat
+            pendingDestLon  = lon
+            subView = 2
+            if (typeof NavigationService !== "undefined" && NavigationService.previewRoute)
+                NavigationService.previewRoute(lat, lon)
+        }
+    }
+
+    RoutePreview {
+        anchors.fill: parent
+        z: 60
+        visible: subView === 2
+        destName: pendingDestName
+        destAddr: pendingDestAddr
+        destLat:  pendingDestLat
+        destLon:  pendingDestLon
+        onCancelled: subView = 1
+        onRouteStarted: subView = 0
+    }
+
     function handleBack() {
-        console.log("[NavView] Back — no sub-view to dismiss")
+        if (subView === 2)      subView = 1
+        else if (subView === 1) subView = 0
+        else                    openDestinationSearch()
     }
     function handleHome() {
-        console.log("[NavView] Home — returning to idle map")
+        subView = 0
     }
 
     // Reverse camera handled by RearCameraView loaded from Main.qml (z:80).

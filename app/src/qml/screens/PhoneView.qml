@@ -155,10 +155,10 @@ Item {
                         Rectangle {
                             anchors.horizontalCenter: parent.horizontalCenter
                             width: 64; height: 64; radius: 32
-                            color: muteArea.pressed ? "#2C2C2E" : "#1C1C1E"
+                            color: StatusBridge.muted ? "#0A84FF" : (muteArea.pressed ? "#2C2C2E" : "#1C1C1E")
                             border { color: Qt.rgba(1, 1, 1, 0.15); width: 1.5 }
                             Text { anchors.centerIn: parent; text: "🎤"; font.pixelSize: 24 }
-                            MouseArea { id: muteArea; anchors.fill: parent; onClicked: {} }
+                            MouseArea { id: muteArea; anchors.fill: parent; onClicked: StatusBridge.toggleMute() }
                         }
                         Text { anchors.horizontalCenter: parent.horizontalCenter; text: "Mute"
                                color: "#8E8E93"; font { family: "Roboto"; pixelSize: 11 } }
@@ -173,7 +173,7 @@ Item {
                             Behavior on color { ColorAnimation { duration: 100 } }
                             Text { anchors.centerIn: parent; text: "✆"; color: "#FFFFFF"
                                    font.pixelSize: 26; rotation: 135 }
-                            MouseArea { id: endArea; anchors.fill: parent; onClicked: {} }
+                            MouseArea { id: endArea; anchors.fill: parent; onClicked: StatusBridge.endCall() }
                         }
                         Text { anchors.horizontalCenter: parent.horizontalCenter; text: "End"
                                color: "#FF453A"; font { family: "Roboto"; pixelSize: 11; weight: Font.SemiBold } }
@@ -184,10 +184,10 @@ Item {
                         Rectangle {
                             anchors.horizontalCenter: parent.horizontalCenter
                             width: 64; height: 64; radius: 32
-                            color: spkArea.pressed ? "#2C2C2E" : "#1C1C1E"
+                            color: StatusBridge.speakerOn ? "#0A84FF" : (spkArea.pressed ? "#2C2C2E" : "#1C1C1E")
                             border { color: Qt.rgba(1, 1, 1, 0.15); width: 1.5 }
                             Text { anchors.centerIn: parent; text: "🔊"; font.pixelSize: 24 }
-                            MouseArea { id: spkArea; anchors.fill: parent; onClicked: {} }
+                            MouseArea { id: spkArea; anchors.fill: parent; onClicked: StatusBridge.toggleSpeaker() }
                         }
                         Text { anchors.horizontalCenter: parent.horizontalCenter; text: "Speaker"
                                color: "#8E8E93"; font { family: "Roboto"; pixelSize: 11 } }
@@ -229,7 +229,7 @@ Item {
                             color: dtmfBtn.pressed ? "#2C2C2E" : "#3A3A3C"
                             Text { anchors.centerIn: parent; text: modelData; color: "#FFFFFF"
                                    font { family: "Roboto"; pixelSize: 20; weight: Font.Light } }
-                            MouseArea { id: dtmfBtn; anchors.fill: parent; onClicked: {} }
+                            MouseArea { id: dtmfBtn; anchors.fill: parent; onClicked: StatusBridge.sendDtmf(modelData) }
                         }
                     }
                 }
@@ -375,8 +375,7 @@ Item {
                                 anchors.fill: parent
                                 onClicked: {
                                     contactsList.pendingIndex = -1
-                                    // TODO: initiate BT HFP call to `number` once
-                                    // AudioService PBAP/HFP wiring lands.
+                                    StatusBridge.dial(number)
                                 }
                             }
                         }
@@ -633,7 +632,8 @@ Item {
                         color: "#FFFFFF"; font.pixelSize: 24
                     }
                     MouseArea {
-                        id: answerPanelArea; anchors.fill: parent; onClicked: {}
+                        id: answerPanelArea; anchors.fill: parent
+                        onClicked: StatusBridge.answerCall()
                     }
                 }
                 Text {
@@ -659,7 +659,8 @@ Item {
                         color: "#FFFFFF"; font.pixelSize: 24; rotation: 135
                     }
                     MouseArea {
-                        id: endPanelArea; anchors.fill: parent; onClicked: {}
+                        id: endPanelArea; anchors.fill: parent
+                        onClicked: StatusBridge.endCall()
                     }
                 }
                 Text {
@@ -678,14 +679,15 @@ Item {
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
                     width: 54; height: 54; radius: 27
-                    color: mutePanelArea.pressed ? "#2C2C2E" : "#1C1C1E"
+                    color: StatusBridge.muted ? "#0A84FF" : (mutePanelArea.pressed ? "#2C2C2E" : "#1C1C1E")
                     border { color: Qt.rgba(1, 1, 1, 0.2); width: 1.5 }
                     Behavior on color { ColorAnimation { duration: 100 } }
                     Text {
                         anchors.centerIn: parent; text: "🎤"; font.pixelSize: 20
                     }
                     MouseArea {
-                        id: mutePanelArea; anchors.fill: parent; onClicked: {}
+                        id: mutePanelArea; anchors.fill: parent
+                        onClicked: StatusBridge.toggleMute()
                     }
                 }
                 Text {

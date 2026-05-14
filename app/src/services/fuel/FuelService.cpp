@@ -151,6 +151,7 @@ void FuelService::fetchPrices()
         url.setQuery(q);
 
         QNetworkRequest req(url);
+        req.setTransferTimeout(5000);   // fail-fast: 5s
         // Tag each request with its product code so onReply() can route it
         req.setAttribute(QNetworkRequest::User, product);
         m_nam->get(req);

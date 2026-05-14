@@ -1,0 +1,123 @@
+#!/bin/sh
+# S05-capture-bootstrap — First-boot CAN capture preparation.
+#
+# Purpose: on every boot, configure SocketCAN interfaces and (when enabled)
+# start `candump` on all 3 buses to a rotating log. This gives the hardware-
+# day J2534 capture session a backstop — even if the J2534 adapter misses a
+# frame, the on-device dumps catch it. Disabled by default; enable by touching
+# /data/q60nav/capture-enable on the data partition.
+#
+# This script runs BEFORE S10-gpsd / S50-q60nav so the buses are up and any
+# capture is running before user activity.
+#
+# Outputs:
+#   /data/q60nav/captures/<can-iface>-YYYYMMDD-HHMMSS.log
+#   /data/q60nav/captures/session-<timestamp>.meta  (boot context)
+
+CAPTURE_ENABLE_FLAG=/data/q60nav/capture-enable
+CAPTURE_DIR=/data/q60nav/captures
+CAN_IFACES="can0 can1 can2"
+BITRATES="500000 500000 125000"
+
+bring_up_buses() {
+    # Bring up all 3 SocketCAN interfaces. Idempotent — silently skip if a
+    # bus is missing (some DCU revisions only wire 2 buses).
+    set -- $BITRATES
+    for IFACE in $CAN_IFACES; do
+        BR=$1; shift
+        if ip link show "$IFACE" >/dev/null 2>&1; then
+            ip link set "$IFACE" down 2>/dev/null || true
+            ip link set "$IFACE" type can bitrate "$BR" 2>/dev/null || true
+            ip link set "$IFACE" up 2>/dev/null && \
+                echo "  $IFACE up at ${BR}bps" || \
+                echo "  $IFACE could not be brought up"
+        else
+            echo "  $IFACE not present — skipping"
+        fi
+    done
+}
+
+write_session_meta() {
+    local TS=$(date -u +%Y%m%dT%H%M%SZ)
+    local META="$CAPTURE_DIR/session-$TS.meta"
+    {
+        echo "boot_time_utc=$TS"
+        echo "vin=$(cat /sys/class/dmi/id/product_uuid 2>/dev/null || echo unknown)"
+        echo "kernel=$(uname -r)"
+        echo "uptime_at_capture=$(awk '{print $1}' /proc/uptime 2>/dev/null)"
+        for IFACE in $CAN_IFACES; do
+            ip -details link show "$IFACE" 2>/dev/null \
+                | grep -E "state|bitrate|berr-counter" \
+                | sed "s/^/  $IFACE: /"
+        done
+    } > "$META"
+    echo "  Session meta: $META"
+}
+
+start_capture() {
+    local TS=$(date -u +%Y%m%dT%H%M%SZ)
+    for IFACE in $CAN_IFACES; do
+        if ip link show "$IFACE" 2>/dev/null | grep -q "state UP"; then
+            local LOG="$CAPTURE_DIR/${IFACE}-${TS}.log"
+            # Use candump -l for human-readable text format; -L for binary
+            # (smaller, but harder to inspect on a Mac). Text wins for hardware day.
+            candump -tA "$IFACE" > "$LOG" 2>&1 &
+            echo "  $IFACE → $LOG (PID $!)"
+        fi
+    done
+}
+
+rotate_old_captures() {
+    # Keep the last 8 sessions worth of captures (~ one capture day).
+    # Each session is 3 logs + 1 meta; keeping 32 files total.
+    if [ -d "$CAPTURE_DIR" ]; then
+        ls -1t "$CAPTURE_DIR"/*.log "$CAPTURE_DIR"/*.meta 2>/dev/null \
+            | tail -n +33 | xargs -r rm
+    fi
+}
+
+case "$1" in
+start)
+    echo -n "Bringing up CAN buses... "
+    bring_up_buses
+
+    if [ -f "$CAPTURE_ENABLE_FLAG" ]; then
+        echo "Capture mode ENABLED (flag file present)"
+        mkdir -p "$CAPTURE_DIR"
+        rotate_old_captures
+        write_session_meta
+        echo "Starting CAN capture on all buses..."
+        start_capture
+    else
+        echo "Capture mode disabled — touch $CAPTURE_ENABLE_FLAG to enable"
+    fi
+    ;;
+stop)
+    killall candump 2>/dev/null || true
+    echo "CAN capture stopped"
+    ;;
+status)
+    pgrep candump >/dev/null && echo "CAN capture RUNNING" || echo "CAN capture STOPPED"
+    for IFACE in $CAN_IFACES; do
+        STATE=$(ip link show "$IFACE" 2>/dev/null | grep -oE "state [A-Z]+" | awk '{print $2}')
+        echo "  $IFACE: ${STATE:-MISSING}"
+    done
+    ;;
+enable)
+    mkdir -p "$(dirname "$CAPTURE_ENABLE_FLAG")"
+    touch "$CAPTURE_ENABLE_FLAG"
+    echo "Capture mode enabled. Reboot or run 'service S05-capture-bootstrap start' to begin."
+    ;;
+disable)
+    rm -f "$CAPTURE_ENABLE_FLAG"
+    killall candump 2>/dev/null || true
+    echo "Capture mode disabled and any running capture stopped."
+    ;;
+*)
+    echo "Usage: $0 {start|stop|status|enable|disable}"
+    echo "  enable  — set the flag so captures run from the next boot"
+    echo "  disable — clear the flag and stop any in-flight capture"
+    exit 1
+    ;;
+esac
+exit 0

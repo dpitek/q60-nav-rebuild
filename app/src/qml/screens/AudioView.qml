@@ -408,7 +408,8 @@ Item {
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "Speed Vol"; color: "#8E8E93"
-                        font { family: "Roboto"; pixelSize: 11 }; width: 60
+                        font { family: "Roboto"; pixelSize: 11 }
+                        width: 60
                     }
                     Repeater {
                         model: [

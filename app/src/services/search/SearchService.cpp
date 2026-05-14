@@ -41,6 +41,8 @@ void SearchService::search(const QString &query, int maxResults)
         if (reply->error() != QNetworkReply::NoError) {
             // Geocoder not running — emit empty results (not an error the UI needs to show)
             qDebug() << "[SearchService] geocoder unavailable:" << reply->errorString();
+            m_results.clear();
+            emit resultsChanged();
             emit resultsReady(QJsonArray());
             return;
         }
@@ -54,6 +56,7 @@ void SearchService::search(const QString &query, int maxResults)
         // Pelias GeoJSON response: { "features": [...] }
         QJsonArray features = doc.object()["features"].toArray();
         QJsonArray results;
+        QVariantList rows;
         for (const auto &f : features) {
             QJsonObject feat   = f.toObject();
             QJsonObject props  = feat["properties"].toObject();
@@ -61,16 +64,31 @@ void SearchService::search(const QString &query, int maxResults)
             if (coords.size() < 2) continue;
 
             QJsonObject r;
-            r["label"] = props["label"].toString(props["name"].toString());
-            r["name"]  = props["name"].toString();
-            r["city"]  = props.contains("locality")
-                         ? props["locality"].toString()
-                         : props["city"].toString();
-            r["state"] = props["region_a"].toString();
-            r["lat"]   = coords[1].toDouble();
-            r["lon"]   = coords[0].toDouble();
+            const QString name  = props["name"].toString();
+            const QString label = props["label"].toString(name);
+            const QString city  = props.contains("locality")
+                                  ? props["locality"].toString()
+                                  : props["city"].toString();
+            const QString state = props["region_a"].toString();
+            const double lat = coords[1].toDouble();
+            const double lon = coords[0].toDouble();
+            r["label"] = label;
+            r["name"]  = name;
+            r["city"]  = city;
+            r["state"] = state;
+            r["lat"]   = lat;
+            r["lon"]   = lon;
             results.append(r);
+
+            QVariantMap qrow;
+            qrow["name"] = name.isEmpty() ? label : name;
+            qrow["addr"] = label;
+            qrow["lat"]  = lat;
+            qrow["lon"]  = lon;
+            rows.append(qrow);
         }
+        m_results = rows;
+        emit resultsChanged();
         emit resultsReady(results);
     });
 }

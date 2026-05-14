@@ -219,3 +219,63 @@ void StatusBridge::onCallEnded()
     emit callActiveChanged(false);
     emit restoreLowerScreen();
 }
+
+// ─── Phone control (QML-facing) ────────────────────────────────────────────
+// Stubs until BlueZ HFP profile is wired through AudioService. Local state +
+// signals are kept consistent so the PhoneView UX is fully responsive.
+void StatusBridge::answerCall()
+{
+    if (m_callActive) return;
+    m_callActive = true;
+    emit callActiveChanged(true);
+    emit switchLowerToPhone();
+    qInfo() << "[StatusBridge] answerCall — HFP stub";
+}
+
+void StatusBridge::endCall()
+{
+    if (!m_callActive) return;
+    m_callActive = false;
+    m_muted = false;
+    emit callActiveChanged(false);
+    emit muteChanged(false);
+    emit restoreLowerScreen();
+    qInfo() << "[StatusBridge] endCall — HFP stub";
+}
+
+void StatusBridge::toggleMute()
+{
+    m_muted = !m_muted;
+    emit muteChanged(m_muted);
+    if (m_audio) m_audio->setMuted(m_muted);
+    qInfo() << "[StatusBridge] toggleMute →" << m_muted;
+}
+
+void StatusBridge::toggleSpeaker()
+{
+    m_speakerOn = !m_speakerOn;
+    emit speakerChanged(m_speakerOn);
+    qInfo() << "[StatusBridge] toggleSpeaker →" << m_speakerOn
+            << "(BlueZ HFP routing stub — no ALSA hand-off yet)";
+}
+
+void StatusBridge::sendDtmf(const QString &digit)
+{
+    // Real BT HFP DTMF (AT+VTS) routing comes with BlueZ HFP profile work.
+    // For now we emit a signal so any future listener (AudioService, an
+    // off-device tester, or a beep generator) can consume it.
+    qInfo() << "[StatusBridge] DTMF" << digit;
+    emit dtmfSent(digit);
+}
+
+void StatusBridge::dial(const QString &number)
+{
+    // Same stub — outgoing call initiation requires BT HFP. Surface the
+    // intent so test harnesses can verify the button works.
+    qInfo() << "[StatusBridge] dial" << number << "— HFP outgoing stub";
+    emit outgoingCallInitiated(number);
+    if (!m_callActive) {
+        m_callActive = true;
+        emit callActiveChanged(true);
+    }
+}

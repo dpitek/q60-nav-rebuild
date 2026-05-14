@@ -95,9 +95,23 @@ export MESA_GL_VERSION_OVERRIDE=3.3      # swrast may report GL 2.1; mbgl needs 
 export MESA_GLSL_VERSION_OVERRIDE=330
 export GALLIUM_DRIVER=softpipe           # force softpipe (Atom has no llvmpipe support)
 
-echo "[$(date)] All pre-launch checks passed. Clearing boot counter."
-rm -f "$COUNT_FILE"
-sync
+echo "[$(date)] All pre-launch checks passed."
+
+# Spawn the boot-counter clearer in the background. It waits 30 seconds — if
+# q60nav is still running by then it's almost certainly past startup crashes,
+# so we clear the failed-attempts file. If q60nav dies in those 30s the
+# counter increments on next boot and the slot-A restore logic engages on the
+# 2nd failure as designed.
+(
+    sleep 30
+    if pgrep -x q60nav > /dev/null 2>&1; then
+        rm -f "$COUNT_FILE"
+        sync
+        echo "[$(date)] q60nav survived 30s — boot counter cleared"
+    else
+        echo "[$(date)] q60nav DIED within 30s — boot counter left intact (attempt $((count + 1)))"
+    fi
+) &
 
 echo "[$(date)] Launching q60nav..."
 exec /opt/nav/bin/q60nav

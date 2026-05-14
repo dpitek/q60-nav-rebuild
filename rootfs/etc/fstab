@@ -1,8 +1,10 @@
 # Q60 Nav Rebuild fstab
 # <device>         <mount>   <type>    <options>              <dump> <pass>
 /dev/mmcblk0p2     /         ext4      ro,relatime,errors=remount-ro  0  1
-/dev/mmcblk0p9     /data     ext4      rw,relatime,nosuid,nodev       0  2
-/dev/mmcblk0p1     /boot     vfat      rw,relatime                    0  2
+# /data uses `nofail` so a missing or not-yet-formatted partition does not
+# block boot. rcS falls back to /var/lib/q60nav-data when /data isn't mounted.
+/dev/mmcblk0p9     /data     ext4      rw,relatime,nosuid,nodev,nofail 0  2
+/dev/mmcblk0p1     /boot     vfat      rw,relatime,nofail              0  2
 tmpfs              /tmp      tmpfs     nosuid,nodev,size=64M          0  0
 tmpfs              /run      tmpfs     nosuid,nodev,size=32M,mode=755 0  0
 devtmpfs           /dev      devtmpfs  nosuid,mode=755                0  0

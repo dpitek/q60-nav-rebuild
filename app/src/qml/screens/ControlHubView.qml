@@ -40,7 +40,7 @@ Item {
             left: parent.left; right: parent.right
         }
 
-        NavCompanionView  { anchors.fill: parent; visible: activeTab === 0 }
+        NavCompanionView  { anchors.fill: parent; visible: activeTab === 0; keyboard: lowerKb }
         AudioView         { anchors.fill: parent; visible: activeTab === 1 }
         PhoneView         { anchors.fill: parent; visible: activeTab === 2 }
         ClimateView       { anchors.fill: parent; visible: activeTab === 3 }
@@ -78,6 +78,15 @@ Item {
                 opacity: 0.6
             }
         }
+    }
+
+    // ── Global on-screen keyboard (lower screen) ─────────────────────────────
+    // Owned at ControlHubView level so it overlays the entire lower display
+    // including the bottom nav. Sub-views receive a reference via the `keyboard`
+    // property and call .show(textField) / .hide() to drive it.
+    QmlKeyboard {
+        id: lowerKb
+        z: 250   // above bottom nav (z:0) and incoming call overlay (z:100)
     }
 
     // ── Bottom navigation bar — 60px ────────────────────────────────────────
