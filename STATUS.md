@@ -312,6 +312,7 @@ Read IDs confirmed via opendbc/carhack/Leaf AZE0 DBC cross-reference. **Write pa
 
 | Issue | Resolution |
 |---|---|
+| **PowerVR SGX 535 GPU has no Linux driver** | Stay on Mesa swrast permanently. Research 2026-05-14 confirmed every alternative (EMGD resurrect, gma500+2D, RE-from-scratch, hardware replacement) is dead, legally tainted, or 5+ person-years. ~80% of acceleration benefit recoverable via QML perf tuning (DRM atomic planes, SCHED_FIFO render thread, Image.asynchronous, no clip:true). See [`docs/powervr-sgx-driver-analysis.md`](docs/powervr-sgx-driver-analysis.md). |
 | Photon geocoder requires Java 21+; Java 21+ has no i386/Linux builds | Replaced with C+SQLite geocoder-server — FTS5+rtree, i386-native, no JVM |
 | valhalla_service has no HTTP server (ENABLE_HTTP=OFF) | valhalla-httpd.c wraps CLI binary → port 8002 |
 | Qt6 cross-compile needs QT_HOST_PATH | build-qt6-host.sh builds native qtbase first |
