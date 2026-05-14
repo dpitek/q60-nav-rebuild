@@ -131,9 +131,11 @@ routines + DTC read/clear/parse + rain auto-up wiper handler in VehicleService.
 
 ### Hardware (boot test prerequisites)
 5. **[hardware]** Physical boot test — `deploy-to-image.sh --test` (write kernel + rootfs, flip elilo.conf)
-6. **[hardware]** J2534 CAN sniff — verify all `CAN_*` IDs, especially HVAC write (0x540/0x541) and body status (0x60D)
-7. **[hardware]** GPS UART probe — confirm ttyS device for GPSD
+6. **[hardware]** J2534 CAN sniff — verify all `CAN_*` IDs, especially HVAC write (0x540/0x541) and body status (0x60D). See [`docs/hardware-day-capture-checklist.md`](docs/hardware-day-capture-checklist.md).
+7. **[hardware]** GPS UART probe — confirm ttyS / ttyPCH device for GPSD
 8. **[hardware]** Weston LVDS — dynamic detection will run at boot; verify connector names in `gen-weston-ini.sh` output vs actual DRM driver names
+9. **[hardware]** OEM hidden-menu exploration — exercise factory diag screens BEFORE flashing slot B. Catalog: [`docs/oem-hidden-functions.md`](docs/oem-hidden-functions.md). Pairs with J2534 capture (each hidden screen fires unique CAN frames).
+10. **[hardware]** `cat /proc/meminfo` on the live unit. **Settles the 1GB-vs-2GB DDR2 question in 30 seconds** (deep research 2026-05-14: 80% confidence on 1GB, MEDIUM-HIGH; no public teardown confirms a specific Q60 SKU). Current memory tuning (zram 256MB, ulimit -v 512MB, log rotation) is sized for 1GB. If `MemTotal` ≥ 1.8GB: drop NO_CACHEGEN, expand Valhalla cache to 256MB, disable zram. If `MemTotal` < 600MB: pull Valhalla entirely, gut MapLibre.
 
 ---
 

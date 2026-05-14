@@ -8,6 +8,31 @@ notepad.
 **Pre-condition:** Q60 in factory firmware (slot A). DO NOT flash slot B until
 this session completes.
 
+## Companion docs
+- [`oem-hidden-functions.md`](./oem-hidden-functions.md) — OEM diagnostic /
+  service / engineering menus reachable from the factory touchscreen. Each
+  hidden screen fires unique CAN frames — capture them alongside the J2534
+  plan below. Section 11 of that doc has the exact walkthrough order.
+
+## Quick fact-confirmation tasks (do these first — 30 seconds each)
+
+Before any write captures, run these once-and-done reads from a TTL/USB
+shell on the live DCU. They resolve every research-flagged UNVERIFIED
+item in STATUS.md (RAM count, display connector names, GPS UART path,
+CAN driver, etc.) in under a minute:
+
+```sh
+cat /proc/meminfo  | head -5            # RAM (resolves 1GB-vs-2GB DDR2 question)
+cat /proc/cpuinfo  | grep -E "model|MHz"
+ls /sys/class/drm/                       # LVDS / DSI connector names
+ls /dev/tty*                             # GPS UART (ttyPCH0..3 vs ttyS0)
+ls /sys/class/net/                       # CAN buses (can0/can1/can2 if present)
+dmesg | grep -iE "can|watchdog|memory|usable"  # driver load + watchdog model
+```
+
+Save each to a text file and `scp` to your laptop — these become the
+ground truth that overrides every "LIKELY"/"UNVERIFIED" label in the repo.
+
 ---
 
 ## On-device capture (belt + suspenders)
