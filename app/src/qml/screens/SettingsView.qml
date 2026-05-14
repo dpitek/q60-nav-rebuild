@@ -1002,16 +1002,17 @@ Item {
                     valueColor: VehicleService.ignitionOn ? "#30D158" : "#8E8E93"
                 }
 
-                // GPS fix — QGeoCoordinate::isValid() is a method, not a property.
-                // Without the parens it returns the function reference (always truthy)
-                // so the "No fix" branch never showed pre-2026-05-13 audit fix.
+                // GPS fix — QGeoCoordinate's isValid is exposed to QML as a
+                // bool property (Q_PROPERTY on the C++ side), NOT a method.
+                // 2026-05-14 fix: runtime test confirmed `.isValid()` throws
+                // "is not a function"; `.isValid` returns the bool correctly.
                 InfoRow {
                     label: "GPS Fix"
-                    value: NavigationService.position.isValid()
+                    value: NavigationService.position.isValid
                            ? (NavigationService.position.latitude.toFixed(4)
                               + ", " + NavigationService.position.longitude.toFixed(4))
                            : "No fix"
-                    valueColor: NavigationService.position.isValid() ? "#30D158" : "#FF9F0A"
+                    valueColor: NavigationService.position.isValid ? "#30D158" : "#FF9F0A"
                 }
 
                 InfoRow {
@@ -1293,11 +1294,17 @@ Item {
         }
     }
 
+    // On-screen keyboard handle, injected by parent (ControlHubView). Threaded
+    // into ProfileView so TextInputs in the create-profile sheet can surface
+    // the keyboard.
+    property var keyboard: null
+
     // ── Profile View (full-screen overlay) ───────────────────────────────────
     ProfileView {
         anchors.fill: parent
         visible: root.profileViewVisible
         z: 101
+        keyboard: root.keyboard
         onVisibleChanged: {
             if (!visible) root.profileViewVisible = false
         }

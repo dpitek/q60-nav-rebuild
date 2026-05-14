@@ -37,6 +37,9 @@ HEIGHT=500
 OPEN_BROWSER=1
 REBUILD=0
 REBUILD_APP=0
+SIM_LAT=""
+SIM_LON=""
+SIM_CITY=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -44,9 +47,31 @@ while [ $# -gt 0 ]; do
         --rebuild)     REBUILD=1; shift ;;
         --rebuild-app) REBUILD_APP=1; shift ;;
         --port)        WEB_PORT="$2"; shift 2 ;;
+        --lat)         SIM_LAT="$2"; shift 2 ;;
+        --lon)         SIM_LON="$2"; shift 2 ;;
         *) echo "Unknown arg: $1"; exit 1 ;;
     esac
 done
+
+# ── Initial map center: IP-based geolocation (free, no API key) ───────────
+# If --lat/--lon weren't provided, ask ip-api.com for the host's public IP
+# location and seed the map there. Falls back to central NC (35.5, -79.0)
+# if the call fails. The C++ side (main.cpp) picks these up from Q60_SIM_LAT
+# / Q60_SIM_LON env vars and seeds the NavigationService.previewRoute /
+# initial map center.
+if [ -z "$SIM_LAT" ] || [ -z "$SIM_LON" ]; then
+    echo "[sim-web] Resolving host location via ip-api.com..."
+    GEO=$(curl -sS --max-time 3 "http://ip-api.com/json/?fields=status,lat,lon,city,region" 2>/dev/null || echo "")
+    if echo "$GEO" | grep -q '"status":"success"'; then
+        SIM_LAT=$(echo "$GEO"  | sed -E 's/.*"lat":([-.0-9]+).*/\1/')
+        SIM_LON=$(echo "$GEO"  | sed -E 's/.*"lon":([-.0-9]+).*/\1/')
+        SIM_CITY=$(echo "$GEO" | sed -E 's/.*"city":"([^"]+)".*/\1/')
+        echo "[sim-web] Location: $SIM_CITY ($SIM_LAT, $SIM_LON)"
+    else
+        SIM_LAT="35.7796"; SIM_LON="-78.6382"; SIM_CITY="Raleigh (fallback)"
+        echo "[sim-web] IP geolocation failed — using fallback ($SIM_LAT, $SIM_LON)"
+    fi
+fi
 
 # ── Build (or rebuild) the simulator image ─────────────────────────────────
 if [ "$REBUILD" -eq 1 ] || ! docker image inspect "$SIM_IMAGE" &>/dev/null; then
@@ -93,6 +118,9 @@ docker run --rm -d \
     \
     -e QT_QUICK_CONTROLS_STYLE=Basic \
     -e Q60_SIM=1 \
+    -e Q60_SIM_LAT="$SIM_LAT" \
+    -e Q60_SIM_LON="$SIM_LON" \
+    -e Q60_SIM_CITY="$SIM_CITY" \
     -e QT_LOGGING_RULES="q60nav.*=true" \
     \
     "$SIM_IMAGE" \

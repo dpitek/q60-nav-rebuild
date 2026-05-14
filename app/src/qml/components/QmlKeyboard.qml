@@ -8,8 +8,9 @@ import QtQuick
 
 Item {
     id: kb
-    anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-    height: 232
+    // Span the entire parent so the tap-outside backdrop covers everything.
+    // The keyboard panel itself is positioned at the bottom inside this Item.
+    anchors.fill: parent
     z: 200
 
     property var target: null
@@ -17,15 +18,31 @@ Item {
     property string layout: "qwerty"   // qwerty | numeric | symbols
     property bool shift: false
     property bool capsLock: false
+    // Idle timeout (seconds). After this many seconds of no key activity the
+    // keyboard auto-closes. 0 = disabled.
+    property int idleTimeoutSec: 30
 
-    visible: open || y < parent.height
+    // The keyboard panel height — matches the visual band at the bottom.
+    readonly property int panelHeight: 232
+
+    visible: open || kbPanel.y < height
 
     function show(t) {
         target = t
         open = true
+        idleTimer.restart()
         if (t && t.forceActiveFocus) t.forceActiveFocus()
     }
-    function hide() { open = false }
+    function hide() {
+        open = false
+        idleTimer.stop()
+        // Releasing focus from the target makes the screen feel "done" — any
+        // visible cursor on the original field disappears.
+        if (target && target.focus !== undefined) target.focus = false
+        target = null
+    }
+
+    function _kick() { idleTimer.restart() }
 
     function _insertText(s) {
         if (!target) return
@@ -35,6 +52,7 @@ Item {
             target.text = (target.text || "") + s
         }
         if (shift && !capsLock) shift = false
+        _kick()
     }
     function _backspace() {
         if (!target || target.text === undefined) return
@@ -42,14 +60,43 @@ Item {
         if (pos <= 0) return
         if (target.remove) target.remove(pos - 1, pos)
         else target.text = target.text.slice(0, -1)
+        _kick()
     }
     function _enter() {
         if (target && target.accepted) target.accepted()
         hide()
     }
 
-    y: open ? (parent.height - height) : parent.height
-    Behavior on y { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+    // Idle auto-close
+    Timer {
+        id: idleTimer
+        interval: kb.idleTimeoutSec * 1000
+        running: kb.open && kb.idleTimeoutSec > 0
+        repeat: false
+        onTriggered: kb.hide()
+    }
+
+    // ── Backdrop: tap anywhere outside the keyboard panel to dismiss ───────
+    MouseArea {
+        anchors.fill: parent
+        // Only active when keyboard is open; lets clicks through otherwise.
+        enabled: kb.open
+        visible: kb.open
+        onClicked: kb.hide()
+        // Don't block scroll; the keyboard is for one-shot input only.
+    }
+
+    // The keyboard panel itself — pinned to the bottom, slides up when open.
+    Item {
+        id: kbPanel
+        anchors { left: parent.left; right: parent.right }
+        height: kb.panelHeight
+        y: kb.open ? (kb.height - height) : kb.height
+        Behavior on y { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+        // Eat clicks so taps on the keyboard panel itself don't dismiss it
+        // (the backdrop above sees them first via Z-order, but a sibling Item
+        // with its own MouseArea wins because we explicitly capture here).
+        MouseArea { anchors.fill: parent; onPressed: function(m) { m.accepted = true } }
 
     Rectangle {
         anchors.fill: parent
@@ -82,12 +129,21 @@ Item {
                 }
             }
         }
+        // Done / close button — sized to Apple HIG minimum (44pt) so it's
+        // actually tappable. Reachable AT ALL TIMES — the prior 22x22 ✕ was
+        // below-threshold and Doug couldn't dismiss the keyboard.
         Rectangle {
-            width: 22; height: 22; radius: 11
-            color: "#2C2C2E"
-            anchors { top: parent.top; right: parent.right; margins: 6 }
-            Text { anchors.centerIn: parent; text: "✕"; color: "#FFFFFF"; font { pixelSize: 11 } }
-            MouseArea { anchors.fill: parent; onClicked: kb.hide() }
+            id: doneBtn
+            width: 56; height: 32; radius: 6
+            color: doneArea.pressed ? "#0A84FF" : "#2C2C2E"
+            border { color: Qt.rgba(1, 1, 1, 0.15); width: 1 }
+            anchors { top: parent.top; right: parent.right; topMargin: 4; rightMargin: 6 }
+            Text {
+                anchors.centerIn: parent
+                text: "Done"; color: "#FFFFFF"
+                font { family: "Roboto"; pixelSize: 12; weight: 600 }
+            }
+            MouseArea { id: doneArea; anchors.fill: parent; onClicked: kb.hide() }
         }
 
         // ── Key area ──────────────────────────────────────────────────────────
@@ -265,7 +321,8 @@ Item {
                 }
             }
         }
-    }
+    }   // close Rectangle (keyboard background)
+    }   // close kbPanel Item
 
     // ── KeyCap inline component ───────────────────────────────────────────────
     component KeyCap: Rectangle {

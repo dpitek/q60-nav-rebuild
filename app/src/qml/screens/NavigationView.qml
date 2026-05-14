@@ -26,7 +26,12 @@ Item {
         Q60Nav.MapLibreMap {
             id: mapLibreMap
             anchors.fill: parent
-            center: QtPositioning.coordinate(35.5, -79.0)
+            // Open the map at NavigationService.position when valid. The sim
+            // launcher seeds this from IP geolocation; on real DCU hardware
+            // GPSD sets it once it has a fix. Falls back to central NC.
+            center: NavigationService.position && NavigationService.position.isValid
+                    ? NavigationService.position
+                    : QtPositioning.coordinate(35.5, -79.0)
             zoom:   12.0
             style:  "file:///opt/nav/style/q60-dark.json"
 

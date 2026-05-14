@@ -16,6 +16,11 @@ Item {
     id: root
     anchors.fill: parent
 
+    // On-screen keyboard handle, injected by parent (see SettingsView). When
+    // null, TextInputs still receive focus but no on-screen keyboard appears —
+    // simulator desktops still have hardware keyboards.
+    property var keyboard: null
+
     // ── State ─────────────────────────────────────────────────────────────────
     property bool createSheetVisible: false
     property bool editScreenVisible:  false
@@ -404,6 +409,23 @@ Item {
                         font { family: "Roboto"; pixelSize: 14 }
                         inputMethodHints: Qt.ImhNoPredictiveText
                         onTextChanged: root.newName = text
+                        // Surface the on-screen keyboard when this field gains
+                        // focus — previously the field was tappable but no
+                        // virtual keyboard appeared on the simulator/DCU.
+                        onActiveFocusChanged: {
+                            if (activeFocus && root.keyboard) root.keyboard.show(nameInput)
+                        }
+                        // Also raise on initial tap (some Qt builds don't
+                        // re-fire activeFocusChanged on first focus).
+                        MouseArea {
+                            anchors.fill: parent
+                            propagateComposedEvents: true
+                            onClicked: function(m) {
+                                nameInput.forceActiveFocus()
+                                if (root.keyboard) root.keyboard.show(nameInput)
+                                m.accepted = false   // let TextInput process the click too
+                            }
+                        }
 
                         Text {
                             anchors.fill: parent

@@ -82,6 +82,11 @@ public slots:
     Q_INVOKABLE void stopRoute() { cancelRoute(); }
     Q_INVOKABLE void requestReroute(int routeType);
 
+    // Seed the current position without a GPS fix. Used by the simulator to
+    // open the map at the user's IP-resolved location instead of central NC.
+    // On real hardware GPSD's TPV messages take over within seconds.
+    Q_INVOKABLE void setSimulatorPosition(double lat, double lon);
+
 signals:
     void activeChanged(bool);
     void instructionChanged();

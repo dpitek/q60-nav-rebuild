@@ -206,6 +206,14 @@ void NavigationService::requestReroute(int routeType)
     emit previewChanged();
 }
 
+void NavigationService::setSimulatorPosition(double lat, double lon)
+{
+    m_position = QGeoCoordinate(lat, lon);
+    m_gpsLock = true;   // pretend we have a fix so UI doesn't say "no signal"
+    emit positionChanged(m_position);
+    qDebug() << "[NavigationService] Simulator position set:" << lat << lon;
+}
+
 void NavigationService::updateSpeed(float mph)
 {
     m_currentSpeed = mph;

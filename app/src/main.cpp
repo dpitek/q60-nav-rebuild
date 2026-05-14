@@ -161,6 +161,24 @@ int main(int argc, char *argv[])
     // Wire AFTER settingsSvc.start() so audioPresets blob is already loaded.
     audioSvc.wireDependencies(&settingsSvc, &vehicleSvc);
 
+    // ── Simulator-mode initial location ──────────────────────────────────
+    // In Q60_SIM mode the launcher resolves the host's IP-based location
+    // (or accepts --lat/--lon overrides) and exports Q60_SIM_LAT/LON. We
+    // seed NavigationService's position so the upper-screen map opens
+    // centered where the user actually is, not on central NC.
+    // On real DCU hardware these env vars are unset and GPSD takes over.
+    if (!qgetenv("Q60_SIM").isEmpty()) {
+        bool latOk = false, lonOk = false;
+        const double simLat = QString::fromLocal8Bit(qgetenv("Q60_SIM_LAT")).toDouble(&latOk);
+        const double simLon = QString::fromLocal8Bit(qgetenv("Q60_SIM_LON")).toDouble(&lonOk);
+        if (latOk && lonOk && simLat != 0.0 && simLon != 0.0) {
+            navSvc.setSimulatorPosition(simLat, simLon);
+            const QByteArray city = qgetenv("Q60_SIM_CITY");
+            qCInfo(lcMain) << "Simulator initial location:" << simLat << simLon
+                           << (city.isEmpty() ? "" : QString("(%1)").arg(QString::fromLocal8Bit(city)).toLocal8Bit().constData());
+        }
+    }
+
     // ── Network availability fan-out ─────────────────────────────────────
     // Without these wires, Weather/Fuel never fire even when the user later
     // tethers a phone — both stay in their offline-default state forever.

@@ -89,6 +89,19 @@ Item {
         z: 250   // above bottom nav (z:0) and incoming call overlay (z:100)
     }
 
+    // ── Profile management overlay ───────────────────────────────────────────
+    // ProfileView surfaces when the user triggers it (welcome → create flow, or
+    // any future "Profiles" settings row). Keyboard handle is injected so the
+    // name TextInput in the create-profile sheet can raise the on-screen kb.
+    property bool profileViewVisible: ProfileService.welcomeVisible && ProfileService.noProfileMode &&
+                                       (!ProfileService.profiles || ProfileService.profiles.length === 0)
+    ProfileView {
+        anchors.fill: parent
+        visible: profileViewVisible
+        keyboard: lowerKb
+        z: 240
+    }
+
     // ── Bottom navigation bar — 60px ────────────────────────────────────────
     // 5 content tabs at 160px each = 800px.
     Rectangle {
