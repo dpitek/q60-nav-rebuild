@@ -1,12 +1,26 @@
 # Q60 Nav Rebuild fstab
-# <device>         <mount>   <type>    <options>              <dump> <pass>
-/dev/mmcblk0p2     /         ext4      ro,relatime,errors=remount-ro  0  1
-# /data uses `nofail` so a missing or not-yet-formatted partition does not
-# block boot. rcS falls back to /var/lib/q60nav-data when /data isn't mounted.
-/dev/mmcblk0p9     /data     ext4      rw,relatime,nosuid,nodev,nofail 0  2
-/dev/mmcblk0p1     /boot     vfat      rw,relatime,nofail              0  2
-tmpfs              /tmp      tmpfs     nosuid,nodev,size=64M          0  0
-tmpfs              /run      tmpfs     nosuid,nodev,size=32M,mode=755 0  0
-devtmpfs           /dev      devtmpfs  nosuid,mode=755                0  0
-proc               /proc     proc      nosuid,nodev,noexec            0  0
-sysfs              /sys      sysfs     nosuid,nodev,noexec            0  0
+#
+# Slot B (us) lives on p3. Booting from p3 means the kernel mounts the root
+# device the bootloader hands it; this fstab entry is the persistent record
+# used by `mount -a` (no-op on /) and any future fsck pass.
+#
+# <device>           <mount>     <type>    <options>                                     <dump> <pass>
+/dev/mmcblk0p3       /           ext4      ro,relatime,errors=remount-ro                 0      1
+
+# /data uses `nofail` so a missing or not-yet-formatted partition doesn't
+# halt boot. rcS falls back to /var/lib/q60nav-data when /data isn't mounted.
+/dev/mmcblk0p9       /data       ext4      rw,relatime,nosuid,nodev,nofail               0      2
+/dev/mmcblk0p1       /boot       vfat      rw,relatime,nofail                            0      2
+
+# Writable runtime overlays — the root is `ro`, so every transient write needs
+# a tmpfs. /var/log captures every service log; /etc/xdg/weston gets the
+# dynamic gen-weston-ini.sh output; /var/run is the systemd-style pidfile dir.
+tmpfs                /tmp        tmpfs     nosuid,nodev,size=64M                         0      0
+tmpfs                /run        tmpfs     nosuid,nodev,size=32M,mode=755                0      0
+tmpfs                /var/log    tmpfs     nosuid,nodev,size=16M,mode=755                0      0
+tmpfs                /var/run    tmpfs     nosuid,nodev,size=4M,mode=755                 0      0
+tmpfs                /etc/xdg/weston tmpfs nosuid,nodev,size=1M,mode=755                 0      0
+
+devtmpfs             /dev        devtmpfs  nosuid,mode=755                               0      0
+proc                 /proc       proc      nosuid,nodev,noexec                           0      0
+sysfs                /sys        sysfs     nosuid,nodev,noexec                           0      0

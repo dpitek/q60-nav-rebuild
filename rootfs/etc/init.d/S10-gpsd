@@ -1,34 +1,60 @@
 #!/bin/sh
 # S10-gpsd — Start GPSD for GPS receiver
-# The Q60 GPS receiver is on a UART (ttyS0 or ttyAMA0 — verify via J2534 hardware probe)
-# GPSD provides JSON protocol on TCP localhost:2947 for NavigationService
+#
+# Hardware research note (2026-05-14): the Q60 DCU is Atom E6xx + EG20T PCH.
+# The EG20T provides 4 integrated UARTs exposed by the `pch_uart` driver as
+# /dev/ttyPCH0..3. The legacy 8250 /dev/ttyS0 may also exist for debug. We
+# probe ttyPCH0..3 first, then ttyS0, then ttyAMA0 (the previous guess).
+# A `/run/gps-skipped` flag is set when nothing matches so NavigationService
+# can surface "GPS not configured" instead of "no fix yet" in the UI.
+#
+# GPSD provides JSON protocol on TCP 127.0.0.1:2947 for NavigationService.
 
 DAEMON=/usr/sbin/gpsd
-DEVICE=/dev/ttyS0       # adjust if GPS is on different UART
-SPEED=9600              # typical NMEA baud; may be 4800 or 38400
+SPEED=9600   # NMEA standard — u-blox/SiRF baseline. Override via /etc/default/gpsd if needed.
+
+CANDIDATES="/dev/ttyPCH0 /dev/ttyPCH1 /dev/ttyPCH2 /dev/ttyPCH3 /dev/ttyS0 /dev/ttyAMA0"
+
+find_gps_device() {
+    for dev in $CANDIDATES; do
+        [ -c "$dev" ] && { echo "$dev"; return 0; }
+    done
+    return 1
+}
 
 case "$1" in
 start)
     echo -n "Starting GPSD... "
-    if [ ! -c "$DEVICE" ]; then
-        echo "SKIPPED (no GPS device at $DEVICE)"
+    DEVICE=$(find_gps_device)
+    if [ -z "$DEVICE" ]; then
+        echo "SKIPPED (no UART matched: $CANDIDATES)"
+        touch /run/gps-skipped 2>/dev/null
         exit 0
     fi
     if [ -x "$DAEMON" ]; then
         $DAEMON -n -G "$DEVICE" &
-        echo "OK"
+        echo "OK ($DEVICE)"
+        rm -f /run/gps-skipped 2>/dev/null
     else
-        echo "MISSING ($DAEMON not found)"
+        echo "MISSING ($DAEMON not found in rootfs)"
+        touch /run/gps-skipped 2>/dev/null
     fi
     ;;
 stop)
     killall gpsd 2>/dev/null && echo "GPSD stopped" || true
     ;;
 status)
-    pgrep gpsd > /dev/null && echo "GPSD running" || echo "GPSD stopped"
+    if pgrep gpsd >/dev/null; then
+        echo "GPSD running"
+    elif [ -f /run/gps-skipped ]; then
+        echo "GPSD skipped — no UART present"
+    else
+        echo "GPSD stopped"
+    fi
     ;;
 *)
     echo "Usage: $0 {start|stop|status}"
     exit 1
     ;;
 esac
+exit 0

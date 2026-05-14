@@ -1,0 +1,5 @@
+# Minimal hosts file — air-gapped device, no external resolution.
+# Listed explicitly so any glibc getaddrinfo("localhost", ...) succeeds
+# instantly without a DNS roundtrip (and 30-second timeout when offline).
+127.0.0.1   localhost q60nav
+::1         localhost ip6-localhost ip6-loopback

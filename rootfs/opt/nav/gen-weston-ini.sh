@@ -70,10 +70,10 @@ if [ -n "$secondary" ]; then
     cat >> "$TMP_INI" << WESTON_EOF
 
 [output]
-# Secondary display — 7" display (800x480)
+# Secondary display — 7" lower control hub (800x420)
 # Connector auto-detected at boot: $secondary
 name=$secondary
-mode=800x480
+mode=800x420
 transform=normal
 WESTON_EOF
 fi

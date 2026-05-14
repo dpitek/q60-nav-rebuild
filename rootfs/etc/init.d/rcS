@@ -3,8 +3,9 @@
 # For Q60 Nav Rebuild on Linux 4.19
 #
 # IMPORTANT: this script must not exit non-zero. The watchdog is armed by
-# start.sh later; if rcS fails the boot enters an indeterminate state and
-# the boot counter never decrements. Use `|| true` on every fallible command.
+# q60nav and start.sh later; if rcS fails the boot enters an indeterminate
+# state and the boot counter never decrements. Use `|| true` on every
+# fallible command.
 
 # Mount essential virtual filesystems
 mount -t proc proc /proc 2>/dev/null || true
@@ -20,6 +21,13 @@ mount -t devpts devpts /dev/pts 2>/dev/null || true
 # Mount FAT32 boot partition + any fstab entries (data is `nofail` — see fstab).
 mount -a 2>/dev/null || true
 
+# Some fstab entries target paths that don't exist on the ro root yet —
+# create the mount-point parent if missing, then re-mount. Cheap and idempotent.
+mkdir -p /var/log /var/run /var/lib /etc/xdg/weston 2>/dev/null || true
+mount /var/log         2>/dev/null || mount -t tmpfs -o nosuid,nodev,size=16M,mode=755 tmpfs /var/log 2>/dev/null || true
+mount /var/run         2>/dev/null || mount -t tmpfs -o nosuid,nodev,size=4M,mode=755 tmpfs /var/run 2>/dev/null || true
+mount /etc/xdg/weston  2>/dev/null || mount -t tmpfs -o nosuid,nodev,size=1M,mode=755 tmpfs /etc/xdg/weston 2>/dev/null || true
+
 # ─── First-boot directory bootstrap ───────────────────────────────────────
 # If /data isn't mounted (partition missing on a fresh image, not yet
 # formatted, or hardware variant without that partition), fall back to
@@ -34,7 +42,7 @@ if ! mountpoint -q /data 2>/dev/null; then
 fi
 
 # Required runtime directories — every service expects these.
-mkdir -p /var/log /var/run /var/lib /var/lib/q60nav 2>/dev/null
+mkdir -p /var/lib/q60nav 2>/dev/null
 mkdir -p /data/q60nav /data/q60nav/trips /data/q60nav/captures \
          /data/q60nav/parking /data/q60nav/logs 2>/dev/null
 
@@ -44,17 +52,62 @@ echo q60nav > /proc/sys/kernel/hostname 2>/dev/null || true
 # Seed RNG (optional, fail-safe)
 [ -f /var/lib/random-seed ] && cat /var/lib/random-seed > /dev/urandom 2>/dev/null
 
-# Load essential kernel modules
-modprobe iTCO_wdt    2>/dev/null || true
+# ─── Kernel modules ───────────────────────────────────────────────────────
+# Hardware-research note (2026-05-14): the Q60 DCU is an Atom E6xx (Tunnel
+# Creek) + EG20T PCH. Correct drivers:
+#   ie6xx_wdt  — E6xx-specific watchdog (NOT iTCO_wdt)
+#   pch_can    — EG20T integrated CAN controller (NOT mcp251x)
+#   pch_uart   — EG20T integrated UARTs (used by GPS receiver)
+# We modprobe both old + new names so the kernel picks whichever the in-tree
+# config built. iTCO_wdt is harmless if not present; ie6xx_wdt is the right
+# one. Same for can drivers — try in-tree first, fall back to mcp251x if a
+# variant DCU has external SPI CAN.
+modprobe ie6xx_wdt   2>/dev/null || modprobe iTCO_wdt 2>/dev/null || true
 modprobe can         2>/dev/null || true
 modprobe can_raw     2>/dev/null || true
-modprobe mcp251x     2>/dev/null || true
+modprobe pch_can     2>/dev/null || modprobe mcp251x 2>/dev/null || true
+modprobe pch_uart    2>/dev/null || true
+# zram for swap (see swap section below)
+modprobe zram        2>/dev/null || true
 
 # udev — device node population
 /sbin/udevd --daemon 2>/dev/null || true
 udevadm trigger --type=subsystems 2>/dev/null || true
 udevadm trigger --type=devices    2>/dev/null || true
 udevadm settle --timeout=8        2>/dev/null || true
+
+# ─── zram swap (256MB compressed) ─────────────────────────────────────────
+# Atom E6xx has 1GB RAM and no swap partition. Without swap the OOM-killer
+# fires aggressively on memory spikes (e.g. tile pan during route calc) and
+# the first victim is q60nav (highest RSS) → boot-counter increments. zram
+# compresses pages 3-4× in RAM → ~750MB effective virtual headroom with no
+# eMMC writes and ~5ms latency.
+if [ -e /sys/block/zram0/disksize ]; then
+    echo 268435456 > /sys/block/zram0/disksize 2>/dev/null && \
+        mkswap /dev/zram0 >/dev/null 2>&1 && \
+        swapon -p 100 /dev/zram0 2>/dev/null && \
+        echo "[rcS] zram swap active (256MB compressed)" || \
+        echo "[rcS] zram setup failed — proceeding without swap"
+else
+    echo "[rcS] zram not available — no swap"
+fi
+
+# ─── busybox syslogd (rotating logs to prevent eMMC fill) ────────────────
+# `-O /var/log/messages` — primary log file
+# `-s 256`  — rotate at 256 KB
+# `-b 4`    — keep 4 rotated copies
+# `-S`      — smaller line format
+# Failure is non-fatal; services already log directly to /var/log/*.log.
+if command -v syslogd >/dev/null 2>&1; then
+    syslogd -O /var/log/messages -s 256 -b 4 -S 2>/dev/null || \
+        echo "[rcS] syslogd failed to start"
+fi
+
+# Lower the OOM-kill score for q60nav-related processes (run later, once
+# q60nav is alive). For now just set kernel vm tuning that helps small-RAM.
+echo 1     > /proc/sys/vm/overcommit_memory 2>/dev/null || true
+echo 80    > /proc/sys/vm/overcommit_ratio  2>/dev/null || true
+echo 16384 > /proc/sys/vm/min_free_kbytes   2>/dev/null || true
 
 echo "[rcS] System init complete"
 exit 0

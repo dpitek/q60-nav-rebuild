@@ -9,7 +9,8 @@ Last updated: 2026-05-13 (post backlog-execution sprint)
 - [x] Working image: factory DCU image backup (slot A preserved, never written)
 - [x] Docker toolchain: `q60-toolchain` (Ubuntu 22.04 amd64, GCC 11.4, `-m32 i686`)
 - [x] Linux 4.19.0 bzImage built for i386/Bonnell — `output/bzImage-4.19-q60` (4.2MB, ELF 32-bit confirmed)
-- [x] Kernel config: `q60_atom_defconfig` (CAN/BT/DRM/MMC/EXT4/SND_HDA/iTCO_WDT/EFI_VARS)
+- [x] Kernel config: `q60_atom_defconfig` (CAN/BT/DRM/MMC/EXT4/SND_HDA/IE6XX_WDT/PCH_CAN/SERIAL_PCH_UART/EFI_VARS)
+  - **2026-05-14 hardware audit correction**: prior `iTCO_WDT` is wrong driver — E6xx uses `CONFIG_IE6XX_WDT` (1s-600s timeout, default 60s). `mcp251x` is wrong CAN driver — E6xx + EG20T uses `CONFIG_PCH_CAN` for the integrated dual-CAN controllers. GPS is on `/dev/ttyPCH0..3` (pch_uart driver), not `/dev/ttyS0`.
 - [x] elilo.conf: `q60nav` entry added, `default=logan1` preserved (slot A never written)
 
 ### Boot Safety
@@ -17,7 +18,7 @@ Last updated: 2026-05-13 (post backlog-execution sprint)
 - [x] FAT32 boot counter in `start.sh` — auto-restores `logan1` after 2 failed boots
 - [x] fstab: p7→p9 data mount fix, `/boot` rw for counter writes
 - [x] `restore-logan1.sh` — 10-second recovery from Mac via USB adapter
-- [x] Watchdog: `watchdog-pet.sh` pets iTCO every 20s, init.d as respawn
+- [x] Watchdog: q60nav owns `/dev/watchdog` (opens in main.cpp, feeds via 5s QTimer + WDIOC_KEEPALIVE ioctl). `watchdog-pet.sh` is a shell-level backstop for the boot window before q60nav is alive.
 
 ### C++ Services (13 total — all .h + .cpp complete)
 2026-05-13 P1/P2 sprint added: TripLoggerService + ParkingService.
@@ -73,7 +74,7 @@ routines + DTC read/clear/parse + rain auto-up wiper handler in VehicleService.
 - [x] `S05-capture-bootstrap` — brings up SocketCAN buses at boot; optional
   on-device `candump` for first-boot CAN capture (flag-gated to
   `/data/q60nav/capture-enable`)
-- [x] `S10-gpsd` — GPSD on ttyS0
+- [x] `S10-gpsd` — GPSD probes ttyPCH0..3, ttyS0, ttyAMA0 in order (hardware audit found EG20T pch_uart is the correct GPS UART driver)
 - [x] `S20-valhalla` — valhalla-httpd wrapper + valhalla_service on port 8002
 - [x] `S25-geocoder` — C+SQLite offline geocoder on port 4000 (graceful if binary/DB absent; replaces Photon/JVM)
 - [x] `S30-weston` — Weston compositor; runs `gen-weston-ini.sh` to detect DRM connectors before launch

@@ -237,7 +237,10 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in addr = {
         .sin_family      = AF_INET,
         .sin_port        = htons(port),
-        .sin_addr.s_addr = htonl(INADDR_ANY),
+        // Bind loopback only — never expose Valhalla on any future tether
+        // / hotspot interface. The DCU is air-gapped on first boot and any
+        // post-boot LTE/BT-PAN must NOT see this port.
+        .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
     };
     if (bind(lfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
         perror("bind"); return 1;

@@ -9,7 +9,13 @@
 #include <QScreen>
 #include <QDebug>
 #include <QLoggingCategory>
+#include <QTimer>
+#include <QFile>
 #include <algorithm>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <linux/watchdog.h>
 
 #include "services/navigation/NavigationService.h"
 #include "services/vehicle/VehicleService.h"
@@ -154,6 +160,41 @@ int main(int argc, char *argv[])
     // AudioService depends on Settings (preset persistence) and Vehicle (SSV speed).
     // Wire AFTER settingsSvc.start() so audioPresets blob is already loaded.
     audioSvc.wireDependencies(&settingsSvc, &vehicleSvc);
+
+    // ── Network availability fan-out ─────────────────────────────────────
+    // Without these wires, Weather/Fuel never fire even when the user later
+    // tethers a phone — both stay in their offline-default state forever.
+    QObject::connect(&networkSvc, &NetworkService::onlineChanged,
+                     &weatherSvc, &WeatherService::setNetworkOnline);
+    QObject::connect(&networkSvc, &NetworkService::onlineChanged,
+                     &fuelSvc,    &FuelService::setNetworkOnline);
+
+    // ── Hardware watchdog (iTCO/ie6xx_wdt) ──────────────────────────────
+    // Open /dev/watchdog and feed it on a 5s QTimer. Kernel default timeout
+    // is configured at module load (typically 30s); we feed every 5s so we
+    // have plenty of slack for transient hiccups (long GC pause, tile load).
+    // If the device isn't available (bench / simulator), the open returns
+    // -1 and we skip — the system runs without watchdog protection.
+    const int wdFd = ::open("/dev/watchdog", O_WRONLY | O_CLOEXEC);
+    if (wdFd >= 0) {
+        // Try to set a 30s timeout (some platforms refuse — that's fine).
+        int timeout = 30;
+        ::ioctl(wdFd, WDIOC_SETTIMEOUT, &timeout);
+        qCInfo(lcMain) << "Watchdog armed, timeout=" << timeout << "s, fd=" << wdFd;
+
+        QTimer *wdTimer = new QTimer(&app);
+        wdTimer->setInterval(5000);
+        QObject::connect(wdTimer, &QTimer::timeout, [wdFd]() {
+            // KEEPALIVE ioctl is the canonical "feed" — works on every Linux
+            // watchdog driver. Writing any byte also feeds but the ioctl is
+            // explicit. Failure is non-fatal — kernel will reset us anyway
+            // if real trouble, which is the whole point.
+            ::ioctl(wdFd, WDIOC_KEEPALIVE, 0);
+        });
+        wdTimer->start();
+    } else {
+        qCInfo(lcMain) << "Watchdog device not available — proceeding without HW watchdog";
+    }
 
     return app.exec();
 }
