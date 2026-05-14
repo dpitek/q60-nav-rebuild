@@ -1,7 +1,7 @@
 // VehicleStatusView.qml — Vehicle information center
 // 6 sub-tabs: Info | Drive | ADAS | ATTESA | Diag | Track
 // Content area: 800×360 (800×420 minus 60px nav bar)
-import QtQuick 6.6
+import QtQuick
 import "../components"
 
 Item {

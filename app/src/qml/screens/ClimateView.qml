@@ -1,7 +1,7 @@
 // ClimateView — Full HVAC control for lower screen
 // Redesigned: top action row + dual-zone cards + extras row + outside temp footer
-import QtQuick 6.6
-import QtQuick.Controls 6.6
+import QtQuick
+import QtQuick.Controls
 import "../components"
 
 Item {

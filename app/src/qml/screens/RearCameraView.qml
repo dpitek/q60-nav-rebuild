@@ -2,8 +2,8 @@
 // Activated when vehicle is in reverse gear.
 // Camera feed via QtMultimedia VideoOutput (Loader-guarded fallback for Mesa softpipe).
 // Parking guidelines drawn on Canvas overlay; all UI chrome sits above via z-index.
-import QtQuick 6.6
-import QtQuick.Controls 6.6
+import QtQuick
+import QtQuick.Controls
 
 Item {
     id: root

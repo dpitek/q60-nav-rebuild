@@ -6,8 +6,8 @@
 //   Row 4: 6 large preset buttons pinned to bottom (54px)
 //              BT uses row 4 for prev/play/next transport controls
 // EQ panel slides up from below and overlays the tuner zone.
-import QtQuick 6.6
-import QtQuick.Controls 6.6
+import QtQuick
+import QtQuick.Controls
 
 Item {
     id: root

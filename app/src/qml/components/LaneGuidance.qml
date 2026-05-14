@@ -7,7 +7,7 @@
 // Caller is expected to bind `lanes` to NavigationService.laneInfo and `show`
 // to a NavigationView-level proximity condition. The component fades in/out
 // on `show`; no internal visibility logic.
-import QtQuick 6.6
+import QtQuick
 
 Item {
     id: root

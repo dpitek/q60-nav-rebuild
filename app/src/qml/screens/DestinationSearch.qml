@@ -2,8 +2,8 @@
 // Full-screen sub-view pushed on top of NavigationView's map.
 // Search box + categories + recents. Results from SearchService when available,
 // otherwise mock-derived for demo. Joystick navigable; back-button pops.
-import QtQuick 6.6
-import QtQuick.Controls 6.6
+import QtQuick
+import QtQuick.Controls
 
 Item {
     id: root

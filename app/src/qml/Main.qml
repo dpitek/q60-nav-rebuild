@@ -3,8 +3,8 @@
 // Two Windows: upper 8" nav, lower 7" hub
 // QtObject root required by qmlcachegen (only one root item allowed per file).
 // Windows accessed from C++ via root->findChildren<QQuickWindow*>()
-import QtQuick 6.6
-import QtQuick.Window 6.6
+import QtQuick
+import QtQuick.Window
 import "screens"
 import "components"
 

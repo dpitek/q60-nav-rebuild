@@ -1,5 +1,5 @@
 // FanControl.qml — Fan speed slider (0–7 levels) with bar visualization
-import QtQuick 6.6
+import QtQuick
 
 Item {
     id: root

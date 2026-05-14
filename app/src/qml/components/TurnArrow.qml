@@ -1,6 +1,6 @@
 // TurnArrow.qml — directional maneuver icon
 // Rendered as Canvas path; no image assets required
-import QtQuick 6.6
+import QtQuick
 
 Item {
     id: root

@@ -3,8 +3,8 @@
 // System / Language / + the existing Vehicle/Lights/etc rolled into "Vehicle").
 // Tap a row to push a sub-page; back-arrow pops it. Persistence is automatic
 // via SettingsService's 5s debounced save — no Save button.
-import QtQuick 6.6
-import QtQuick.Controls 6.6
+import QtQuick
+import QtQuick.Controls
 
 Item {
     id: root

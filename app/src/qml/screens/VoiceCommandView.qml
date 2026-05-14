@@ -1,6 +1,6 @@
 // VoiceCommandView.qml — Bottom sheet overlay for voice command UI
 // 240px from bottom, semi-transparent, auto-dismisses after 8s
-import QtQuick 6.6
+import QtQuick
 
 Item {
     id: root

@@ -2,8 +2,8 @@
 // Reached from the main SettingsView "Vehicle Unlocks" row.
 // Every write path here is Q50_HYPOTHESIZED — see SettingsService.canVerifiedWrites
 // (master gate) and docs/hardware-day-capture-checklist.md.
-import QtQuick 6.6
-import QtQuick.Controls 6.6
+import QtQuick
+import QtQuick.Controls
 
 Item {
     id: root

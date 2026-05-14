@@ -11,7 +11,7 @@
 //
 // Upper screen is 800×480. This overlay fills the parent (NavigationView).
 
-import QtQuick 6.6
+import QtQuick
 
 Item {
     id: root

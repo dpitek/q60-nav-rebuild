@@ -1,55 +1,67 @@
 # Dockerfile.simulator — Q60 Nav hardware simulator
-# Extends q60-toolchain with i386 runtime libs needed to execute the target binary.
-# Build once:  docker build -t q60-simulator -f Dockerfile.simulator .
-# Run via:     scripts/run-simulator.sh
 #
-# Why a separate image: the build container installs dev headers which are not
-# persisted between 'docker run --rm' invocations.  This image bakes the runtime
-# .so files in so the simulator starts instantly without a per-run apt install.
+# Strategy (2026-05-14 v2): the Qt VNC platform plugin in our i386 Qt6 build
+# is broken — accepts connections but never sends the RFB protocol greeting,
+# and doesn't register input devices. Switched to a standard noVNC stack:
+#
+#   q60nav-amd64 (built with system Qt6 amd64 + xcb plugin)
+#     ↓ renders to
+#   Xvfb (:99, virtual X11 display)
+#     ↓ captured by
+#   x11vnc (serves VNC on internal :5900)
+#     ↓ bridged by
+#   websockify (HTML5 client on :8080)
+#
+# The simulator binary is a separate amd64 build of q60nav (see
+# scripts/build-app-sim.sh) — same QML, same services, but Linux amd64 so
+# system Qt6 (with xcb) can host it. MapLibre is disabled in the sim build
+# (its static lib is i386-only); the nav screen uses the placeholder grid.
+#
+# The PRODUCTION binary is still i386 (built via scripts/build-app.sh) for
+# the real DCU. The simulator only serves UI testing — not target-arch
+# verification.
 FROM q60-toolchain
 
-# i386 runtime libraries — same set the binary links against (NEEDED from objdump).
-# Runtime only (.so, not -dev headers).
 RUN dpkg --add-architecture i386 2>/dev/null || true && \
     apt-get update -qq && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        # EGL + GL (Mesa swrast — no hardware GPU, matches target)
-        libglvnd0:i386 \
-        libopengl0:i386 \
-        libegl1:i386 \
-        libgl1:i386 \
-        libgles2:i386 \
-        # Image libs (MapLibre tile decoding)
-        libpng16-16:i386 \
-        libjpeg8:i386 \
-        # libuv (MapLibre async I/O)
-        libuv1:i386 \
-        # ICU (MapLibre Unicode shaping)
-        libicu70:i386 \
-        # C++ runtime
-        libstdc++6:i386 \
-        libgcc-s1:i386 \
-        # Qt font/input stack
-        libxkbcommon0:i386 \
-        libdouble-conversion3:i386 \
-        libpcre2-16-0:i386 \
-        libfreetype6:i386 \
-        libfontconfig1:i386 \
-        # GLib (Qt6Core dependency on Ubuntu)
-        libglib2.0-0:i386 \
-        # X11 amd64 libs — Qt VNC plugin links libX11/libxcb for font/input init
-        # even though it serves its own TCP VNC server.  Without a DISPLAY the
-        # QVncServer constructor never calls listen().
-        libx11-6 \
-        libxext6 \
-        libxau6 \
-        # Xvfb — provides the virtual DISPLAY so VNC init succeeds
+        # Qt6 amd64 — used by the simulator-only q60nav-amd64 binary.
+        # qt6-base-dev pulls in xcb plugin, GL, network, and the core/gui libs.
+        qt6-base-dev \
+        qt6-base-dev-tools \
+        qt6-tools-dev-tools \
+        qt6-declarative-dev \
+        qt6-declarative-dev-tools \
+        qt6-positioning-dev \
+        libqt6opengl6-dev \
+        qt6-qpa-plugins \
+        # QML runtime modules — Ubuntu ships QML modules separately from libqt6qml6.
+        # Without these the QML engine fails to load Main.qml with "module not installed".
+        qml6-module-qtqml \
+        qml6-module-qtqml-models \
+        qml6-module-qtqml-workerscript \
+        qml6-module-qtquick \
+        qml6-module-qtquick-controls \
+        qml6-module-qtquick-templates \
+        qml6-module-qtquick-layouts \
+        qml6-module-qtquick-window \
+        qml6-module-qtpositioning \
+        # Build deps for amd64 sim build
+        libgl1-mesa-dev \
+        libegl1-mesa-dev \
+        libxkbcommon-dev \
+        libfontconfig1-dev \
+        libxcb-cursor0 \
+        # Xvfb + x11vnc — proven noVNC stack
         xvfb \
-        # noVNC + websockify — browser-accessible HTML5 VNC client on :8080.
-        # Bridges WebSocket→TCP so http://localhost:8080 renders the running
-        # Qt VNC output. Mouse + keyboard pass through to the live app.
-        # Adds ~25MB to the image (mostly the static JS/CSS bundle).
+        x11vnc \
+        # noVNC HTML5 client + websockify WebSocket→TCP bridge
         novnc \
         websockify \
+        # Ninja + cmake for the in-container amd64 sim build
+        cmake \
+        ninja-build \
+        # Misc support
         net-tools \
+        ca-certificates \
     && rm -rf /var/lib/apt/lists/*

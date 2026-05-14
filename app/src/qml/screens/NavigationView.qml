@@ -1,9 +1,9 @@
 // NavigationView — Upper 8" screen
 // Apple CarPlay aesthetic redesign
 // All StatusBridge / NavigationService / VehicleService bindings preserved exactly.
-import QtQuick 6.6
-import QtQuick.Controls 6.6
-import QtPositioning 6.6
+import QtQuick
+import QtQuick.Controls
+import QtPositioning
 import "../components"
 
 import Q60Nav 1.0 as Q60Nav

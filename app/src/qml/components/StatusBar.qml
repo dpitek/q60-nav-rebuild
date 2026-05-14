@@ -1,6 +1,6 @@
 // StatusBar.qml — 32px top status bar
 // Time left, center speed/gear, right: GPS/BT/phone indicators
-import QtQuick 6.6
+import QtQuick
 
 Item {
     id: root

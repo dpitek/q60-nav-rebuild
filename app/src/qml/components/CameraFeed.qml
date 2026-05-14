@@ -2,7 +2,7 @@
 // Loaded via Loader in RearCameraView so that if QtMultimedia 6.6
 // is unavailable on this Mesa softpipe build the Loader.status goes
 // to Loader.Error cleanly, activating the placeholder instead.
-import QtQuick 6.6
+import QtQuick
 import QtMultimedia 6.6
 
 Item {

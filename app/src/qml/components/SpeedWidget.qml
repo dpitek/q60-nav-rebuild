@@ -1,4 +1,4 @@
-import QtQuick 6.6
+import QtQuick
 
 Row {
     id: root

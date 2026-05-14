@@ -4,7 +4,7 @@
 // Usage:
 //   QmlKeyboard { id: kb; anchors.fill: parent }
 //   TextField { onActiveFocusChanged: if (activeFocus) kb.show(this) }
-import QtQuick 6.6
+import QtQuick
 
 Item {
     id: kb

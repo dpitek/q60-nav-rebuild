@@ -13,7 +13,7 @@
 // Activation is driven externally via StatusBridge.avmActive. The caller is
 // expected to render this with `visible: StatusBridge.avmActive` and an
 // appropriate z value (z:90 per Main.qml conventions).
-import QtQuick 6.6
+import QtQuick
 
 Item {
     id: root

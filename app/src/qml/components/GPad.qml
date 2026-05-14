@@ -1,7 +1,7 @@
 // GPad.qml — circular G-meter with live dot, trail, and peak-hold rings.
 // Reads VehicleService.lateralG / longitudinalG directly; caller sizes via width/height.
 // Trail is rebuilt from a rolling 30-sample (~3s @ 10Hz) ring buffer.
-import QtQuick 6.6
+import QtQuick
 
 Item {
     id: root
