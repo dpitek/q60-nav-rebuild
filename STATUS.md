@@ -152,14 +152,64 @@ Photos in `diag-menu/` + full table in [`docs/factory-version-baseline.md`](docs
 | TCU2 (telematics) | HW 443039 / SW 473232 | NetworkService.tcuMode correct path |
 | **ANC controller** | **SW 010000, Unit ID 2 — separate ECU** | **Not BCM as we assumed.** 3 mics + tach + door inputs. Distinct UDS endpoint. |
 | **ASC controller** | **SW 010000, Unit ID 2 — separate ECU** | **Not BCM.** Our ASC toggle should target this controller's UDS endpoint, not BCM 0x745. Capture during `ANC/ASC Diagnosis` screen toggle. |
-| 2nd display | HW 000000 / SW 020024, Unit ID 2 | Lower 7" panel is its own MCU (likely separate DRM card) |
+| 2nd display | HW 000000 / SW 020024, Unit ID 2 | ✅ **resolved 2026-05-14** — research determined it's a "thin client" (Integral Switch P/N `28330-4HBxx`). FPD-Link III deserializer + small MCU. Touch + buttons flow upstream via **AV-COMM** (separate ~500kbps CAN-style bus). The "SW 020024" is the MCU firmware on the Integral Switch, OEM-sealed, we never touch it. See [`docs/lower-screen-architecture.md`](docs/lower-screen-architecture.md). |
 | Park Assist data | `----` (not loaded) | Doug's car probably lacks AVM/sonar hardware; gate AvmOverlay accordingly |
 | Beacon | FFFFFF (not equipped) | Japan-market traffic receiver — N/A |
 | Voice Recog | engine 1.10, grammar US001 | Factory has STT/TTS; ours doesn't (future enhancement) |
 
 ---
 
-## 🗂️ Backlog — Future Features
+## 🗂️ Backlog — Fresh View (2026-05-14)
+
+Reorganized by what blocks what. **Read top-down — finish a tier before moving on.**
+
+### Tier 1 — Blocks the slot B flash
+
+| # | Item | Why it blocks | Effort |
+|---|---|---|---|
+| 1.1 | **Hardware-day J2534 capture session** | Every Q50_HYPOTHESIZED CAN write path stays gated until captures confirm IDs. ANC/ASC fix needs the controller endpoint captured. AV-COMM bus needs identification for lower-screen touch. | 1 bench day |
+| 1.2 | **30-sec shell probe via TTL/USB** (`cat /proc/meminfo`, `cat /proc/cpuinfo`, `ls /sys/class/drm/card*-*`, `dmesg`, `ls /dev/tty*`, `ls /sys/class/net/`) | Settles RAM count (1GB? 2GB?), confirms ttyPCH for GPS, confirms 2nd display DRM enumeration, identifies which SocketCAN interface is AV-COMM. | 5 min |
+| 1.3 | **Lower-screen touch capture** — `candump` on every SocketCAN interface, tap each corner + each hard button under the lower screen | Identifies which bus is AV-COMM + frame format for touch + hard buttons. Required before we can build the input translator. | 30 min |
+| 1.4 | **Bose wake frame capture** | `CAN_BOSE_WAKE = 0x3B3` is a placeholder. AV-CAN sniff at amp connector during cold power-on. | 15 min |
+| 1.5 | **`deploy-to-image.sh --test` rehearsal** | Confirm slot A → slot B flip + boot-counter behavior on bench. Dry run before vehicle flash. | 30 min |
+
+### Tier 2 — Required to use the device daily once flashed
+
+| # | Item | Status | Effort |
+|---|---|---|---|
+| 2.1 | **AV-COMM touch translator service** — new `IntegralSwitchService` reading the captured touch frame format and emitting `uinput` events for Qt | NEW (from 2026-05-14 lower-screen research). Code-skeleton sized at 1-2 dev days once frame format is known | 1-2 days |
+| 2.2 | **Decode + commit captured CAN frame format** to `VehicleService` | Bulk-edit + flip ~15 `Q50_HYPOTHESIZED` flags to `CONFIRMED` after capture day | 1 day |
+| 2.3 | **ANC/ASC controller UDS endpoint** wired (not BCM 0x745 as currently) | Affects `setAscEnabled()` and any ANC toggle. ECU UDS request ID captured during hardware day. | 0.5 day |
+| 2.4 | **Real boot test on slot B** | Watchdog behavior, log capture, integrity check on live unit | 1 evening |
+
+### Tier 3 — UX polish (do after first successful slot-B boot)
+
+| # | Item | Why |
+|---|---|---|
+| 3.1 | **AvmOverlay sonar-gating** | Doug's car shows `Data-Parkassist=----` — no sonar hardware. Render only when a sonar-detect flag is true. |
+| 3.2 | **Park Assist data source** | Either: import from Data-Sonar version `US002` if available, or hide AVM tab entirely |
+| 3.3 | **TCU RSSI from CAN** | Currently hardcoded "4 bars". Real RSSI is in Continental BL28NA003 CAN frames (IDs unknown). Capture during active LTE session. |
+| 3.4 | **Phone HFP wiring through AudioService** | StatusBridge stubs work; no actual BT call audio. Implement against BlueZ HFP profile. |
+| 3.5 | **Map data refresh pipeline** | Factory ships 11-year-old map data. Our 2026 NC tiles are loaded but we need OTA refresh story for future updates (SC/GA/VA when those land). |
+
+### Tier 4 — Future major integrations (post-v1.0, see full sections below)
+
+| # | Item | Effort |
+|---|---|---|
+| 4.1 | **Apple CarPlay** via aasdk + OpenAuto (i386 build) | 2-3 weeks |
+| 4.2 | **Android Auto** — same aasdk path (~free after CarPlay) | 1 week |
+| 4.3 | **Bluetooth hotspot + deferred sync** (album art, map updates, OTA) | 1 week |
+| 4.4 | **Voice STT/TTS** — Vosk (small US English model ~50MB) + flite | 1-2 weeks |
+| 4.5 | **Map region expansion** (SC, GA, VA, combined SE) | 1 day each region (mostly waiting on tile-build) |
+| 4.6 | **Cool factor 7 — performance run logger, live tach + shift light, full I-Key profile sync, per-mode DSP** | 0.5-1 day each |
+
+### Tier 5 — Nice-to-have (Cool factor 6-5)
+
+Per-cylinder knock log · Battery health trend · Tire wear estimator · Wiper park-position adjust · BCM option dump/restore · Hidden diag-menu replicator · Driver attention score.
+
+---
+
+## 🗂️ Backlog — Full Feature Sections (post-v1.0 detail)
 
 Features staged for post-v1.0, ordered by impact. Surface these once hardware tests pass and the core nav loop is stable.
 

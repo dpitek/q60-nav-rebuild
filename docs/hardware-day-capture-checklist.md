@@ -33,6 +33,36 @@ dmesg | grep -iE "can|watchdog|memory|usable"  # driver load + watchdog model
 Save each to a text file and `scp` to your laptop — these become the
 ground truth that overrides every "LIKELY"/"UNVERIFIED" label in the repo.
 
+### Lower-screen touch capture (new — added 2026-05-14)
+
+Per [`lower-screen-architecture.md`](./lower-screen-architecture.md), the
+lower 7" screen sends touch + hard-button events to the DCU over **AV-COMM**
+(separate ~500kbps CAN-style bus). We need to identify which SocketCAN
+interface is AV-COMM and capture the frame format.
+
+```sh
+# Start candump on every available SocketCAN interface
+for iface in $(ls /sys/class/net/ | grep ^can); do
+    candump -tA "$iface" > /tmp/lower-screen-$iface.log &
+done
+
+# Now exercise the lower screen:
+#  1. Tap each corner of the lower screen
+#  2. Tap each hard button below the lower screen (Audio, Phone, Climate, etc.)
+#  3. Adjust each hard rotary (volume, tune, fan, temp)
+#  4. Tap each soft button visible on the lower screen
+# Mark timestamps in a notepad for each action.
+
+# Stop captures
+killall candump
+# Pull off via USB / scp
+```
+
+The interface whose log has the heaviest spike on each touch is AV-COMM.
+Decode rules: typical AV-COMM touch frame is 4-6 bytes (x16, y16, status8,
+optional pressure). Hard-button frames are usually 1-2 bytes (button code +
+press/release flag).
+
 ---
 
 ## On-device capture (belt + suspenders)
