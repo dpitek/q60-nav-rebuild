@@ -153,6 +153,20 @@ docker run --rm -d \
             sleep 0.2
         done
 
+        # Drop an index.html into the noVNC web root so navigating to the
+        # bare URL (http://localhost:PORT/) lands on the auto-connect client
+        # instead of websockify's directory listing.
+        cat > /usr/share/novnc/index.html <<'HTML'
+<!DOCTYPE html>
+<html><head>
+<meta charset='utf-8'>
+<title>Q60 Nav Simulator</title>
+<meta http-equiv='refresh' content='0; url=vnc.html?autoconnect=1&resize=scale'>
+</head><body style='background:#0a0a0a;color:#8e8e93;font-family:sans-serif;text-align:center;padding-top:40px'>
+<p>Loading <a style='color:#0a84ff' href='vnc.html?autoconnect=1&resize=scale'>Q60 Nav simulator</a>&hellip;</p>
+</body></html>
+HTML
+
         # websockify: serves the noVNC HTML5 client + WebSocket bridge to
         # 127.0.0.1:${VNC_PORT}. Foreground process so docker logs follow it.
         echo '[sim-web] websockify launching on :8080 → 127.0.0.1:${VNC_PORT}'
