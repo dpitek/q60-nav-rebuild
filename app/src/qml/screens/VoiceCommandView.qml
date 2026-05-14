@@ -71,7 +71,7 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: "Listening…"
                 color: "#FFFFFF"
-                font { family: "Roboto"; pixelSize: 22; weight: Font.Light }
+                font { family: "Roboto"; pixelSize: 22; weight: 300 }
             }
 
             // 3 pulsing bars

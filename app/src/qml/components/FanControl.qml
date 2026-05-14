@@ -50,7 +50,7 @@ Item {
             leftPadding: 10
             text: root.fanSpeed === 0 ? "OFF" : "  "
             color: root.fanSpeed === 0 ? "#ff4444" : "#333"
-            font { pixelSize: 13; weight: Font.Bold }
+            font { pixelSize: 13; weight: 700 }
             MouseArea {
                 anchors.fill: parent
                 onClicked: root.speedChanged(0)

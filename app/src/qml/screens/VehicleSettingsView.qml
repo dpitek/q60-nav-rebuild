@@ -39,7 +39,7 @@ Item {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "Vehicle Unlocks"; color: "#FFFFFF"
-                font { family: "Roboto"; pixelSize: 17; weight: Font.SemiBold }
+                font { family: "Roboto"; pixelSize: 17; weight: 600 }
             }
         }
     }
@@ -67,7 +67,7 @@ Item {
                 Text {
                     text: s.canVerifiedWrites ? "CAN writes ENABLED" : "CAN writes DISABLED — log only"
                     color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                    font { family: "Roboto"; pixelSize: 13; weight: 600 }
                 }
                 Text {
                     text: s.canVerifiedWrites
@@ -461,12 +461,12 @@ Item {
                                 width: 42; height: 22; radius: 6
                                 color: modelData.status === "active"  ? "#FF453A"
                                      : modelData.status === "pending" ? "#FF9F0A" : "#8E8E93"
-                                Text { anchors.centerIn: parent; text: modelData.ecu; color: "#FFFFFF"; font { pixelSize: 10; weight: Font.SemiBold } }
+                                Text { anchors.centerIn: parent; text: modelData.ecu; color: "#FFFFFF"; font { pixelSize: 10; weight: 600 } }
                             }
                             Column {
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: parent.width - 60
-                                Text { text: modelData.code + " — " + modelData.status; color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 13; weight: Font.Medium } }
+                                Text { text: modelData.code + " — " + modelData.status; color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 13; weight: 500 } }
                                 Text {
                                     text: modelData.desc; color: "#8E8E93"
                                     font { family: "Roboto"; pixelSize: 11 }
@@ -501,7 +501,7 @@ Item {
             anchors { left: parent.left; verticalCenter: parent.verticalCenter; leftMargin: 16 }
             text: parent.sectionText
             color: "#8E8E93"
-            font { family: "Roboto"; pixelSize: 10; weight: Font.Medium; letterSpacing: 1.4 }
+            font { family: "Roboto"; pixelSize: 10; weight: 500; letterSpacing: 1.4 }
         }
     }
 
@@ -527,7 +527,7 @@ Item {
                 width: 160
                 text: cardRoot.labelText
                 color: "#FFFFFF"
-                font { family: "Roboto"; pixelSize: 13; weight: Font.Medium }
+                font { family: "Roboto"; pixelSize: 13; weight: 500 }
                 wrapMode: Text.WordWrap
             }
             Item {
@@ -561,7 +561,7 @@ Item {
                 width: parent.width - 70
                 text: toggleRoot.labelText
                 color: "#FFFFFF"
-                font { family: "Roboto"; pixelSize: 13; weight: Font.Medium }
+                font { family: "Roboto"; pixelSize: 13; weight: 500 }
                 wrapMode: Text.WordWrap
             }
             Rectangle {
@@ -595,7 +595,7 @@ Item {
             anchors.centerIn: parent
             text: pillRoot.pillLabel
             color: pillRoot.pillActive ? "#FFFFFF" : "#8E8E93"
-            font { family: "Roboto"; pixelSize: 12; weight: Font.Medium }
+            font { family: "Roboto"; pixelSize: 12; weight: 500 }
         }
         MouseArea { anchors.fill: parent; onClicked: pillRoot.tapped() }
     }

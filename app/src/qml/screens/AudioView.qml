@@ -82,7 +82,7 @@ Item {
                         font {
                             family: "Roboto"
                             pixelSize: 14
-                            weight: isActive ? Font.SemiBold : Font.Normal
+                            weight: isActive ? 600 : 400   // numeric — avoids enum init-order [undefined] warning in Repeater delegates
                         }
                         Behavior on color { ColorAnimation { duration: 120 } }
                     }
@@ -194,7 +194,7 @@ Item {
                 Text {
                     anchors.centerIn: parent; text: "EQ"
                     color: root.eqPanelVisible ? "#0A84FF" : "#8E8E93"
-                    font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
+                    font { family: "Roboto"; pixelSize: 12; weight: 600 }
                 }
                 MouseArea {
                     anchors.fill: parent
@@ -424,7 +424,7 @@ Item {
                             Text {
                                 id: ssvLbl; anchors.centerIn: parent; text: modelData.label
                                 color: AudioService.ssvLevel === modelData.value ? "#FFFFFF" : "#8E8E93"
-                                font { family: "Roboto"; pixelSize: 11; weight: Font.Medium }
+                                font { family: "Roboto"; pixelSize: 11; weight: 500 }
                             }
                             MouseArea { anchors.fill: parent; onClicked: AudioService.setSSVLevel(modelData.value) }
                         }
@@ -490,7 +490,7 @@ Item {
                         Text {
                             anchors.centerIn: parent; text: "i"
                             color: "#8E8E93"
-                            font { family: "Roboto"; pixelSize: 11; weight: Font.SemiBold; italic: true }
+                            font { family: "Roboto"; pixelSize: 11; weight: 600; italic: true }
                         }
                         MouseArea {
                             anchors.fill: parent
@@ -552,7 +552,7 @@ Item {
                 Text {
                     text: "Active Sound Control"
                     color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 16; weight: Font.SemiBold }
+                    font { family: "Roboto"; pixelSize: 16; weight: 600 }
                 }
                 Text {
                     width: parent.width
@@ -570,7 +570,7 @@ Item {
                     Text {
                         anchors.centerIn: parent; text: "OK"
                         color: "#FFFFFF"
-                        font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                        font { family: "Roboto"; pixelSize: 13; weight: 600 }
                     }
                     MouseArea {
                         anchors.fill: parent
@@ -631,13 +631,13 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: AudioService.fmFrequency.toFixed(1) + " MHz"
                     color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 34; weight: Font.Bold }
+                    font { family: "Roboto"; pixelSize: 34; weight: 700 }
                 }
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: AudioService.fmStation
                     color: "#0A84FF"
-                    font { family: "Roboto"; pixelSize: 15; weight: Font.SemiBold }
+                    font { family: "Roboto"; pixelSize: 15; weight: 600 }
                     visible: AudioService.fmStation.length > 0
                     elide: Text.ElideRight
                     width: parent.width - 8
@@ -709,12 +709,12 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: AudioService.fmFrequency.toFixed(0) + " kHz"
                     color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 34; weight: Font.Bold }
+                    font { family: "Roboto"; pixelSize: 34; weight: 700 }
                 }
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: AudioService.fmStation; color: "#0A84FF"
-                    font { family: "Roboto"; pixelSize: 15; weight: Font.SemiBold }
+                    font { family: "Roboto"; pixelSize: 15; weight: 600 }
                     visible: AudioService.fmStation.length > 0
                     elide: Text.ElideRight
                     width: parent.width - 8
@@ -791,13 +791,13 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: AudioService.sxmChannel.length > 0 ? "Ch. " + AudioService.sxmChannel : "—"
                     color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 32; weight: Font.Bold }
+                    font { family: "Roboto"; pixelSize: 32; weight: 700 }
                 }
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: AudioService.sxmName
                     color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 15; weight: Font.SemiBold }
+                    font { family: "Roboto"; pixelSize: 15; weight: 600 }
                     visible: AudioService.sxmName.length > 0
                     elide: Text.ElideRight
                     width: parent.width - 8
@@ -817,7 +817,7 @@ Item {
                         Text {
                             id: sxmCatLbl; anchors.centerIn: parent
                             text: AudioService.sxmCategory; color: "#0A84FF"
-                            font { family: "Roboto"; pixelSize: 10; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 10; weight: 600 }
                         }
                     }
 
@@ -869,7 +869,7 @@ Item {
                     width: parent.width
                     text: AudioService.trackTitle.length > 0 ? AudioService.trackTitle : "—"
                     color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 17; weight: Font.SemiBold }
+                    font { family: "Roboto"; pixelSize: 17; weight: 600 }
                     elide: Text.ElideRight
                 }
                 Text {
@@ -973,14 +973,14 @@ Item {
                 font {
                     family: "Roboto"
                     pixelSize: hasData ? 13 : 15
-                    weight: Font.SemiBold
+                    weight: 600   // numeric — see line 85 note
                 }
             }
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: preset && preset.name.length > 0 ? preset.name : ""
                 color: isActive ? "#0A84FF" : "#636366"
-                font { family: "Roboto"; pixelSize: 9; weight: Font.Medium }
+                font { family: "Roboto"; pixelSize: 9; weight: 500 }
                 visible: preset && preset.name.length > 0
                 elide: Text.ElideRight
                 width: parent.width < 120 ? parent.width - 6 : 110
@@ -1021,7 +1021,7 @@ Item {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: eqSliderRoot.label; color: "#636366"
-            font { family: "Roboto"; pixelSize: 9; weight: Font.SemiBold; letterSpacing: 0.5 }
+            font { family: "Roboto"; pixelSize: 9; weight: 600; letterSpacing: 0.5 }
         }
 
         Item {
@@ -1065,7 +1065,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             text: eqSliderRoot.value > 0 ? "+" + eqSliderRoot.value : eqSliderRoot.value.toString()
             color: eqSliderRoot.value !== 0 ? "#0A84FF" : "#636366"
-            font { family: "Roboto"; pixelSize: 11; weight: Font.Medium }
+            font { family: "Roboto"; pixelSize: 11; weight: 500 }
         }
     }
 
@@ -1083,7 +1083,7 @@ Item {
         Text {
             id: bosePillLbl; anchors.centerIn: parent; text: bosePillRoot.label
             color: bosePillRoot.active ? "#0A84FF" : "#8E8E93"
-            font { family: "Roboto"; pixelSize: 11; weight: Font.Medium }
+            font { family: "Roboto"; pixelSize: 11; weight: 500 }
         }
         MouseArea { anchors.fill: parent; onClicked: bosePillRoot.toggled() }
     }

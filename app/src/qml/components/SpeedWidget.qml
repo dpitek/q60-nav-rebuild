@@ -23,7 +23,7 @@ Row {
                 text: speed.toFixed(0)
                 color: speed > limit ? "#e84040" : "#3adf8a"
                 font.pixelSize: 36
-                font.weight: Font.ExtraBold
+                font.weight: 800
                 anchors.horizontalCenter: parent.horizontalCenter
             }
             Text {
@@ -54,7 +54,7 @@ Row {
                 text: "SPEED\nLIMIT"
                 color: "#222"
                 font.pixelSize: 7
-                font.weight: Font.Bold
+                font.weight: 700
                 horizontalAlignment: Text.AlignHCenter
                 anchors.horizontalCenter: parent.horizontalCenter
             }
@@ -62,7 +62,7 @@ Row {
                 text: limit.toFixed(0)
                 color: "#111"
                 font.pixelSize: 16
-                font.weight: Font.Black
+                font.weight: 900
                 anchors.horizontalCenter: parent.horizontalCenter
             }
         }

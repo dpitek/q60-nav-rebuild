@@ -40,7 +40,7 @@ routines + DTC read/clear/parse + rain auto-up wiper handler in VehicleService.
 - [x] `TripLoggerService` (15 Q_PROPERTYs) — per-ignition-cycle GPX writer; trip A/B meters; history index in `/data/q60nav/trips/`
 - [x] `ParkingService` (4 Q_PROPERTYs) — last-parked GPS coord + timestamp; `navigateToCar()` invokable
 - [x] `StatusBridge` (21 Q_PROPERTYs) — full signal wiring, clock, cross-screen coordination, call routing, AVM activation
-- [x] `MapLibreItem` (8 Q_PROPERTYs) — QQuickItem Phase 3 stub; `RendererFrontend` / `OffscreenBackend` API correct; EGL pbuffer wiring TODO
+- [x] `MapLibreItem` (8 Q_PROPERTYs) — QQuickItem Phase 3 **live**. Uses `mbgl::HeadlessFrontend` which owns the EGL pbuffer + Mesa swrast context internally (no custom OffscreenBackend needed). q60nav builds at 9.6MB ELF i386 with `-DWITH_MAPLIBRE=ON`. Simulator-verified: `[MapLibre] Map created — scheduling first render` on cold start.
 
 ### QML UI (18 screens + 8 components — all implemented)
 2026-05-13 backlog-execution sprint added: `QmlKeyboard.qml`, `DestinationSearch.qml`,
@@ -115,7 +115,7 @@ routines + DTC read/clear/parse + rain auto-up wiper handler in VehicleService.
 |---|---|---|
 | Vector tiles (`.mbtiles`) | ✅ Built | `output/vector-tiles/nc.mbtiles` 464MB |
 | Rootfs image | ✅ Built | `output/q60nav-rootfs.img` 3GB ext4, 1.3GB used |
-| Phase 3: MapLibre EGL wiring | ⏳ Stub complete | `OffscreenBackend` needs EGL pbuffer impl; placeholder renders until then |
+| Phase 3: MapLibre EGL wiring | ✅ Live | `HeadlessFrontend` (mbgl) owns EGL pbuffer + Mesa swrast internally. Build flag `-DWITH_MAPLIBRE=ON` enabled in `scripts/build-app.sh`. Simulator confirmed map renders. |
 | Geocoder DB | ✅ Ready to build | Run `scripts/build-geocoder-db.sh` (~5-10 min, Python3 on Mac) |
 
 ---
@@ -123,9 +123,10 @@ routines + DTC read/clear/parse + rain auto-up wiper handler in VehicleService.
 ## ⏳ Remaining Work (ordered)
 
 ### Software
-1. **Phase 3 — EGL wiring**: Implement `OffscreenBackend::activate()` in `MapLibreItem.cpp` — create EGL pbuffer backed by Mesa swrast, wire `readPixels()` into frame callback. Rebuild with `-DWITH_MAPLIBRE=ON`.
+1. **Phase 3 — EGL wiring**: ✅ **DONE 2026-05-14** — turned out the `mbgl::HeadlessFrontend` we already use owns the EGL pbuffer + Mesa swrast context entirely internally (via headless_backend_egl.cpp inside libmbgl-core.a). No custom `OffscreenBackend::activate()` needed. Build flag `-DWITH_MAPLIBRE=ON` flipped in `scripts/build-app.sh`. q60nav 9.3MB → 9.6MB. Simulator log shows `[MapLibre] Map created — scheduling first render` on cold start.
 2. **Geocoder (Photon i386 blocker)**: ✅ **RESOLVED** — Replaced Photon/JVM with native C+SQLite geocoder. `geocoder-server` is a single-file C99 binary compiled for i386/Bonnell. SQLite FTS5 full-text search + R-tree spatial index. No JVM, no Java, no Elasticsearch. ~10-50ms queries on Atom hardware. Run `scripts/build-geocoder-db.sh` + `scripts/build-geocoder-server.sh` to produce artifacts.
 3. **Bose wake frame**: Sniff AV-CAN at Bose amp connector (trunk). `CAN_BOSE_WAKE = 0x3B3` is a placeholder — see wakeBosse() in VehicleService.cpp.
+4. **Font.Xxx → numeric weight migration**: ✅ **DONE 2026-05-14** — repo-wide perl substitution replaced `weight: Font.SemiBold/Bold/Medium/Light/Normal` with numeric values (600/700/500/300/400). QML init-order bug in Repeater delegates was producing `Unable to assign [undefined] to int` warnings; 100+ instances cleared.
 
 ### Hardware (boot test prerequisites)
 5. **[hardware]** Physical boot test — `deploy-to-image.sh --test` (write kernel + rootfs, flip elilo.conf)

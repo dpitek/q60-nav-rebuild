@@ -51,7 +51,7 @@ Item {
                 anchors.centerIn: parent
                 text: root.label
                 color: "#0A84FF"
-                font { family: "Roboto"; pixelSize: 12; weight: Font.Bold; letterSpacing: 2; capitalization: Font.AllUppercase }
+                font { family: "Roboto"; pixelSize: 12; weight: 700; letterSpacing: 2; capitalization: Font.AllUppercase }
             }
         }
 
@@ -159,7 +159,7 @@ Item {
             anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: 14 }
             text: root.preferredArm === "left" ? "KEEP LEFT" : "KEEP RIGHT"
             color: "#0A84FF"
-            font { family: "Roboto"; pixelSize: 17; weight: Font.Bold; letterSpacing: 2 }
+            font { family: "Roboto"; pixelSize: 17; weight: 700; letterSpacing: 2 }
         }
     }
 }

@@ -113,7 +113,7 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: Math.round(WeatherService.temperature) + "°F"
                                 color: tempColor(WeatherService.temperature)
-                                font { family: "Roboto"; pixelSize: 36; weight: Font.Bold }
+                                font { family: "Roboto"; pixelSize: 36; weight: 700 }
                             }
                         }
 
@@ -155,7 +155,7 @@ Item {
                                         return d.toLocaleDateString(Qt.locale(), "ddd").toUpperCase().substring(0, 3)
                                     }
                                     color: "#8E8E93"
-                                    font { family: "Roboto"; pixelSize: 9; weight: Font.Medium; letterSpacing: 0.5 }
+                                    font { family: "Roboto"; pixelSize: 9; weight: 500; letterSpacing: 0.5 }
                                 }
                                 Text {
                                     anchors.horizontalCenter: parent.horizontalCenter
@@ -166,7 +166,7 @@ Item {
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     text: Math.round(modelData.hi) + "°"
                                     color: modelData.hi > 80 ? "#FF9F0A" : "#FFFFFF"
-                                    font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
+                                    font { family: "Roboto"; pixelSize: 12; weight: 600 }
                                 }
                                 Text {
                                     anchors.horizontalCenter: parent.horizontalCenter
@@ -199,7 +199,7 @@ Item {
                         Text {
                             text: "⛽  Regional Prices"
                             color: "#FFFFFF"
-                            font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 13; weight: 600 }
                         }
                         Item { width: parent.width - headerLeft.implicitWidth - regionLabel.implicitWidth; height: 1 }
                         Text {
@@ -241,7 +241,7 @@ Item {
                                       : "—"
                                 color: modelData.grade === "reg" ? "#30D158" : "#8E8E93"
                                 font { family: "Roboto"; pixelSize: 12;
-                                       weight: modelData.grade === "reg" ? Font.SemiBold : Font.Normal }
+                                       weight: modelData.grade === "reg" ? 600 : 400 }
                             }
                             // Trend arrow (only for regular)
                             Text {
@@ -273,7 +273,7 @@ Item {
                     Text {
                         text: "🅿  Last Parked"
                         color: "#FFFFFF"
-                        font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                        font { family: "Roboto"; pixelSize: 13; weight: 600 }
                     }
 
                     Row {
@@ -297,7 +297,7 @@ Item {
                                       ? "Last parked  —  " + timeAgo(ParkingService.lastParkingTimestamp)
                                       : "No parking record"
                                 color: "#FFFFFF"
-                                font { family: "Roboto"; pixelSize: 13; weight: Font.Medium }
+                                font { family: "Roboto"; pixelSize: 13; weight: 500 }
                                 width: parent.width; elide: Text.ElideRight
                             }
                             Text {
@@ -322,7 +322,7 @@ Item {
                                 anchors.centerIn: parent
                                 text: "Navigate"
                                 color: "#FFFFFF"
-                                font { family: "Roboto"; pixelSize: 11; weight: Font.Medium }
+                                font { family: "Roboto"; pixelSize: 11; weight: 500 }
                             }
 
                             MouseArea {
@@ -356,7 +356,7 @@ Item {
                     Text {
                         text: "🗺  Recent Trips"
                         color: "#FFFFFF"
-                        font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                        font { family: "Roboto"; pixelSize: 13; weight: 600 }
                     }
 
                     Repeater {
@@ -373,7 +373,7 @@ Item {
                                 Text {
                                     text: tripWhen(modelData.startTime)
                                     color: "#FFFFFF"
-                                    font { family: "Roboto"; pixelSize: 12; weight: Font.Medium }
+                                    font { family: "Roboto"; pixelSize: 12; weight: 500 }
                                     width: parent.width; elide: Text.ElideRight
                                 }
                                 Text {

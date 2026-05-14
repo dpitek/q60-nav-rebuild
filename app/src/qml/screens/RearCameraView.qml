@@ -67,7 +67,7 @@ Item {
             font {
                 family:       "Roboto"
                 pixelSize:    48
-                weight:       Font.Black
+                weight:       900
                 capitalization: Font.AllUppercase
                 letterSpacing:  8
             }
@@ -203,7 +203,7 @@ Item {
         font {
             family:         "Roboto"
             pixelSize:      11
-            weight:         Font.Medium
+            weight:         500
             capitalization: Font.AllUppercase
             letterSpacing:  0.5
         }
@@ -219,7 +219,7 @@ Item {
         font {
             family:         "Roboto"
             pixelSize:      11
-            weight:         Font.Medium
+            weight:         500
             capitalization: Font.AllUppercase
             letterSpacing:  0.5
         }
@@ -237,7 +237,7 @@ Item {
         font {
             family:         "Roboto"
             pixelSize:      11
-            weight:         Font.Medium
+            weight:         500
             capitalization: Font.AllUppercase
             letterSpacing:  0.5
         }
@@ -256,7 +256,7 @@ Item {
         font {
             family:         "Roboto"
             pixelSize:      11
-            weight:         Font.Medium
+            weight:         500
             capitalization: Font.AllUppercase
             letterSpacing:  4
         }
@@ -287,7 +287,7 @@ Item {
             font {
                 family:  "Roboto"
                 pixelSize: 22
-                weight:    Font.Bold
+                weight:    700
             }
         }
     }
@@ -309,7 +309,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text:  VehicleService.speed.toFixed(1)
                     color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 20; weight: Font.SemiBold }
+                    font { family: "Roboto"; pixelSize: 20; weight: 600 }
                 }
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter

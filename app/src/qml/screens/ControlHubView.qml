@@ -60,14 +60,14 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: "R"
                     color: "#0A84FF"
-                    font { pixelSize: 80; weight: Font.Black }
+                    font { pixelSize: 80; weight: 900 }
                     opacity: 0.9
                 }
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: "REVERSE"
                     color: "#0A84FF"
-                    font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold; capitalization: Font.AllUppercase; letterSpacing: 5 }
+                    font { family: "Roboto"; pixelSize: 13; weight: 600; capitalization: Font.AllUppercase; letterSpacing: 5 }
                 }
             }
 
@@ -145,7 +145,7 @@ Item {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: modelData.label
                             color: activeTab === modelData.tab ? "#0A84FF" : "#8E8E93"
-                            font { family: "Roboto"; pixelSize: 10; weight: Font.Medium }
+                            font { family: "Roboto"; pixelSize: 10; weight: 500 }
                             Behavior on color { ColorAnimation { duration: 150 } }
                         }
                     }

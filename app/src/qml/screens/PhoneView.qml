@@ -51,7 +51,7 @@ Item {
                 Text {
                     id: tabLbl; anchors.centerIn: parent; text: modelData
                     color: root.activeTab === index ? "#FFFFFF" : "#8E8E93"
-                    font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                    font { family: "Roboto"; pixelSize: 13; weight: 600 }
                 }
                 MouseArea {
                     anchors.fill: parent
@@ -102,7 +102,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: StatusBridge.btConnected ? "Phone Connected" : "No Phone Connected"
                     color: StatusBridge.btConnected ? "#FFFFFF" : "#8E8E93"
-                    font { family: "Roboto"; pixelSize: 17; weight: Font.SemiBold }
+                    font { family: "Roboto"; pixelSize: 17; weight: 600 }
                 }
 
                 Text {
@@ -130,7 +130,7 @@ Item {
                     color: Qt.rgba(0.1882, 0.8196, 0.3451, 0.2); border { color: "#30D158"; width: 1 }
                     Text {
                         id: activeBadgeLbl; anchors.centerIn: parent; text: "Active Call"
-                        color: "#30D158"; font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
+                        color: "#30D158"; font { family: "Roboto"; pixelSize: 12; weight: 600 }
                     }
                 }
 
@@ -138,11 +138,11 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter; spacing: 4
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter; text: "Incoming"
-                        color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 26; weight: Font.Bold }
+                        color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 26; weight: 700 }
                     }
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter; text: callTimerHost.elapsed
-                        color: "#8E8E93"; font { family: "Roboto"; pixelSize: 16; weight: Font.Light }
+                        color: "#8E8E93"; font { family: "Roboto"; pixelSize: 16; weight: 300 }
                     }
                 }
 
@@ -176,7 +176,7 @@ Item {
                             MouseArea { id: endArea; anchors.fill: parent; onClicked: StatusBridge.endCall() }
                         }
                         Text { anchors.horizontalCenter: parent.horizontalCenter; text: "End"
-                               color: "#FF453A"; font { family: "Roboto"; pixelSize: 11; weight: Font.SemiBold } }
+                               color: "#FF453A"; font { family: "Roboto"; pixelSize: 11; weight: 600 } }
                     }
 
                     Column {
@@ -198,7 +198,7 @@ Item {
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: dialPanel.keypadVisible ? "▲ Hide Keypad" : "▼ Keypad"
-                    color: "#0A84FF"; font { family: "Roboto"; pixelSize: 13; weight: Font.Medium }
+                    color: "#0A84FF"; font { family: "Roboto"; pixelSize: 13; weight: 500 }
                     MouseArea { anchors.fill: parent; onClicked: dialPanel.keypadVisible = !dialPanel.keypadVisible }
                 }
             }
@@ -228,7 +228,7 @@ Item {
                             width: 72; height: 44; radius: 10
                             color: dtmfBtn.pressed ? "#2C2C2E" : "#3A3A3C"
                             Text { anchors.centerIn: parent; text: modelData; color: "#FFFFFF"
-                                   font { family: "Roboto"; pixelSize: 20; weight: Font.Light } }
+                                   font { family: "Roboto"; pixelSize: 20; weight: 300 } }
                             MouseArea { id: dtmfBtn; anchors.fill: parent; onClicked: StatusBridge.sendDtmf(modelData) }
                         }
                     }
@@ -320,13 +320,13 @@ Item {
                                     Text {
                                         anchors.centerIn: parent
                                         text: name.charAt(0).toUpperCase()
-                                        color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 16; weight: Font.Bold }
+                                        color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 16; weight: 700 }
                                     }
                                 }
 
                                 Column {
                                     anchors.verticalCenter: parent.verticalCenter; spacing: 2
-                                    Text { text: name; color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 15; weight: Font.Medium } }
+                                    Text { text: name; color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 15; weight: 500 } }
                                     Text { text: number; color: "#8E8E93"; font { family: "Roboto"; pixelSize: 12 } }
                                 }
                             }
@@ -344,7 +344,7 @@ Item {
                                     text: type
                                     color: type === "mobile" ? "#0A84FF"
                                            : type === "work"  ? "#FF9F0A" : "#30D158"
-                                    font { family: "Roboto"; pixelSize: 10; weight: Font.SemiBold; capitalization: Font.AllUppercase }
+                                    font { family: "Roboto"; pixelSize: 10; weight: 600; capitalization: Font.AllUppercase }
                                 }
                             }
 
@@ -369,7 +369,7 @@ Item {
                             Text {
                                 id: confirmLbl; anchors.centerIn: parent
                                 text: "Call " + name + "?  ✓ Dial"
-                                color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
+                                color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 12; weight: 600 }
                             }
                             MouseArea {
                                 anchors.fill: parent
@@ -427,7 +427,7 @@ Item {
                                     if (index === 1) return "#30D158"
                                     return "#FF453A"
                                 }
-                                font { family: "Roboto"; pixelSize: 12; weight: Font.Medium }
+                                font { family: "Roboto"; pixelSize: 12; weight: 500 }
                             }
                             MouseArea {
                                 anchors.fill: parent
@@ -485,7 +485,7 @@ Item {
                                     color: callType === "missed"   ? "#FF453A"
                                            : callType === "received" ? "#30D158"
                                                                      : "#0A84FF"
-                                    font { family: "Roboto"; pixelSize: 18; weight: Font.Bold }
+                                    font { family: "Roboto"; pixelSize: 18; weight: 700 }
                                     width: 20; horizontalAlignment: Text.AlignHCenter
                                 }
 
@@ -495,7 +495,7 @@ Item {
                                     Text {
                                         text: (name && name.length > 0) ? name : number
                                         color: callType === "missed" ? "#FF453A" : "#FFFFFF"
-                                        font { family: "Roboto"; pixelSize: 15; weight: Font.Medium }
+                                        font { family: "Roboto"; pixelSize: 15; weight: 500 }
                                     }
                                     Text {
                                         text: timestamp
@@ -531,7 +531,7 @@ Item {
                             Text {
                                 id: recentConfirmLbl; anchors.centerIn: parent
                                 text: "Call " + ((name && name.length > 0) ? name : number) + " back?  ✓ Dial"
-                                color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
+                                color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 12; weight: 600 }
                             }
                             MouseArea {
                                 anchors.fill: parent
@@ -640,7 +640,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: "Answer"
                     color: "#30D158"
-                    font { family: "Roboto"; pixelSize: 10; weight: Font.Medium }
+                    font { family: "Roboto"; pixelSize: 10; weight: 500 }
                 }
             }
 
@@ -667,7 +667,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: "End"
                     color: "#FF453A"
-                    font { family: "Roboto"; pixelSize: 10; weight: Font.SemiBold }
+                    font { family: "Roboto"; pixelSize: 10; weight: 600 }
                 }
             }
 

@@ -22,7 +22,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             text: root.label
             color: "#666"
-            font { pixelSize: 12; weight: Font.Medium; capitalization: Font.AllUppercase }
+            font { pixelSize: 12; weight: 500; capitalization: Font.AllUppercase }
         }
 
         // Up arrow
@@ -54,7 +54,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             text: root.temperature.toFixed(0) + "°"
             color: "#f0f0f0"
-            font { pixelSize: 38; weight: Font.Light }
+            font { pixelSize: 38; weight: 300 }
         }
 
         // Down arrow

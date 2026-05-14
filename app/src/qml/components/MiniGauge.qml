@@ -85,7 +85,7 @@ Item {
         anchors { top: arcCanvas.bottom; horizontalCenter: parent.horizontalCenter; topMargin: 2 }
         text: root.value.toFixed(root.decimals) + (root.units.length > 0 ? " " + root.units : "")
         color: root.warning ? "#FF453A" : "#FFFFFF"
-        font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+        font { family: "Roboto"; pixelSize: 13; weight: 600 }
     }
 
     Text {

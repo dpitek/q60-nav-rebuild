@@ -51,7 +51,7 @@ Item {
                 anchors.centerIn: parent
                 text: "‹"
                 color: "#0A84FF"
-                font { pixelSize: 24; weight: Font.Light }
+                font { pixelSize: 24; weight: 300 }
             }
             MouseArea {
                 anchors.fill: parent
@@ -63,7 +63,7 @@ Item {
             anchors.centerIn: parent
             text: "Driver Profiles"
             color: "#FFFFFF"
-            font { family: "Roboto"; pixelSize: 16; weight: Font.SemiBold }
+            font { family: "Roboto"; pixelSize: 16; weight: 600 }
         }
 
         // Add button (top-right)
@@ -76,7 +76,7 @@ Item {
                 anchors.centerIn: parent
                 text: "+ Add"
                 color: "#FFFFFF"
-                font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
+                font { family: "Roboto"; pixelSize: 12; weight: 600 }
             }
             MouseArea {
                 anchors.fill: parent
@@ -154,7 +154,7 @@ Item {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: modelData.name || "Profile"
                             color: "#FFFFFF"
-                            font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 13; weight: 600 }
                             elide: Text.ElideRight
                             width: 110
                             horizontalAlignment: Text.AlignHCenter
@@ -174,7 +174,7 @@ Item {
                                         anchors.centerIn: parent
                                         text: "Key " + modelData
                                         color: "#FFFFFF"
-                                        font { family: "Roboto"; pixelSize: 9; weight: Font.Medium }
+                                        font { family: "Roboto"; pixelSize: 9; weight: 500 }
                                     }
                                 }
                             }
@@ -190,7 +190,7 @@ Item {
                                 anchors.centerIn: parent
                                 text: "Active"
                                 color: "#FFFFFF"
-                                font { family: "Roboto"; pixelSize: 9; weight: Font.SemiBold }
+                                font { family: "Roboto"; pixelSize: 9; weight: 600 }
                             }
                         }
 
@@ -204,7 +204,7 @@ Item {
                                 anchors.centerIn: parent
                                 text: "Kid Mode"
                                 color: "#FFCC00"
-                                font { family: "Roboto"; pixelSize: 9; weight: Font.SemiBold }
+                                font { family: "Roboto"; pixelSize: 9; weight: 600 }
                             }
                         }
                     }
@@ -244,7 +244,7 @@ Item {
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: "Guest"
                         color: "#8E8E93"
-                        font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                        font { family: "Roboto"; pixelSize: 13; weight: 600 }
                     }
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
@@ -325,7 +325,7 @@ Item {
                             anchors.centerIn: parent
                             text: "Cancel"
                             color: "#8E8E93"
-                            font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 14; weight: 600 }
                         }
                         MouseArea {
                             anchors.fill: parent
@@ -341,7 +341,7 @@ Item {
                             anchors.centerIn: parent
                             text: "Delete"
                             color: "#FF453A"
-                            font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 14; weight: 600 }
                         }
                         MouseArea {
                             anchors.fill: parent
@@ -388,7 +388,7 @@ Item {
                 Text {
                     text: "New Driver Profile"
                     color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 16; weight: Font.SemiBold }
+                    font { family: "Roboto"; pixelSize: 16; weight: 600 }
                 }
 
                 // Name input
@@ -497,7 +497,7 @@ Item {
                                     anchors.centerIn: parent
                                     text: modelData
                                     color: root.newKeySlot === index ? "#FFFFFF" : "#8E8E93"
-                                    font { family: "Roboto"; pixelSize: 11; weight: Font.SemiBold }
+                                    font { family: "Roboto"; pixelSize: 11; weight: 600 }
                                 }
                                 MouseArea {
                                     anchors.fill: parent
@@ -520,7 +520,7 @@ Item {
                             anchors.centerIn: parent
                             text: "Cancel"
                             color: "#8E8E93"
-                            font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 14; weight: 600 }
                         }
                         MouseArea {
                             anchors.fill: parent
@@ -536,7 +536,7 @@ Item {
                             anchors.centerIn: parent
                             text: "Create"
                             color: root.newName.trim() !== "" ? "#FFFFFF" : "#48484A"
-                            font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 14; weight: 600 }
                         }
                         MouseArea {
                             anchors.fill: parent
@@ -583,7 +583,7 @@ Item {
                     anchors.centerIn: parent
                     text: "‹"
                     color: "#0A84FF"
-                    font { pixelSize: 24; weight: Font.Light }
+                    font { pixelSize: 24; weight: 300 }
                 }
                 MouseArea {
                     anchors.fill: parent
@@ -594,7 +594,7 @@ Item {
                 anchors.centerIn: parent
                 text: "Edit Profile"
                 color: "#FFFFFF"
-                font { family: "Roboto"; pixelSize: 16; weight: Font.SemiBold }
+                font { family: "Roboto"; pixelSize: 16; weight: 600 }
             }
         }
 
@@ -721,7 +721,7 @@ Item {
                         anchors.centerIn: parent
                         text: "Delete Profile"
                         color: "#FF453A"
-                        font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                        font { family: "Roboto"; pixelSize: 14; weight: 600 }
                     }
                     MouseArea {
                         anchors.fill: parent
@@ -836,7 +836,7 @@ Item {
                 Text {
                     anchors.centerIn: parent; text: "−"
                     color: "#0A84FF"
-                    font { pixelSize: 18; weight: Font.SemiBold }
+                    font { pixelSize: 18; weight: 600 }
                 }
                 MouseArea {
                     anchors.fill: parent
@@ -847,7 +847,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 text: etempBase.tempValue + "°F"
                 color: "#FFFFFF"
-                font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                font { family: "Roboto"; pixelSize: 14; weight: 600 }
                 width: 44
                 horizontalAlignment: Text.AlignHCenter
             }
@@ -856,7 +856,7 @@ Item {
                 Text {
                     anchors.centerIn: parent; text: "+"
                     color: "#0A84FF"
-                    font { pixelSize: 16; weight: Font.SemiBold }
+                    font { pixelSize: 16; weight: 600 }
                 }
                 MouseArea {
                     anchors.fill: parent

@@ -47,7 +47,7 @@ Item {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: root.tabs[index]
                             color: (index === root.currentTab) ? "#00d4ff" : "#444"
-                            font { pixelSize: 10; weight: Font.Medium;
+                            font { pixelSize: 10; weight: 500;
                                    capitalization: Font.AllUppercase }
                         }
                     }

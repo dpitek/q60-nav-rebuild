@@ -24,7 +24,7 @@ Item {
         anchors { left: parent.left; verticalCenter: parent.verticalCenter; leftMargin: 16 }
         text: StatusBridge.timeString
         color: "#FFFFFF"
-        font { family: "Roboto"; pixelSize: 13; weight: Font.Medium }
+        font { family: "Roboto"; pixelSize: 13; weight: 500 }
     }
 
     // ── Center: Speed + Gear ────────────────────────────────────────────────
@@ -37,7 +37,7 @@ Item {
             text: StatusBridge.speed.toFixed(0)
             color: StatusBridge.speed > StatusBridge.speedLimit + 5
                    ? "#FF453A" : "#FFFFFF"
-            font { family: "Roboto"; pixelSize: 13; weight: Font.Medium }
+            font { family: "Roboto"; pixelSize: 13; weight: 500 }
             visible: StatusBridge.speed > 1
         }
 
@@ -66,7 +66,7 @@ Item {
                 return ""
             }
             color: VehicleService.reverse ? "#FF9F0A" : "#8E8E93"
-            font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+            font { family: "Roboto"; pixelSize: 13; weight: 600 }
         }
     }
 
@@ -95,7 +95,7 @@ Item {
             Text {
                 text: "GPS"
                 color: StatusBridge.gpsLock ? "#30D158" : "#3A3A3C"
-                font { family: "Roboto"; pixelSize: 11; weight: Font.Medium }
+                font { family: "Roboto"; pixelSize: 11; weight: 500 }
             }
         }
 
@@ -112,7 +112,7 @@ Item {
             Text {
                 text: "BT"
                 color: StatusBridge.btConnected ? "#0A84FF" : "#3A3A3C"
-                font { family: "Roboto"; pixelSize: 11; weight: Font.Medium }
+                font { family: "Roboto"; pixelSize: 11; weight: 500 }
             }
         }
 
@@ -137,7 +137,7 @@ Item {
             Text {
                 text: "CALL"
                 color: "#30D158"
-                font { family: "Roboto"; pixelSize: 11; weight: Font.Medium }
+                font { family: "Roboto"; pixelSize: 11; weight: 500 }
             }
         }
     }

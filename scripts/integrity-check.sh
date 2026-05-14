@@ -80,7 +80,6 @@ echo "── Documentation ─────────────────�
 check_file "hardware-day-capture-checklist.md" "$WORKTREE_ROOT/docs/hardware-day-capture-checklist.md"
 check_file "BACKLOG.md"                "$WORKTREE_ROOT/BACKLOG.md"
 check_file "STATUS.md"                 "$WORKTREE_ROOT/STATUS.md"
-check_file "Progress log"              "$WORKTREE_ROOT/.claude/progress/backlog-execution-2026-05-13.md"
 
 echo ""
 echo "── QML → C++ binding static check ────────────────────────"

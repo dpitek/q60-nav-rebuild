@@ -65,7 +65,7 @@ Item {
             anchors { left: parent.left; verticalCenter: parent.verticalCenter; leftMargin: 16 }
             text: "AROUND VIEW MONITOR"
             color: "#FFFFFF"
-            font { family: "Roboto"; pixelSize: 13; weight: Font.Bold; letterSpacing: 3 }
+            font { family: "Roboto"; pixelSize: 13; weight: 700; letterSpacing: 3 }
         }
 
         // Close affordance — tapping it clears avmActive on the bridge
@@ -79,7 +79,7 @@ Item {
                 anchors.centerIn: parent
                 text: "CLOSE"
                 color: "#FFFFFF"
-                font { family: "Roboto"; pixelSize: 11; weight: Font.Bold; letterSpacing: 2 }
+                font { family: "Roboto"; pixelSize: 11; weight: 700; letterSpacing: 2 }
             }
 
             MouseArea {
@@ -121,7 +121,7 @@ Item {
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: "FRONT"; color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 12; weight: Font.Bold; letterSpacing: 2 }
+                    font { family: "Roboto"; pixelSize: 12; weight: 700; letterSpacing: 2 }
                 }
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -145,7 +145,7 @@ Item {
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: "LEFT"; color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 12; weight: Font.Bold; letterSpacing: 2 }
+                    font { family: "Roboto"; pixelSize: 12; weight: 700; letterSpacing: 2 }
                 }
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -240,13 +240,13 @@ Item {
                 anchors { top: parent.top; horizontalCenter: parent.horizontalCenter; topMargin: 4 }
                 text: (root.frontDist * 100).toFixed(0) + " cm"
                 color: root.distColor(root.frontDist)
-                font { family: "Roboto"; pixelSize: 10; weight: Font.Bold }
+                font { family: "Roboto"; pixelSize: 10; weight: 700 }
             }
             Text {
                 anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: 4 }
                 text: (root.rearDist * 100).toFixed(0) + " cm"
                 color: root.distColor(root.rearDist)
-                font { family: "Roboto"; pixelSize: 10; weight: Font.Bold }
+                font { family: "Roboto"; pixelSize: 10; weight: 700 }
             }
         }
 
@@ -261,7 +261,7 @@ Item {
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: "RIGHT"; color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 12; weight: Font.Bold; letterSpacing: 2 }
+                    font { family: "Roboto"; pixelSize: 12; weight: 700; letterSpacing: 2 }
                 }
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -285,7 +285,7 @@ Item {
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: "REAR"; color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 12; weight: Font.Bold; letterSpacing: 2 }
+                    font { family: "Roboto"; pixelSize: 12; weight: 700; letterSpacing: 2 }
                 }
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter

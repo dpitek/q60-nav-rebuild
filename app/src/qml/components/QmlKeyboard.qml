@@ -76,7 +76,7 @@ Item {
                         anchors.centerIn: parent
                         text: modelData.label
                         color: "#FFFFFF"
-                        font { family: "Roboto"; pixelSize: 11; weight: Font.Medium }
+                        font { family: "Roboto"; pixelSize: 11; weight: 500 }
                     }
                     MouseArea { anchors.fill: parent; onClicked: { kb.layout = modelData.id; kb.shift = false } }
                 }
@@ -287,7 +287,7 @@ Item {
             font {
                 family: "Roboto"
                 pixelSize: parent.text.length > 1 ? 13 : 17
-                weight: Font.Medium
+                weight: 500
             }
         }
         MouseArea {

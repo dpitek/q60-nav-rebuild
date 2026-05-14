@@ -119,7 +119,7 @@ Item {
                     Text {
                         text: "RECENT"
                         color: "#8E8E93"
-                        font { family: "Roboto"; pixelSize: 10; weight: Font.Medium; letterSpacing: 1.2 }
+                        font { family: "Roboto"; pixelSize: 10; weight: 500; letterSpacing: 1.2 }
                         leftPadding: 4
                     }
 
@@ -155,7 +155,7 @@ Item {
                                     Text {
                                         text: modelData.name
                                         color: "#FFFFFF"
-                                        font { family: "Roboto"; pixelSize: 14; weight: Font.Medium }
+                                        font { family: "Roboto"; pixelSize: 14; weight: 500 }
                                         width: parent.width; elide: Text.ElideRight
                                     }
                                     Text {
@@ -195,7 +195,7 @@ Item {
                     Text {
                         text: "RESULTS"
                         color: "#8E8E93"
-                        font { family: "Roboto"; pixelSize: 10; weight: Font.Medium; letterSpacing: 1.2 }
+                        font { family: "Roboto"; pixelSize: 10; weight: 500; letterSpacing: 1.2 }
                         leftPadding: 4
                     }
 
@@ -233,7 +233,7 @@ Item {
                                     Text {
                                         text: modelData.name
                                         color: "#FFFFFF"
-                                        font { family: "Roboto"; pixelSize: 14; weight: Font.Medium }
+                                        font { family: "Roboto"; pixelSize: 14; weight: 500 }
                                         width: parent.width; elide: Text.ElideRight
                                     }
                                     Text {
@@ -277,7 +277,7 @@ Item {
                         Text {
                             text: "★ FAVORITES"
                             color: "#8E8E93"
-                            font { family: "Roboto"; pixelSize: 10; weight: Font.Medium; letterSpacing: 1.2 }
+                            font { family: "Roboto"; pixelSize: 10; weight: 500; letterSpacing: 1.2 }
                         }
                     }
 
@@ -311,7 +311,7 @@ Item {
                                     Text {
                                         text: modelData.name
                                         color: "#FFFFFF"
-                                        font { family: "Roboto"; pixelSize: 14; weight: Font.Medium }
+                                        font { family: "Roboto"; pixelSize: 14; weight: 500 }
                                         width: parent.width; elide: Text.ElideRight
                                     }
                                     Text {
@@ -356,13 +356,13 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: "+"
                                 color: "#0A84FF"
-                                font { pixelSize: 18; weight: Font.Light }
+                                font { pixelSize: 18; weight: 300 }
                             }
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: "Add Favorite"
                                 color: "#0A84FF"
-                                font { family: "Roboto"; pixelSize: 13; weight: Font.Medium }
+                                font { family: "Roboto"; pixelSize: 13; weight: 500 }
                             }
                         }
 
@@ -424,12 +424,12 @@ Item {
                                  ? Math.round(StatusBridge.nextDistance * 5280) + " ft"
                                  : StatusBridge.nextDistance.toFixed(1) + " mi")
                         color: StatusBridge.approachingTurn ? "#FF9F0A" : "#FFFFFF"
-                        font { family: "Roboto"; pixelSize: 26; weight: Font.Bold }
+                        font { family: "Roboto"; pixelSize: 26; weight: 700 }
                     }
                     Text {
                         text: StatusBridge.nextStreet
                         color: "#FFFFFF"
-                        font { family: "Roboto"; pixelSize: 15; weight: Font.Medium }
+                        font { family: "Roboto"; pixelSize: 15; weight: 500 }
                         width: parent.width; elide: Text.ElideRight
                     }
                     Text {
@@ -483,7 +483,7 @@ Item {
                                 text: StatusBridge.speed.toFixed(0)
                                 color: StatusBridge.speed > StatusBridge.speedLimit + 5
                                        ? "#FF453A" : "#FFFFFF"
-                                font { family: "Roboto"; pixelSize: 26; weight: Font.Bold }
+                                font { family: "Roboto"; pixelSize: 26; weight: 700 }
                             }
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
@@ -515,7 +515,7 @@ Item {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: StatusBridge.eta.length > 0 ? StatusBridge.eta : "--:--"
                             color: "#FFFFFF"
-                            font { family: "Roboto"; pixelSize: 22; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 22; weight: 600 }
                         }
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
@@ -539,7 +539,7 @@ Item {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: NavigationService.remaining.toFixed(1)
                             color: "#FFFFFF"
-                            font { family: "Roboto"; pixelSize: 22; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 22; weight: 600 }
                         }
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
@@ -566,7 +566,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "Recalculating route…"
                     color: "#000000"
-                    font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                    font { family: "Roboto"; pixelSize: 14; weight: 600 }
                 }
             }
         }
@@ -603,7 +603,7 @@ Item {
                     anchors.centerIn: parent
                     text: "Stop Navigation"
                     color: "#FF453A"
-                    font { family: "Roboto"; pixelSize: 13; weight: Font.Medium }
+                    font { family: "Roboto"; pixelSize: 13; weight: 500 }
                 }
 
                 MouseArea {
@@ -648,7 +648,7 @@ Item {
                                 anchors.centerIn: parent
                                 text: modelData
                                 color: routeType === index ? "#FFFFFF" : "#8E8E93"
-                                font { family: "Roboto"; pixelSize: 13; weight: Font.Medium }
+                                font { family: "Roboto"; pixelSize: 13; weight: 500 }
                             }
 
                             MouseArea {
@@ -759,7 +759,7 @@ Item {
                 Text {
                     text: sheetDestName
                     color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 16; weight: Font.SemiBold }
+                    font { family: "Roboto"; pixelSize: 16; weight: 600 }
                     width: parent.width; elide: Text.ElideRight
                 }
                 Text {
@@ -787,7 +787,7 @@ Item {
                             anchors.centerIn: parent
                             text: modelData
                             color: routeSheet.sheetRouteType === index ? "#FFFFFF" : "#8E8E93"
-                            font { family: "Roboto"; pixelSize: 13; weight: Font.Medium }
+                            font { family: "Roboto"; pixelSize: 13; weight: 500 }
                         }
 
                         MouseArea {
@@ -850,7 +850,7 @@ Item {
                     anchors.centerIn: parent
                     text: "Start Navigation"
                     color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 15; weight: Font.SemiBold }
+                    font { family: "Roboto"; pixelSize: 15; weight: 600 }
                 }
 
                 MouseArea {

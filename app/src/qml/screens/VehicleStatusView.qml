@@ -173,7 +173,7 @@ Item {
                         anchors.centerIn: parent
                         text: modelData
                         color: root.activeTab === index ? "#FFFFFF" : "#8E8E93"
-                        font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                        font { family: "Roboto"; pixelSize: 13; weight: 600 }
                         Behavior on color { ColorAnimation { duration: 150 } }
                     }
 
@@ -300,7 +300,7 @@ Item {
                         anchors { left: parent.left; top: parent.top; leftMargin: 10; topMargin: 22 }
                         spacing: 3
 
-                        Text { text: "FL"; color: "#636366"; font { family: "Roboto"; pixelSize: 9; weight: Font.SemiBold } }
+                        Text { text: "FL"; color: "#636366"; font { family: "Roboto"; pixelSize: 9; weight: 600 } }
                         Row {
                             spacing: 5
                             Rectangle {
@@ -312,7 +312,7 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: tpmsCard.psiText(VehicleService.tirePSI_FL)
                                 color: tpmsCard.psiColor(VehicleService.tirePSI_FL)
-                                font { family: "Roboto"; pixelSize: 16; weight: Font.Bold }
+                                font { family: "Roboto"; pixelSize: 16; weight: 700 }
                             }
                         }
                         Text { text: "psi"; color: "#636366"; font { family: "Roboto"; pixelSize: 9 } }
@@ -323,7 +323,7 @@ Item {
                         anchors { right: parent.right; top: parent.top; rightMargin: 10; topMargin: 22 }
                         spacing: 3
 
-                        Text { text: "FR"; color: "#636366"; font { family: "Roboto"; pixelSize: 9; weight: Font.SemiBold } }
+                        Text { text: "FR"; color: "#636366"; font { family: "Roboto"; pixelSize: 9; weight: 600 } }
                         Row {
                             spacing: 5
                             Rectangle {
@@ -335,7 +335,7 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: tpmsCard.psiText(VehicleService.tirePSI_FR)
                                 color: tpmsCard.psiColor(VehicleService.tirePSI_FR)
-                                font { family: "Roboto"; pixelSize: 16; weight: Font.Bold }
+                                font { family: "Roboto"; pixelSize: 16; weight: 700 }
                             }
                         }
                         Text { text: "psi"; color: "#636366"; font { family: "Roboto"; pixelSize: 9 } }
@@ -357,11 +357,11 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: tpmsCard.psiText(VehicleService.tirePSI_RL)
                                 color: tpmsCard.psiColor(VehicleService.tirePSI_RL)
-                                font { family: "Roboto"; pixelSize: 16; weight: Font.Bold }
+                                font { family: "Roboto"; pixelSize: 16; weight: 700 }
                             }
                         }
                         Text { text: "psi"; color: "#636366"; font { family: "Roboto"; pixelSize: 9 } }
-                        Text { text: "RL"; color: "#636366"; font { family: "Roboto"; pixelSize: 9; weight: Font.SemiBold } }
+                        Text { text: "RL"; color: "#636366"; font { family: "Roboto"; pixelSize: 9; weight: 600 } }
                     }
 
                     // ── RR — bottom-right ─────────────────────────────────────
@@ -380,11 +380,11 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: tpmsCard.psiText(VehicleService.tirePSI_RR)
                                 color: tpmsCard.psiColor(VehicleService.tirePSI_RR)
-                                font { family: "Roboto"; pixelSize: 16; weight: Font.Bold }
+                                font { family: "Roboto"; pixelSize: 16; weight: 700 }
                             }
                         }
                         Text { text: "psi"; color: "#636366"; font { family: "Roboto"; pixelSize: 9 } }
-                        Text { text: "RR"; color: "#636366"; font { family: "Roboto"; pixelSize: 9; weight: Font.SemiBold } }
+                        Text { text: "RR"; color: "#636366"; font { family: "Roboto"; pixelSize: 9; weight: 600 } }
                     }
                 }
 
@@ -428,7 +428,7 @@ Item {
                             color: doorSection.doorOff(VehicleService.doorDriver)
                             border { color: doorSection.doorOn(VehicleService.doorDriver); width: 1.5 }
                             Behavior on color { ColorAnimation { duration: 100 } }
-                            Text { anchors.centerIn: parent; text: "FL"; color: "#FFFFFF"; font { pixelSize: 8; weight: Font.Bold } }
+                            Text { anchors.centerIn: parent; text: "FL"; color: "#FFFFFF"; font { pixelSize: 8; weight: 700 } }
                         }
 
                         // FR door (passenger — right side)
@@ -438,7 +438,7 @@ Item {
                             color: doorSection.doorOff(VehicleService.doorPassenger)
                             border { color: doorSection.doorOn(VehicleService.doorPassenger); width: 1.5 }
                             Behavior on color { ColorAnimation { duration: 100 } }
-                            Text { anchors.centerIn: parent; text: "FR"; color: "#FFFFFF"; font { pixelSize: 8; weight: Font.Bold } }
+                            Text { anchors.centerIn: parent; text: "FR"; color: "#FFFFFF"; font { pixelSize: 8; weight: 700 } }
                         }
 
                         // RL door — 4-door only
@@ -449,7 +449,7 @@ Item {
                             color: doorSection.doorOff(VehicleService.doorRearLeft)
                             border { color: doorSection.doorOn(VehicleService.doorRearLeft); width: 1.5 }
                             Behavior on color { ColorAnimation { duration: 100 } }
-                            Text { anchors.centerIn: parent; text: "RL"; color: "#FFFFFF"; font { pixelSize: 8; weight: Font.Bold } }
+                            Text { anchors.centerIn: parent; text: "RL"; color: "#FFFFFF"; font { pixelSize: 8; weight: 700 } }
                         }
 
                         // RR door — 4-door only
@@ -460,7 +460,7 @@ Item {
                             color: doorSection.doorOff(VehicleService.doorRearRight)
                             border { color: doorSection.doorOn(VehicleService.doorRearRight); width: 1.5 }
                             Behavior on color { ColorAnimation { duration: 100 } }
-                            Text { anchors.centerIn: parent; text: "RR"; color: "#FFFFFF"; font { pixelSize: 8; weight: Font.Bold } }
+                            Text { anchors.centerIn: parent; text: "RR"; color: "#FFFFFF"; font { pixelSize: 8; weight: 700 } }
                         }
 
                         // Trunk (hatch bar below body)
@@ -470,7 +470,7 @@ Item {
                             color: doorSection.doorOff(VehicleService.trunkOpen)
                             border { color: doorSection.doorOn(VehicleService.trunkOpen); width: 1.5 }
                             Behavior on color { ColorAnimation { duration: 100 } }
-                            Text { anchors.centerIn: parent; text: "TR"; color: "#FFFFFF"; font { pixelSize: 7; weight: Font.Bold } }
+                            Text { anchors.centerIn: parent; text: "TR"; color: "#FFFFFF"; font { pixelSize: 7; weight: 700 } }
                         }
                     }
 
@@ -544,7 +544,7 @@ Item {
                             anchors { left: oilGauge.right; verticalCenter: parent.verticalCenter; leftMargin: 6 }
                             text: VehicleService.oilLife.toFixed(0) + "%"
                             color: oilLifeSection.oilColor(VehicleService.oilLife)
-                            font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 13; weight: 600 }
                         }
 
                         Text {
@@ -597,7 +597,7 @@ Item {
                                 anchors.centerIn: parent
                                 text: "TRIP " + modelData
                                 color: "#FFFFFF"
-                                font { family: "Roboto"; pixelSize: 10; weight: Font.SemiBold }
+                                font { family: "Roboto"; pixelSize: 10; weight: 600 }
                             }
 
                             MouseArea {
@@ -624,7 +624,7 @@ Item {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: (tripComputer.activeTrip === 0 ? VehicleService.tripAMiles : VehicleService.tripBMiles).toFixed(1)
                                 color: "#FFFFFF"
-                                font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                                font { family: "Roboto"; pixelSize: 14; weight: 600 }
                             }
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
@@ -645,7 +645,7 @@ Item {
                                     return v > 0 ? v.toFixed(1) : "—"
                                 }
                                 color: "#FFFFFF"
-                                font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                                font { family: "Roboto"; pixelSize: 14; weight: 600 }
                             }
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
@@ -666,7 +666,7 @@ Item {
                                     return v > 0 ? v.toFixed(0) : "—"
                                 }
                                 color: "#FFFFFF"
-                                font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                                font { family: "Roboto"; pixelSize: 14; weight: 600 }
                             }
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
@@ -684,7 +684,7 @@ Item {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: tripComputer.fmtTime(tripComputer.activeTrip === 0 ? VehicleService.tripASeconds : VehicleService.tripBSeconds)
                                 color: "#FFFFFF"
-                                font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                                font { family: "Roboto"; pixelSize: 14; weight: 600 }
                             }
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
@@ -707,7 +707,7 @@ Item {
                         anchors.centerIn: parent
                         text: "RESET"
                         color: "#8E8E93"
-                        font { family: "Roboto"; pixelSize: 8; weight: Font.SemiBold; letterSpacing: 0.5 }
+                        font { family: "Roboto"; pixelSize: 8; weight: 600; letterSpacing: 0.5 }
                     }
 
                     MouseArea {
@@ -759,7 +759,7 @@ Item {
                         anchors { right: parent.right; verticalCenter: parent.verticalCenter }
                         text: VehicleService.instantMPG > 0 ? VehicleService.instantMPG.toFixed(1) + " MPG" : "— MPG"
                         color: tripMpgBar.mpgColor(VehicleService.instantMPG)
-                        font { family: "Roboto"; pixelSize: 9; weight: Font.SemiBold }
+                        font { family: "Roboto"; pixelSize: 9; weight: 600 }
                     }
                 }
             }
@@ -786,7 +786,7 @@ Item {
                             text: VehicleService.coolantTemp > 32 ? VehicleService.coolantTemp.toFixed(0) + "°F" : "—"
                             color: VehicleService.coolantTemp > 230 ? "#FF453A"
                                  : VehicleService.coolantTemp > 210 ? "#FF9F0A" : "#FFFFFF"
-                            font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 12; weight: 600 }
                         }
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
@@ -810,7 +810,7 @@ Item {
                             text: VehicleService.batteryVolts.toFixed(1) + "V"
                             color: VehicleService.batteryVolts < 11.5 ? "#FF453A"
                                  : VehicleService.batteryVolts < 12.0 ? "#FF9F0A" : "#FFFFFF"
-                            font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 12; weight: 600 }
                         }
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
@@ -834,7 +834,7 @@ Item {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: VehicleService.rpm + ""
                             color: VehicleService.rpm > 5500 ? "#FF453A" : "#FFFFFF"
-                            font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 12; weight: 600 }
                         }
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
@@ -858,7 +858,7 @@ Item {
                             text: VehicleService.oilLife.toFixed(0) + "%"
                             color: VehicleService.oilLife < 15 ? "#FF453A"
                                  : VehicleService.oilLife < 30 ? "#FF9F0A" : "#FFFFFF"
-                            font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 12; weight: 600 }
                         }
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
@@ -883,7 +883,7 @@ Item {
                             text: VehicleService.cruiseActive
                                 ? VehicleService.cruiseSpeed + " MPH" : "—"
                             color: VehicleService.cruiseActive ? "#0A84FF" : "#8E8E93"
-                            font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 12; weight: 600 }
                         }
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
@@ -957,7 +957,7 @@ Item {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: modelData.name
                                 color: "#FFFFFF"
-                                font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                                font { family: "Roboto"; pixelSize: 13; weight: 600 }
                             }
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
@@ -1001,7 +1001,7 @@ Item {
                     anchors.centerIn: parent
                     text: tabDrive.toastText
                     color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
+                    font { family: "Roboto"; pixelSize: 12; weight: 600 }
                 }
             }
 
@@ -1091,7 +1091,7 @@ Item {
                 Text {
                     text: "Driver Assistance Systems"
                     color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                    font { family: "Roboto"; pixelSize: 14; weight: 600 }
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
@@ -1106,7 +1106,7 @@ Item {
                         anchors.centerIn: parent
                         text: "⚠ Q50_LIKELY"
                         color: "#FF9F0A"
-                        font { family: "Roboto"; pixelSize: 9; weight: Font.SemiBold }
+                        font { family: "Roboto"; pixelSize: 9; weight: 600 }
                     }
                 }
             }
@@ -1126,7 +1126,7 @@ Item {
                     text: "Hold to disable " + root.adasHoldLabel + " — " +
                           Math.ceil((1.0 - root.adasHoldProgress) * 2) + "s"
                     color: "#FF9F0A"
-                    font { family: "Roboto"; pixelSize: 10; weight: Font.SemiBold }
+                    font { family: "Roboto"; pixelSize: 10; weight: 600 }
                 }
             }
 
@@ -1181,7 +1181,7 @@ Item {
                                     Text {
                                         text: modelData.abbr
                                         color: "#FFFFFF"
-                                        font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                                        font { family: "Roboto"; pixelSize: 14; weight: 600 }
                                     }
                                     Text {
                                         text: modelData.full
@@ -1296,7 +1296,7 @@ Item {
                                     Text {
                                         text: modelData.abbr
                                         color: "#FFFFFF"
-                                        font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                                        font { family: "Roboto"; pixelSize: 14; weight: 600 }
                                     }
                                     Text {
                                         text: modelData.full
@@ -1391,7 +1391,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "PFCW"
                         color: "#FFFFFF"
-                        font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
+                        font { family: "Roboto"; pixelSize: 12; weight: 600 }
                         width: 44
                     }
                     Text {
@@ -1569,7 +1569,7 @@ Item {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: VehicleService.atessaFront.toFixed(0) + "%"
                                 color: "#0A84FF"
-                                font { family: "Roboto"; pixelSize: 20; weight: Font.Bold }
+                                font { family: "Roboto"; pixelSize: 20; weight: 700 }
                             }
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
@@ -1588,7 +1588,7 @@ Item {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: VehicleService.atessaRear.toFixed(0) + "%"
                                 color: "#FF9F0A"
-                                font { family: "Roboto"; pixelSize: 20; weight: Font.Bold }
+                                font { family: "Roboto"; pixelSize: 20; weight: 700 }
                             }
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
@@ -1815,7 +1815,7 @@ Item {
                                     Text {
                                         text: modelData.val ? "ON" : "OFF"
                                         color: modelData.val ? "#30D158" : "#FF453A"
-                                        font { family: "Roboto"; pixelSize: 10; weight: Font.SemiBold }
+                                        font { family: "Roboto"; pixelSize: 10; weight: 600 }
                                     }
                                 }
                             }
@@ -1955,7 +1955,7 @@ Item {
                         anchors.right: parent.right
                         text: VehicleService.lateralG.toFixed(2) + " g"
                         color: "#FFFFFF"
-                        font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                        font { family: "Roboto"; pixelSize: 14; weight: 600 }
                     }
                     Text {
                         anchors.right: parent.right
@@ -1978,7 +1978,7 @@ Item {
                     Text {
                         text: VehicleService.longitudinalG.toFixed(2) + " g"
                         color: "#FFFFFF"
-                        font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                        font { family: "Roboto"; pixelSize: 14; weight: 600 }
                     }
                     Text {
                         text: "LONG"
@@ -2021,7 +2021,7 @@ Item {
                                       : "—"
                             color: VehicleService.zeroToSixtySec > 0 ? "#30D158"
                                  : VehicleService.perfRunActive       ? "#0A84FF" : "#FFFFFF"
-                            font { family: "Roboto"; pixelSize: 28; weight: Font.Bold }
+                            font { family: "Roboto"; pixelSize: 28; weight: 700 }
                         }
                     }
 
@@ -2041,7 +2041,7 @@ Item {
                             text: VehicleService.quarterMileSec > 0
                                   ? VehicleService.quarterMileSec.toFixed(2) + "s" : "—"
                             color: VehicleService.quarterMileSec > 0 ? "#30D158" : "#FFFFFF"
-                            font { family: "Roboto"; pixelSize: 18; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 18; weight: 600 }
                         }
                     }
 
@@ -2061,7 +2061,7 @@ Item {
                             text: VehicleService.quarterMileTrapMph > 0
                                   ? VehicleService.quarterMileTrapMph.toFixed(0) + " mph" : "—"
                             color: VehicleService.quarterMileTrapMph > 0 ? "#30D158" : "#FFFFFF"
-                            font { family: "Roboto"; pixelSize: 18; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 18; weight: 600 }
                         }
                     }
 
@@ -2075,7 +2075,7 @@ Item {
                             anchors.centerIn: parent
                             text: "Reset"
                             color: "#FFFFFF"
-                            font { family: "Roboto"; pixelSize: 11; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 11; weight: 600 }
                         }
 
                         MouseArea {
@@ -2107,7 +2107,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: value
             color: valColor
-            font { family: "Roboto"; pixelSize: 11; weight: Font.SemiBold }
+            font { family: "Roboto"; pixelSize: 11; weight: 600 }
         }
     }
 }

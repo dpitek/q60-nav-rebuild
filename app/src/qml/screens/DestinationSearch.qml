@@ -99,7 +99,7 @@ Item {
                     Text {
                         text: "CATEGORIES"; leftPadding: 16
                         color: "#8E8E93"
-                        font { family: "Roboto"; pixelSize: 11; weight: Font.Medium; letterSpacing: 1.2 }
+                        font { family: "Roboto"; pixelSize: 11; weight: 500; letterSpacing: 1.2 }
                     }
 
                     Grid {
@@ -124,7 +124,7 @@ Item {
                                 Column {
                                     anchors.centerIn: parent; spacing: 4
                                     Text { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.icon; font { pixelSize: 22 } }
-                                    Text { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.label; color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 13; weight: Font.Medium } }
+                                    Text { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.label; color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 13; weight: 500 } }
                                 }
                                 MouseArea {
                                     anchors.fill: parent
@@ -137,7 +137,7 @@ Item {
                     Text {
                         text: "RECENT"; leftPadding: 16
                         color: "#8E8E93"
-                        font { family: "Roboto"; pixelSize: 11; weight: Font.Medium; letterSpacing: 1.2 }
+                        font { family: "Roboto"; pixelSize: 11; weight: 500; letterSpacing: 1.2 }
                     }
 
                     Repeater {
@@ -159,7 +159,7 @@ Item {
                                 Column {
                                     anchors.verticalCenter: parent.verticalCenter
                                     width: parent.width - 40
-                                    Text { text: modelData.name; color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 14; weight: Font.Medium } }
+                                    Text { text: modelData.name; color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 14; weight: 500 } }
                                     Text {
                                         text: modelData.addr; color: "#8E8E93"
                                         font { family: "Roboto"; pixelSize: 11 }
@@ -185,7 +185,7 @@ Item {
                 Text {
                     text: "RESULTS"; leftPadding: 16
                     color: "#8E8E93"
-                    font { family: "Roboto"; pixelSize: 11; weight: Font.Medium; letterSpacing: 1.2 }
+                    font { family: "Roboto"; pixelSize: 11; weight: 500; letterSpacing: 1.2 }
                 }
 
                 Repeater {
@@ -214,7 +214,7 @@ Item {
                                 width: parent.width - 40
                                 Text {
                                     text: modelData.name; color: "#FFFFFF"
-                                    font { family: "Roboto"; pixelSize: 14; weight: Font.Medium }
+                                    font { family: "Roboto"; pixelSize: 14; weight: 500 }
                                     width: parent.width; elide: Text.ElideRight
                                 }
                                 Text {

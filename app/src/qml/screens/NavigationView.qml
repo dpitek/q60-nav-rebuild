@@ -75,7 +75,7 @@ Item {
             anchors.centerIn: parent
             text: "MAP"
             color: "#1C1C1E"
-            font { pixelSize: 96; weight: Font.Black }
+            font { pixelSize: 96; weight: 900 }
         }
     }
 
@@ -129,7 +129,7 @@ Item {
                              ? Math.round(StatusBridge.nextDistance * 5280) + " ft"
                              : StatusBridge.nextDistance.toFixed(1) + " mi")
                     color: StatusBridge.approachingTurn ? "#FF9F0A" : "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 30; weight: Font.Bold }
+                    font { family: "Roboto"; pixelSize: 30; weight: 700 }
                 }
                 Text {
                     text: StatusBridge.nextStreet
@@ -182,7 +182,7 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: VehicleService.cruiseSpeed > 0 ? VehicleService.cruiseSpeed.toString() : "—"
                 color: "#0A84FF"
-                font { family: "Roboto"; pixelSize: 26; weight: Font.Bold }
+                font { family: "Roboto"; pixelSize: 26; weight: 700 }
             }
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -207,7 +207,7 @@ Item {
         visible: !StatusBridge.navActive
         text: "Q60"
         color: Qt.rgba(1, 1, 1, 0.06)
-        font { pixelSize: 28; weight: Font.Light; letterSpacing: 6 }
+        font { pixelSize: 28; weight: 300; letterSpacing: 6 }
     }
 
     // ── Top-right speed badge + over-limit alert pill ───────────────────────
@@ -262,7 +262,7 @@ Item {
                     id: alertText
                     text: "SPEED"
                     color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 12; weight: Font.Bold; letterSpacing: 2 }
+                    font { family: "Roboto"; pixelSize: 12; weight: 700; letterSpacing: 2 }
                 }
             }
         }
@@ -330,7 +330,7 @@ Item {
             anchors.centerIn: parent
             text: "AVM"
             color: "#FFFFFF"
-            font { family: "Roboto"; pixelSize: 12; weight: Font.Bold; letterSpacing: 2 }
+            font { family: "Roboto"; pixelSize: 12; weight: 700; letterSpacing: 2 }
         }
 
         MouseArea {
@@ -416,7 +416,7 @@ Item {
                 Text {
                     text: StatusBridge.eta.length > 0 ? StatusBridge.eta : "--:--"
                     color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 22; weight: Font.SemiBold }
+                    font { family: "Roboto"; pixelSize: 22; weight: 600 }
                 }
                 Text {
                     text: "ETA"
@@ -441,7 +441,7 @@ Item {
                 Text {
                     text: NavigationService.remaining.toFixed(1) + " mi"
                     color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 22; weight: Font.SemiBold }
+                    font { family: "Roboto"; pixelSize: 22; weight: 600 }
                 }
                 Text {
                     text: "Remaining"
@@ -466,7 +466,7 @@ Item {
                 Text {
                     text: StatusBridge.nextStreet.length > 0 ? StatusBridge.nextStreet : "On Route"
                     color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 15; weight: Font.Medium }
+                    font { family: "Roboto"; pixelSize: 15; weight: 500 }
                     width: parent.width - 16
                     elide: Text.ElideRight
                 }
@@ -524,7 +524,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "Recalculating route…"
                 color: "#000000"
-                font { family: "Roboto"; pixelSize: 15; weight: Font.SemiBold }
+                font { family: "Roboto"; pixelSize: 15; weight: 600 }
             }
         }
     }

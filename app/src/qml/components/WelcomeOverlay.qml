@@ -103,7 +103,7 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: "Welcome back, " + ProfileService.activeProfileName
                 color: "#FFFFFF"
-                font { family: "Roboto"; pixelSize: 28; weight: Font.Light }
+                font { family: "Roboto"; pixelSize: 28; weight: 300 }
                 opacity: 0
                 SequentialAnimation {
                     id: welcomeTextAnim
@@ -165,7 +165,7 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: "Who's driving?"
                 color: "#FFFFFF"
-                font { family: "Roboto"; pixelSize: 26; weight: Font.Light }
+                font { family: "Roboto"; pixelSize: 26; weight: 300 }
             }
 
             // Profile avatar row (tap to select)
@@ -202,7 +202,7 @@ Item {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: modelData.name || "Profile"
                             color: "#FFFFFF"
-                            font { family: "Roboto"; pixelSize: 12; weight: Font.Medium }
+                            font { family: "Roboto"; pixelSize: 12; weight: 500 }
                         }
                     }
                 }

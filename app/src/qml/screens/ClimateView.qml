@@ -32,7 +32,7 @@ Item {
             anchors.centerIn: parent
             text: "AUTO"
             color: VehicleService.autoClimateOn ? "#FFFFFF" : "#0A84FF"
-            font { family: "Roboto"; pixelSize: 22; weight: Font.Bold; letterSpacing: 2 }
+            font { family: "Roboto"; pixelSize: 22; weight: 700; letterSpacing: 2 }
         }
         MouseArea {
             anchors.fill: parent
@@ -71,7 +71,7 @@ Item {
                 anchors.centerIn: parent
                 text: "MAX A/C"
                 color: maxAcBtn.maxAcFlash ? "#FFFFFF" : "#0A84FF"
-                font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold; letterSpacing: 1 }
+                font { family: "Roboto"; pixelSize: 14; weight: 600; letterSpacing: 1 }
             }
             MouseArea {
                 anchors.fill: parent
@@ -103,7 +103,7 @@ Item {
                 anchors.centerIn: parent
                 text: "MAX DEF"
                 color: maxDefBtn.maxDefFlash ? "#FFFFFF" : "#0A84FF"
-                font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold; letterSpacing: 1 }
+                font { family: "Roboto"; pixelSize: 14; weight: 600; letterSpacing: 1 }
             }
             MouseArea {
                 anchors.fill: parent
@@ -164,7 +164,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: VehicleService.driverTemp.toFixed(0) + "°"
                     color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 36; weight: Font.Bold }
+                    font { family: "Roboto"; pixelSize: 36; weight: 700 }
                 }
 
                 Rectangle {
@@ -231,7 +231,7 @@ Item {
                         anchors.centerIn: parent
                         text: "⇄ SYNC"
                         color: syncBtn.syncFlash ? "#FFFFFF" : "#0A84FF"
-                        font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold; letterSpacing: 1 }
+                        font { family: "Roboto"; pixelSize: 12; weight: 600; letterSpacing: 1 }
                     }
                     MouseArea {
                         anchors.fill: parent
@@ -297,7 +297,7 @@ Item {
                         Text {
                             anchors.centerIn: parent; text: "A/C"
                             color: VehicleService.acOn ? "#0A84FF" : "#8E8E93"
-                            font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 14; weight: 600 }
                         }
                         MouseArea {
                             anchors.fill: parent
@@ -313,7 +313,7 @@ Item {
                         Text {
                             anchors.centerIn: parent; text: "⟳ RECIRC"
                             color: VehicleService.recircOn ? "#0A84FF" : "#8E8E93"
-                            font { family: "Roboto"; pixelSize: 11; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 11; weight: 600 }
                         }
                         MouseArea {
                             anchors.fill: parent
@@ -365,7 +365,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: VehicleService.passengerTemp.toFixed(0) + "°"
                     color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 36; weight: Font.Bold }
+                    font { family: "Roboto"; pixelSize: 36; weight: 700 }
                 }
 
                 Rectangle {
@@ -432,7 +432,7 @@ Item {
             Text {
                 anchors.centerIn: parent; text: "OFF"
                 color: VehicleService.fanSpeed === 0 ? "#FFFFFF" : "#8E8E93"
-                font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                font { family: "Roboto"; pixelSize: 13; weight: 600 }
             }
             MouseArea { anchors.fill: parent; onClicked: VehicleService.setFanSpeed(0) }
         }
@@ -455,7 +455,7 @@ Item {
                     anchors.centerIn: parent
                     text: (index + 1).toString()
                     color: VehicleService.fanSpeed >= index + 1 ? "#FFFFFF" : "#8E8E93"
-                    font { family: "Roboto"; pixelSize: 16; weight: Font.Bold }
+                    font { family: "Roboto"; pixelSize: 16; weight: 700 }
                 }
                 MouseArea { anchors.fill: parent; onClicked: VehicleService.setFanSpeed(index + 1) }
             }
@@ -568,7 +568,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: "⛆ RAIN SENSOR"
                     color: VehicleService.rainSensorEnabled ? "#0A84FF" : "#8E8E93"
-                    font { family: "Roboto"; pixelSize: 9; weight: Font.SemiBold; letterSpacing: 0.5 }
+                    font { family: "Roboto"; pixelSize: 9; weight: 600; letterSpacing: 0.5 }
                 }
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter

@@ -53,7 +53,7 @@ Item {
             Column {
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 2
-                Text { text: root.destName; color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 17; weight: Font.SemiBold } }
+                Text { text: root.destName; color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 17; weight: 600 } }
                 Text { text: root.destAddr; color: "#8E8E93"; font { family: "Roboto"; pixelSize: 12 } }
             }
         }
@@ -83,7 +83,7 @@ Item {
                             text: Math.floor(root.durMin / 60) > 0
                                   ? Math.floor(root.durMin / 60) + "h " + (root.durMin % 60) + "m"
                                   : root.durMin + "m"
-                            color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 28; weight: Font.Bold }
+                            color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 28; weight: 700 }
                         }
                         Text { anchors.horizontalCenter: parent.horizontalCenter; text: "Travel"; color: "#8E8E93"; font { family: "Roboto"; pixelSize: 11 } }
                     }
@@ -93,7 +93,7 @@ Item {
                     width: parent.width / 3; height: parent.height
                     Column {
                         anchors.centerIn: parent; spacing: 4
-                        Text { anchors.horizontalCenter: parent.horizontalCenter; text: root.distMi.toFixed(1); color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 28; weight: Font.Bold } }
+                        Text { anchors.horizontalCenter: parent.horizontalCenter; text: root.distMi.toFixed(1); color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 28; weight: 700 } }
                         Text { anchors.horizontalCenter: parent.horizontalCenter; text: "mi"; color: "#8E8E93"; font { family: "Roboto"; pixelSize: 11 } }
                     }
                 }
@@ -102,7 +102,7 @@ Item {
                     width: parent.width / 3; height: parent.height
                     Column {
                         anchors.centerIn: parent; spacing: 4
-                        Text { anchors.horizontalCenter: parent.horizontalCenter; text: root.etaStr; color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 24; weight: Font.SemiBold } }
+                        Text { anchors.horizontalCenter: parent.horizontalCenter; text: root.etaStr; color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 24; weight: 600 } }
                         Text { anchors.horizontalCenter: parent.horizontalCenter; text: "Arrive"; color: "#8E8E93"; font { family: "Roboto"; pixelSize: 11 } }
                     }
                 }
@@ -125,7 +125,7 @@ Item {
                         anchors.centerIn: parent
                         text: modelData
                         color: root.routeType === index ? "#FFFFFF" : "#8E8E93"
-                        font { family: "Roboto"; pixelSize: 14; weight: Font.Medium }
+                        font { family: "Roboto"; pixelSize: 14; weight: 500 }
                     }
                     MouseArea {
                         anchors.fill: parent
@@ -191,7 +191,7 @@ Item {
             radius: 28
             color: "transparent"
             border { color: "#8E8E93"; width: 1 }
-            Text { anchors.centerIn: parent; text: "Cancel"; color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 15; weight: Font.Medium } }
+            Text { anchors.centerIn: parent; text: "Cancel"; color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 15; weight: 500 } }
             MouseArea { anchors.fill: parent; onClicked: root.cancelled() }
         }
 
@@ -204,7 +204,7 @@ Item {
                 anchors.centerIn: parent
                 spacing: 10
                 Text { anchors.verticalCenter: parent.verticalCenter; text: "▶"; color: "#FFFFFF"; font { pixelSize: 16 } }
-                Text { anchors.verticalCenter: parent.verticalCenter; text: "Start Navigation"; color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 17; weight: Font.SemiBold } }
+                Text { anchors.verticalCenter: parent.verticalCenter; text: "Start Navigation"; color: "#FFFFFF"; font { family: "Roboto"; pixelSize: 17; weight: 600 } }
             }
             MouseArea {
                 anchors.fill: parent

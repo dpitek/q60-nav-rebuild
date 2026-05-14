@@ -43,7 +43,7 @@ Item {
                 anchors.centerIn: parent
                 text: "Settings"
                 color: "#FFFFFF"
-                font { family: "Roboto"; pixelSize: 18; weight: Font.SemiBold }
+                font { family: "Roboto"; pixelSize: 18; weight: 600 }
             }
         }
 
@@ -97,7 +97,7 @@ Item {
                             Text {
                                 text: ProfileService.profileLoaded ? ProfileService.activeProfileName : "No Profile"
                                 color: "#FFFFFF"
-                                font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                                font { family: "Roboto"; pixelSize: 14; weight: 600 }
                             }
                             Text {
                                 text: ProfileService.profileLoaded
@@ -301,7 +301,7 @@ Item {
                             }
                             onValueModified: settings.clockHour = value
                         }
-                        Text { text: ":"; color: "#FFFFFF"; font { pixelSize: 18; weight: Font.Bold } anchors.verticalCenter: parent.verticalCenter }
+                        Text { text: ":"; color: "#FFFFFF"; font { pixelSize: 18; weight: 700 } anchors.verticalCenter: parent.verticalCenter }
                         SpinBox {
                             id: minSpinner
                             value: settings.clockMinute
@@ -357,7 +357,7 @@ Item {
 
                         Rectangle {
                             width: 36; height: 36; radius: 8; color: "#2C2C2E"
-                            Text { anchors.centerIn: parent; text: "−"; color: "#0A84FF"; font { pixelSize: 20; weight: Font.Bold } }
+                            Text { anchors.centerIn: parent; text: "−"; color: "#0A84FF"; font { pixelSize: 20; weight: 700 } }
                             MouseArea {
                                 anchors.fill: parent
                                 onClicked: if (settings.timezoneOffset > -12) settings.timezoneOffset = settings.timezoneOffset - 1
@@ -368,12 +368,12 @@ Item {
                             text: (settings.timezoneOffset >= 0 ? "UTC+" : "UTC")
                                   + settings.timezoneOffset
                             color: "#FFFFFF"
-                            font { family: "Roboto"; pixelSize: 15; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 15; weight: 600 }
                             width: 72; horizontalAlignment: Text.AlignHCenter
                         }
                         Rectangle {
                             width: 36; height: 36; radius: 8; color: "#2C2C2E"
-                            Text { anchors.centerIn: parent; text: "+"; color: "#0A84FF"; font { pixelSize: 18; weight: Font.Bold } }
+                            Text { anchors.centerIn: parent; text: "+"; color: "#0A84FF"; font { pixelSize: 18; weight: 700 } }
                             MouseArea {
                                 anchors.fill: parent
                                 onClicked: if (settings.timezoneOffset < 14) settings.timezoneOffset = settings.timezoneOffset + 1
@@ -466,7 +466,7 @@ Item {
                                 Text {
                                     text: modelData.name
                                     color: "#FFFFFF"
-                                    font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                                    font { family: "Roboto"; pixelSize: 14; weight: 600 }
                                 }
                                 Text {
                                     text: modelData.connected ? "Connected" : "Saved"
@@ -505,7 +505,7 @@ Item {
                                     anchors.centerIn: parent
                                     text: modelData.connected ? "Disconnect" : "Connect"
                                     color: modelData.connected ? "#FF453A" : "#0A84FF"
-                                    font { family: "Roboto"; pixelSize: 11; weight: Font.SemiBold }
+                                    font { family: "Roboto"; pixelSize: 11; weight: 600 }
                                 }
                                 MouseArea {
                                     anchors.fill: parent
@@ -539,7 +539,7 @@ Item {
                         anchors.centerIn: parent
                         text: "+ Add New Device"
                         color: "#0A84FF"
-                        font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                        font { family: "Roboto"; pixelSize: 14; weight: 600 }
                     }
                     MouseArea {
                         anchors.fill: parent
@@ -871,7 +871,7 @@ Item {
                     control: Text {
                         text: VehicleService.oilLife + "%"
                         color: VehicleService.oilLife > 30 ? "#30D158" : VehicleService.oilLife > 15 ? "#FF9F0A" : "#FF453A"
-                        font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                        font { family: "Roboto"; pixelSize: 14; weight: 600 }
                     }
                 }
                 SettingsRow {
@@ -891,7 +891,7 @@ Item {
                         Text {
                             anchors.centerIn: parent; text: "Calibrate"
                             color: "#0A84FF"
-                            font { family: "Roboto"; pixelSize: 12; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 12; weight: 600 }
                         }
                         MouseArea { anchors.fill: parent; onClicked: console.log("TPMS calibration started") }
                     }
@@ -940,7 +940,7 @@ Item {
                             anchors { right: parent.right; rightMargin: 16; verticalCenter: parent.verticalCenter }
                             text: "✓"
                             color: "#0A84FF"
-                            font { family: "Roboto"; pixelSize: 18; weight: Font.Bold }
+                            font { family: "Roboto"; pixelSize: 18; weight: 700 }
                             visible: settings.language === modelData.index
                         }
 
@@ -1043,7 +1043,7 @@ Item {
                         anchors.centerIn: parent
                         text: "Factory Reset"
                         color: "#FF453A"
-                        font { family: "Roboto"; pixelSize: 14; weight: Font.SemiBold }
+                        font { family: "Roboto"; pixelSize: 14; weight: 600 }
                     }
                     MouseArea {
                         anchors.fill: parent
@@ -1096,7 +1096,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: "Tap a device on your phone…"
                     color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 15; weight: Font.SemiBold }
+                    font { family: "Roboto"; pixelSize: 15; weight: 600 }
                     horizontalAlignment: Text.AlignHCenter
                 }
                 Text {
@@ -1118,7 +1118,7 @@ Item {
                         Text {
                             anchors.centerIn: parent; text: "Cancel"
                             color: "#8E8E93"
-                            font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 13; weight: 600 }
                         }
                         MouseArea {
                             anchors.fill: parent
@@ -1134,7 +1134,7 @@ Item {
                         Text {
                             anchors.centerIn: parent; text: "Simulate Pair"
                             color: "#0A84FF"
-                            font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 13; weight: 600 }
                         }
                         MouseArea {
                             anchors.fill: parent
@@ -1172,7 +1172,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: "⚠  Factory Reset"
                     color: "#FF453A"
-                    font { family: "Roboto"; pixelSize: 16; weight: Font.Bold }
+                    font { family: "Roboto"; pixelSize: 16; weight: 700 }
                 }
                 Text {
                     width: parent.width
@@ -1191,7 +1191,7 @@ Item {
                         Text {
                             anchors.centerIn: parent; text: "Cancel"
                             color: "#8E8E93"
-                            font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 13; weight: 600 }
                         }
                         MouseArea {
                             anchors.fill: parent
@@ -1205,7 +1205,7 @@ Item {
                         Text {
                             anchors.centerIn: parent; text: "Continue"
                             color: "#FF453A"
-                            font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 13; weight: 600 }
                         }
                         MouseArea {
                             anchors.fill: parent
@@ -1243,7 +1243,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: "Are you absolutely sure?"
                     color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 16; weight: Font.Bold }
+                    font { family: "Roboto"; pixelSize: 16; weight: 700 }
                 }
                 Text {
                     width: parent.width
@@ -1262,7 +1262,7 @@ Item {
                         Text {
                             anchors.centerIn: parent; text: "Cancel"
                             color: "#8E8E93"
-                            font { family: "Roboto"; pixelSize: 13; weight: Font.SemiBold }
+                            font { family: "Roboto"; pixelSize: 13; weight: 600 }
                         }
                         MouseArea {
                             anchors.fill: parent
@@ -1275,7 +1275,7 @@ Item {
                         Text {
                             anchors.centerIn: parent; text: "Confirm Reset"
                             color: "#FFFFFF"
-                            font { family: "Roboto"; pixelSize: 13; weight: Font.Bold }
+                            font { family: "Roboto"; pixelSize: 13; weight: 700 }
                         }
                         MouseArea {
                             anchors.fill: parent
@@ -1352,7 +1352,7 @@ Item {
                     anchors.centerIn: parent
                     text: "‹"
                     color: "#0A84FF"
-                    font { family: "Roboto"; pixelSize: 30; weight: Font.Light }
+                    font { family: "Roboto"; pixelSize: 30; weight: 300 }
                 }
                 MouseArea {
                     id: spBackArea
@@ -1365,7 +1365,7 @@ Item {
                 anchors.centerIn: parent
                 text: sp.title
                 color: "#FFFFFF"
-                font { family: "Roboto"; pixelSize: 18; weight: Font.SemiBold }
+                font { family: "Roboto"; pixelSize: 18; weight: 600 }
             }
         }
 
@@ -1653,7 +1653,7 @@ Item {
                     anchors.centerIn: parent
                     text: modelData
                     color: pillGroupBase.selected === index ? "#FFFFFF" : "#8E8E93"
-                    // numeric weight: avoids "Font.SemiBold undefined" warning from
+                    // numeric weight: avoids "600 undefined" warning from
                     // QML init ordering inside Repeater delegates within inline components
                     font { family: "Roboto"; pixelSize: 12; weight: 600 }
                 }

@@ -64,7 +64,7 @@ Item {
                       ? root.displayName.charAt(0).toUpperCase()
                       : "?"
                 color: "#0A84FF"
-                font { family: "Roboto"; pixelSize: 32; weight: Font.Bold }
+                font { family: "Roboto"; pixelSize: 32; weight: 700 }
             }
         }
 
@@ -87,7 +87,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             text: root.displayName.length > 0 ? root.displayName : "Unknown"
             color: "#FFFFFF"
-            font { family: "Roboto"; pixelSize: 28; weight: Font.Bold }
+            font { family: "Roboto"; pixelSize: 28; weight: 700 }
             width: 320
             elide: Text.ElideRight
             horizontalAlignment: Text.AlignHCenter
@@ -136,7 +136,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "Decline"
                     color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 17; weight: Font.SemiBold }
+                    font { family: "Roboto"; pixelSize: 17; weight: 600 }
                 }
             }
 
@@ -167,7 +167,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "Answer"
                     color: "#FFFFFF"
-                    font { family: "Roboto"; pixelSize: 17; weight: Font.SemiBold }
+                    font { family: "Roboto"; pixelSize: 17; weight: 600 }
                 }
             }
 
