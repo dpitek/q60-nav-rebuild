@@ -182,40 +182,71 @@ int main(int argc, char **argv) {
     /* Phase D: attach buffer to Sprite C OSD plane via DRM_IOCTL_IGD_ALTER_OVL2 */
     if (b_ok && mapped) {
         LOG("[Phase D] DRM_IOCTL_IGD_ALTER_OVL2 (cmd=CMD_ALTER_OVL2_OSD=2)");
-        /* emgd_drm_alter_ovl2_t layout (i386):
-         *   int rtn;
-         *   igd_display_h display_handle; (pointer, 4 bytes)
-         *   igd_surface_t src_surf; (~84 bytes, lots of fields, we mostly zero)
-         *   igd_rect_t src_rect; (16 bytes — x1,y1,x2,y2)
-         *   igd_rect_t dst_rect; (16 bytes)
-         *   igd_ovl_info_t ovl_info; (composite — leave zero)
-         *   unsigned long flags;
-         *   int cmd;
-         * To keep the test small we allocate 256 bytes, zero everything, and
-         * fill only the fields we care about. */
-        unsigned char request[256] = {0};
+        /* Exact emgd_drm_alter_ovl2_t layout on i386 (computed from EMGD source):
+         *   off 0   int   rtn                     (4)
+         *   off 4   ptr   display_handle          (4)
+         *   off 8   igd_surface_t src_surf       (112)
+         *     off 8    unsigned long offset        (GTT offset of our buffer)
+         *     off 12   unsigned int  pitch         (bytes per row)
+         *     off 16   unsigned int  width
+         *     off 20   unsigned int  height
+         *     off 24   unsigned long u_offset      (YUV-only, zero)
+         *     off 28   unsigned int  u_pitch
+         *     off 32   unsigned long v_offset
+         *     off 36   unsigned int  v_pitch
+         *     off 40   unsigned long pixel_format  (0 = let kernel default; for ARGB8888 set right value)
+         *     off 44   ptr  palette_info           (NULL for non-paletted)
+         *     off 48   unsigned long flags         (GMM alignment flags)
+         *     off 52   unsigned int  logic_ops
+         *     off 56   unsigned int  render_ops
+         *     off 60   unsigned int  alpha
+         *     off 64   unsigned int  diffuse
+         *     off 68   unsigned long chroma_high
+         *     off 72   unsigned long chroma_low
+         *     off 76   ptr  virt_addr
+         *     off 80   ptr  pvr2d_mem_info
+         *     off 84   ptr  pvr2d_context_h
+         *     off 88   unsigned long FlipChainID
+         *     off 92   ptr  hPVR2DFlipChain
+         *     off 96   float proc_amp_const[6]    (24 bytes)
+         *   off 120 igd_rect_t src_rect           (16: x1,y1,x2,y2)
+         *   off 136 igd_rect_t dst_rect           (16)
+         *   off 152 igd_ovl_info_t ovl_info        (40)
+         *   off 192 unsigned long flags            (4)
+         *   off 196 int cmd                        (4)
+         *   total = 200 bytes
+         */
+        unsigned char request[200] = {0};
         int *rtn = (int *)&request[0];
-        /* igd_surface_t starts at offset 8 (after rtn + display_handle) */
-        unsigned long *surf_offset = (unsigned long *)&request[8];
-        unsigned int *surf_pitch  = (unsigned int *)&request[12];
-        unsigned int *surf_width  = (unsigned int *)&request[16];
-        unsigned int *surf_height = (unsigned int *)&request[20];
-        /* pixel_format at offset 8+32 = 40 (after offset+pitch+width+height+u/v stuff)
-         * — leave zero for now (kernel may default to ARGB8888 for OSD mode) */
-        /* src_rect at end of surface struct, then dst_rect, then ovl_info, then flags+cmd
-         * — too complex to size accurately. We'll use a "minimal" layout: place rects
-         * immediately after surface; cmd goes at offset 252 (4 bytes from end of 256). */
-        *rtn = 0;
-        *surf_offset = buf.offset;
-        *surf_pitch = 800 * 4;
-        *surf_width = 800;
-        *surf_height = 480;
-        int *cmd = (int *)&request[252];
-        *cmd = 2;   /* CMD_ALTER_OVL2_OSD */
+
+        /* fill src_surf */
+        *(unsigned long *)&request[8]  = buf.offset;    /* offset */
+        *(unsigned int  *)&request[12] = 800 * 4;       /* pitch */
+        *(unsigned int  *)&request[16] = 800;           /* width */
+        *(unsigned int  *)&request[20] = 480;           /* height */
+        /* pixel_format = 0 → kernel default; for ARGB8888 the value is platform-specific
+         * but most EMGD versions use 'BGRA' fourcc (0x41524742) or IGD_PF_ARGB32_8888 */
+        *(unsigned long *)&request[40] = 0x41524742;    /* 'BGRA' fourcc — try first */
+
+        /* fill src_rect (entire buffer) */
+        *(unsigned int *)&request[120] = 0;             /* x1 */
+        *(unsigned int *)&request[124] = 0;             /* y1 */
+        *(unsigned int *)&request[128] = 800;           /* x2 */
+        *(unsigned int *)&request[132] = 480;           /* y2 */
+
+        /* fill dst_rect (full screen) */
+        *(unsigned int *)&request[136] = 0;             /* x1 */
+        *(unsigned int *)&request[140] = 0;             /* y1 */
+        *(unsigned int *)&request[144] = 800;           /* x2 */
+        *(unsigned int *)&request[148] = 480;           /* y2 */
+
+        /* cmd at offset 196 */
+        *(int *)&request[196] = 2;                       /* CMD_ALTER_OVL2_OSD */
 
         unsigned long ioctl_num = (3u << 30) | (((unsigned long)sizeof(request)) << 16)
                                 | ('d' << 8) | DRM_IGD_ALTER_OVL2_NR;
-        LOG("  ioctl(0x%lx, size=%zu)", ioctl_num, sizeof(request));
+        LOG("  ioctl(0x%lx, size=%zu, cmd=2/OSD, ARGB8888 800x480 → full screen)",
+            ioctl_num, sizeof(request));
         int r = ioctl(drm_fd, ioctl_num, request);
         LOG("  ALTER_OVL2 r=%d rtn=%d errno=%d (%s)", r, *rtn, errno, strerror(errno));
     }
