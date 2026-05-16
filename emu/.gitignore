@@ -1,0 +1,8 @@
+# never commit the proprietary rootfs extracts
+slot-a/
+naviwork/
+slot-a.tar
+naviwork.tar
+shim/q60_iohook.so
+*.tgz
+*.tar.gz
