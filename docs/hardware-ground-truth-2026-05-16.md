@@ -58,7 +58,7 @@ SCR           : 02b5800034022202
 preferred_erase_size: 4194304               (4 MB)
 ```
 
-This is a Toshiba **consumer-grade** SD card (not industrial). Consumer cards have hardware-locked CIDs. This is the card the factory firmware appears to validate against (a byte-identical duplicate on a different physical SD does not boot). Industrial CID-writable SD cards (e.g., Apacer "CID Lock" series, some Swissbit/Hagiwara variants) would be required to clone this identity onto another card.
+This is a Toshiba **consumer-grade** SD card (not industrial). Consumer cards have hardware-locked CIDs, but **per follow-up research the DCU firmware does NOT validate CID** — see [`docs/dcu-sd-replacement-research.md`](dcu-sd-replacement-research.md). DCUFix sells generic class-10 SDs as pre-flashed repair kits; Q50 owners have swapped cards across vehicles. The actual gating mechanism for "this card boots, that doesn't" is almost certainly elilo's `q60_boot_attempts` bootchooser state or a first-boot-wizard state file on the writable data partition. Replacement SDs can be any 16-32 GB SanDisk Industrial / Samsung PRO Endurance, byte-imaged with `dd` from a known-good DSU backup.
 
 ## eMMC layout (active, factory-mounted)
 
