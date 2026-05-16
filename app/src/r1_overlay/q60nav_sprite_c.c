@@ -224,9 +224,10 @@ int main(int argc, char **argv) {
         *(unsigned int  *)&request[12] = 800 * 4;       /* pitch */
         *(unsigned int  *)&request[16] = 800;           /* width */
         *(unsigned int  *)&request[20] = 480;           /* height */
-        /* pixel_format = 0 → kernel default; for ARGB8888 the value is platform-specific
-         * but most EMGD versions use 'BGRA' fourcc (0x41524742) or IGD_PF_ARGB32_8888 */
-        *(unsigned long *)&request[40] = 0x41524742;    /* 'BGRA' fourcc — try first */
+        /* pixel_format = IGD_PF_ARGB32 (from EMGD igd_mode.h):
+         *   PF_DEPTH_32 (0x20) | PF_TYPE_ARGB (PF_TYPE_ALPHA|PF_TYPE_RGB = 0x300) | 0x90000
+         *   = 0x00090320 */
+        *(unsigned long *)&request[40] = 0x00090320;    /* IGD_PF_ARGB32 */
 
         /* fill src_rect (entire buffer) */
         *(unsigned int *)&request[120] = 0;             /* x1 */
