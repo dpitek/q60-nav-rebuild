@@ -1,8 +1,17 @@
 # Kernel Config — Required Fixes for Q60 Boot
 
-This document lists kernel `.config` items that **must** be set for the q60nav kernel to boot on Clarion QY5092 / Atom E6xx hardware. These were identified after the first hardware boot attempt produced a complete black screen — five research agents converged on the same root causes.
+This document lists kernel `.config` items that **must** be set for the q60nav kernel to boot on Clarion QY5092 / Atom E6xx hardware. Originally identified after the first hardware boot attempt produced a complete black screen — five research agents converged on the same root causes. Significantly refined 2026-05-16 after a live probe inside the factory environment captured ground-truth hardware data (see [hardware-ground-truth-2026-05-16.md](hardware-ground-truth-2026-05-16.md)).
 
 Apply these on top of `configs/q60_kernel.config` and rebuild.
+
+## 2026-05-16 update — what changed after the in-factory probe
+
+- ✅ **RAM is 2 GB, not 1 GB.** Drop `mem=1G` from cmdline. Drop zram. Raise Valhalla cache to 256 MB.
+- ✅ **Factory cmdline has `dram=on`** (memory controller init param). Add it.
+- ⚠️ **Factory display driver is Intel EMGD (proprietary), NOT mainline gma500.** The `CONFIG_DRM_GMA500=y` build is now KNOWN to be unverified on this hardware — gma500 may not even claim PCI 0:0:2.0 cleanly. Keeping the config items because gma500 is our only legal/open option, but this is a path-dependent risk: if gma500 doesn't claim the device, the kernel has NO display driver and there is NO efifb fallback (factory EFI provides no GOP/UGA framebuffer).
+- ⚠️ **Factory uses custom `v2g`/`v2gbridge` overlay driver** layered on top of EMGD for the LVDS panels. We can't reproduce this. The closest equivalent open path is gma500 + Mesa swrast for userland.
+- ✅ **Kernel hardware watchdog runs from factory boot.** Our rootfs must open `/dev/watchdog` and pet it within ~30 sec or risk reboot loop. STATUS already covers this.
+- ✅ **CAN access**: factory uses DENSO proprietary IPC, NOT SocketCAN. Our path via `CONFIG_PCH_CAN=y` is independent and the PCH controller is at PCI 0000:02:* — should work but unverified live.
 
 ## Critical — boot will fail silently without these
 
@@ -62,8 +71,17 @@ If the bootloader truncates or drops the cmdline (some EFI handoff paths do this
 ```
 CONFIG_CMDLINE_BOOL=y
 CONFIG_CMDLINE_OVERRIDE=y
-CONFIG_CMDLINE="root=/dev/mmcblk0p3 rw rootwait console=ttyS0,115200n8 console=tty0 earlyprintk=serial,ttyS0,115200n8 loglevel=8 ignore_loglevel debug video=LVDS-1:800x480@60 video=LVDS-2:800x420@60 priority_khubd=98 priority_ehciwork=44,R idle=halt pmemdisk=/dev/mmcblk0p7 panic=10 mem=1G"
+CONFIG_CMDLINE="root=/dev/mmcblk0p3 rw rootwait console=ttyPCH0,115200n8 console=tty0 earlyprintk=serial,ttyPCH0,115200n8 loglevel=8 ignore_loglevel debug video=LVDS-1:800x480@60 video=LVDS-2:800x420@60 lpj=1296800 priority_khubd=98 priority_ehciwork=44,R idle=halt ehci_hcd.log2_irq_thresh=2 pmemdisk=/dev/mmcblk0p7 memmap=2M$52M memmap=10M$54M panic=10 dram=on"
 ```
+
+**Changes from prior cmdline (2026-05-16):**
+
+- Dropped `mem=1G` — system has 2 GB (verified live).
+- Added `dram=on` — factory uses it; memory controller init.
+- Added `lpj=1296800` — factory's pre-calibrated loops-per-jiffy. Saves ~250 ms of boot calibration.
+- Added `ehci_hcd.log2_irq_thresh=2` — factory uses; USB EHCI IRQ coalescing tuning.
+- Added `memmap=2M$52M memmap=10M$54M` — reserves the v2g/EMGD framebuffer region (52-64 MB).
+- Changed `console=ttyS0` → `console=ttyPCH0` — the real UART device name on this PCH chipset. (`ttyS0` is the legacy 8250 path which doesn't exist on EG20T; `pch_uart` driver creates `ttyPCH0..2`.)
 
 ## Secondary — bugs surfaced by overnight research
 
