@@ -1,0 +1,80 @@
+#!/bin/sh
+# Diagnostic rcS — minimal i386 stage-1 boot bring-up
+# Writes incremental BOOT_STAGE_NN.TXT markers to FAT32 /boot for blind-boot triage.
+# Used during boot bring-up; production rcS replaces this once kernel + display proven.
+# See docs/diagnostic-rcS-design.md for rationale.
+
+exec >/dev/ttyS0 2>&1
+set +e
+
+mount -t proc proc /proc 2>/dev/null
+mount -t sysfs sys /sys 2>/dev/null
+mount -t tmpfs tmpfs /tmp
+
+# Wait for partition device nodes (devtmpfs can lag init)
+for i in 1 2 3 4 5 6 7 8 9 10; do
+    [ -e /dev/mmcblk0p1 ] && break
+    sleep 1
+done
+
+mkdir -p /boot
+mount -t vfat -o rw /dev/mmcblk0p1 /boot 2>&1
+
+MARK() {
+    echo "$(date +%H:%M:%S) STAGE=$1 $2" > /boot/BOOT_STAGE_$1.TXT 2>/dev/null
+    sync
+    echo "[STAGE $1] $2"
+}
+
+MARK 01 "rcS started, pseudo-fs mounted, /boot mounted"
+mount -t tmpfs tmpfs /run;                                       MARK 02 "/run mounted"
+mkdir -p /dev/pts && mount -t devpts devpts /dev/pts 2>/dev/null; MARK 03 "/dev/pts mounted"
+hostname q60-nav;                                                 MARK 04 "hostname=$(hostname)"
+
+dmesg > /boot/BOOT_DMESG_EARLY.LOG 2>&1
+MARK 05 "early dmesg captured ($(wc -l < /boot/BOOT_DMESG_EARLY.LOG) lines)"
+
+{
+    uname -a
+    echo "=== meminfo ==="; cat /proc/meminfo
+    echo "=== cpuinfo ==="; grep -E "model|flags|cores" /proc/cpuinfo | head -10
+    echo "=== partitions ==="; cat /proc/partitions
+    echo "=== mounts ==="; cat /proc/mounts
+    echo "=== drm ==="; ls -la /sys/class/drm/ 2>/dev/null
+    echo "=== mmc ==="; ls /dev/mmcblk* 2>/dev/null
+    echo "=== net ==="; ls /sys/class/net/
+    echo "=== fb ==="; ls /dev/fb* 2>/dev/null
+    echo "=== tty ==="; ls /dev/tty* 2>/dev/null | head -20
+} > /boot/BOOT_AUDIT.LOG 2>&1
+MARK 06 "audit captured"
+sync
+
+MARK 07 "attempting tty0 banner"
+clear > /dev/tty0 2>/dev/null
+echo "Q60 STAGE 1 BOOT OK $(date)" > /dev/tty0 2>/dev/null
+MARK 08 "tty0 banner echo'd"
+
+if [ -e /dev/fb0 ]; then
+    MARK 09 "fb0 exists, painting solid color"
+    dd if=/dev/zero bs=1024 count=64 2>/dev/null | tr '\0' '\377' > /dev/fb0 2>/dev/null
+    MARK 10 "fb0 painted"
+else
+    MARK 09 "fb0 MISSING - no framebuffer"
+fi
+sync
+
+MARK 99 "rcS complete, entering heartbeat loop (60s then auto-poweroff)"
+
+i=0
+while true; do
+    i=$((i+1))
+    echo "$(date +%H:%M:%S) iter=$i" >> /boot/BOOT_HEARTBEAT.LOG
+    sync
+    sleep 5
+    if [ "$i" -ge 12 ]; then
+        MARK 100 "60s heartbeat done, poweroff"
+        sync
+        poweroff -f
+        break
+    fi
+done

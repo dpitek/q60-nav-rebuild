@@ -115,9 +115,21 @@ routines + DTC read/clear/parse + rain auto-up wiper handler in VehicleService.
 | Item | Status | Notes |
 |---|---|---|
 | Vector tiles (`.mbtiles`) | ✅ Built | `output/vector-tiles/nc.mbtiles` 464MB |
-| Rootfs image | ✅ Built | `output/q60nav-rootfs.img` 3GB ext4, 1.3GB used |
+| Rootfs image | ⚠️ **FOUND DEFECTIVE 2026-05-15** | `output/q60nav-rootfs.img` exists at 3GB, but missing `/sbin/init`, `/bin/sh`, `/lib/ld-linux.so.2`, glibc. Only application overlay (q60nav binary, Qt6 libs) — no base userland. See [docs/boot-failure-rca.md](docs/boot-failure-rca.md). Stage 1 minimal rootfs (busybox + glibc) used for bring-up. |
+| Kernel bzImage | ⚠️ **FOUND DEFECTIVE 2026-05-15** | 4.19 MB exceeds elilo ia32's 4 MB hardcoded limit → silent truncation → black screen on real DCU. Missing `DRM_GMA500/600`, `X86_INTEL_MID`, `FB_SIMPLE`. Rebuilt 2026-05-16 with XZ compression → 3.03 MB. See [docs/kernel-config-required-fixes.md](docs/kernel-config-required-fixes.md). |
 | Phase 3: MapLibre EGL wiring | ✅ Live | `HeadlessFrontend` (mbgl) owns EGL pbuffer + Mesa swrast internally. Build flag `-DWITH_MAPLIBRE=ON` enabled in `scripts/build-app.sh`. Simulator confirmed map renders. |
 | Geocoder DB | ✅ Ready to build | Run `scripts/build-geocoder-db.sh` (~5-10 min, Python3 on Mac) |
+
+## 🔥 First-boot attempt (2026-05-15) — black screen, root-caused 2026-05-16
+
+Hardware boot of the SD-deployed image produced a complete black screen with no recovery. Five research agents identified two simultaneous root causes:
+
+1. **elilo silently truncates kernels >4 MB** (ia32 hardcoded limit). Our bzImage was 4.19 MB → corrupt setup header → silent CPU hang.
+2. **Kernel built without `DRM_GMA500/600`** — no display driver for Atom E6xx Oaktrail. Even if elilo loaded a clean kernel, LVDS would stay black.
+
+Fix shipped: kernel rebuilt with XZ compression (3.03 MB), `DRM_GMA500=y`, `DRM_GMA600=y`, `X86_INTEL_MID=y`, `SFI=y`, `INTEL_SCU_IPC=y`, `FB_SIMPLE=y`, `BACKLIGHT_CLASS_DEVICE=y`, `CMDLINE_BOOL=y` (embedded cmdline so bootloader cmdline is moot), bloat stripped. Diagnostic rcS at [rootfs/etc/init.d/rcS.diag](../rootfs/etc/init.d/rcS.diag) writes `BOOT_STAGE_NN.TXT` to FAT32 at each milestone for Mac-readable triage.
+
+Full RCA: [docs/boot-failure-rca.md](docs/boot-failure-rca.md). Required config: [docs/kernel-config-required-fixes.md](docs/kernel-config-required-fixes.md). Rationale for diagnostic rcS: [docs/diagnostic-rcS-design.md](docs/diagnostic-rcS-design.md).
 
 ---
 
