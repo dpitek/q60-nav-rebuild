@@ -1,6 +1,6 @@
 // IncomingCallView.qml — Full-screen incoming call modal overlay
 // Shown over upper or lower screen when an incoming call arrives
-import QtQuick
+import QtQuick 2.15
 import "../components"
 
 Item {

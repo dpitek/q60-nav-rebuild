@@ -55,8 +55,8 @@ if [ -f "$CAMERA" ]; then
         "$CAMERA"
 fi
 
-echo "--- Verifying versionless imports remain (should be zero) ---"
-REMAINING=$(grep -rE '^import (QtQuick|QtQuick\.Controls|QtQuick\.Window|QtPositioning|QtMultimedia 6)' "$QML_DIR" 2>/dev/null || true)
+echo "--- Verifying versionless / Qt 6-only imports remain (should be zero) ---"
+REMAINING=$(grep -rE '^import (QtQuick|QtQuick\.Controls|QtQuick\.Window|QtPositioning)[[:space:]]*$|^import QtMultimedia 6\.' "$QML_DIR" 2>/dev/null || true)
 if [ -n "$REMAINING" ]; then
     echo "WARNING: still found versionless / Qt 6-only imports:"
     echo "$REMAINING"

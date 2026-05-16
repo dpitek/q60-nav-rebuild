@@ -4,6 +4,7 @@
 #include <QFileInfo>
 #include <QDebug>
 #include <QCoreApplication>
+#include <QTextCodec>
 
 ButtonLogger::ButtonLogger()
 {
@@ -37,7 +38,7 @@ void ButtonLogger::open(const QString &logPath)
         return;
     }
     m_stream.setDevice(&m_file);
-    m_stream.setEncoding(QStringConverter::Utf8);
+    m_stream.setCodec("UTF-8");
 
     writeEntry(QStringLiteral("SESSION_START version=1 pid=") +
                QString::number(QCoreApplication::applicationPid()));

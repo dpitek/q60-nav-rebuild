@@ -269,11 +269,11 @@ void MapLibreItem::scheduleRender()
 #endif
 }
 
-// ─── geometryChange ───────────────────────────────────────────────────────────
-void MapLibreItem::geometryChange(const QRectF &newGeometry,
+// ─── geometryChanged ──────────────────────────────────────────────────────────
+void MapLibreItem::geometryChanged(const QRectF &newGeometry,
                                    const QRectF &oldGeometry)
 {
-    QQuickItem::geometryChange(newGeometry, oldGeometry);
+    QQuickItem::geometryChanged(newGeometry, oldGeometry);
     if (newGeometry.size() == oldGeometry.size()) return;
 
     const int w = qMax(static_cast<int>(newGeometry.width()),  32);

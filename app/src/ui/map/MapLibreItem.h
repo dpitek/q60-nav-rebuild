@@ -41,7 +41,8 @@
 // ─── MapLibreItem ─────────────────────────────────────────────────────────────
 class MapLibreItem : public QQuickItem {
     Q_OBJECT
-    QML_NAMED_ELEMENT(MapLibreMap)   // QML type: Q60Nav.MapLibreMap
+    // Qt 5.15: registered via qmlRegisterType<MapLibreItem>(...) in main.cpp.
+    // (Qt 6 QML_NAMED_ELEMENT removed for Plan B Qt 5.15 build.)
 
     Q_PROPERTY(QGeoCoordinate center   READ center   WRITE setCenter   NOTIFY centerChanged)
     Q_PROPERTY(double          zoom    READ zoom     WRITE setZoom     NOTIFY zoomChanged)
@@ -94,8 +95,8 @@ protected:
     QSGNode *updatePaintNode(QSGNode *oldNode,
                              UpdatePaintNodeData *data) override;
     void componentComplete() override;
-    void geometryChange(const QRectF &newGeometry,
-                        const QRectF &oldGeometry) override;
+    void geometryChanged(const QRectF &newGeometry,
+                         const QRectF &oldGeometry) override;
 
 private:
     void initMap();

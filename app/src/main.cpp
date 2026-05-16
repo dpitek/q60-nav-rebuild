@@ -6,6 +6,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickWindow>
+#include <QtQml>
 #include <QScreen>
 #include <QDebug>
 #include <QLoggingCategory>
@@ -52,10 +53,9 @@ int main(int argc, char *argv[])
     app.setApplicationVersion("0.1.0");
     app.setOrganizationName("Q60Rebuild");
 
-    // MapLibreItem is registered as "MapLibreMap" in the "Q60Nav" QML module via
-    // QML_ELEMENT + qt6_add_qml_module (CMakeLists.txt). No manual qmlRegisterType
-    // needed — the auto-registration covers both WITH_MAPLIBRE=ON and OFF builds
-    // (stub rendering when MAPLIBRE_AVAILABLE is not defined).
+    // Qt 5.15: register MapLibreItem as Q60Nav.MapLibreMap explicitly.
+    // (Qt 6 used QML_NAMED_ELEMENT + qt6_add_qml_module; Qt 5.15 needs the call.)
+    qmlRegisterType<MapLibreItem>("Q60Nav", 1, 0, "MapLibreMap");
 
     // ── Services ──────────────────────────────────────────────────────────
     VehicleService  vehicleSvc;   // SocketCAN: Vehicle CAN + CAN2

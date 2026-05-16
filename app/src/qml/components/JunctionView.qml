@@ -5,7 +5,7 @@
 // imagery decoded from Valhalla's sign/junction data.
 //
 // Caller binds `show` (true → slide in) and `preferredArm` ("left" / "right").
-import QtQuick
+import QtQuick 2.15
 
 Item {
     id: root

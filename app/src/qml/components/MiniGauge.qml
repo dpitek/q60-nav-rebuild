@@ -1,7 +1,7 @@
 // MiniGauge.qml — small Canvas-based arc + needle + numeric readout.
 // Designed for the VR30 Track sub-tab tile grid (7 cells, ~190×88 each).
 // No fancy shaders — Mesa swrast renders plain 2D paths cleanly.
-import QtQuick
+import QtQuick 2.15
 
 Item {
     id: root

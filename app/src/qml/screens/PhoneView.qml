@@ -2,8 +2,8 @@
 // Apple CarPlay aesthetic redesign
 // Full feature parity: Dial / Contacts / Recent tabs, BT device footer
 // All StatusBridge bindings preserved exactly.
-import QtQuick
-import QtQuick.Controls
+import QtQuick 2.15
+import QtQuick.Controls 2.15
 import "../components"
 
 Item {
