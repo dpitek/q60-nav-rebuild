@@ -281,6 +281,27 @@ static int handle_drm(int fd, unsigned long req, void *arg, unsigned int nr, uns
         hooklog("  → smart DRM_SET_VERSION: accepted");
         return 0;
     }
+    /* DRM_IGD_GMM_ALLOC_REGION (nr=78=0x4e, sz=20):
+     *   struct { int rtn; unsigned long offset; unsigned long size; ... }
+     *   Preserve client's size, fake an offset (so mmap is meaningful). */
+    if (nr == 78 && sz == 20 && arg) {
+        int *rtn = (int *)arg;
+        unsigned long *offset_p = (unsigned long *)((char *)arg + 4);
+        unsigned long *size_p = (unsigned long *)((char *)arg + 8);
+        *rtn = 0;
+        *offset_p = 0x10000000;   /* fake GTT offset — anything non-zero */
+        /* keep size as-is so the client can mmap it */
+        hooklog("  → smart DRM_IGD_GMM_ALLOC_REGION: offset=0x%lx size=%lu",
+                *offset_p, *size_p);
+        return 0;
+    }
+    /* DRM_IGD_ALTER_OVL2 (nr=0x6f=111): just accept whatever was sent */
+    if (nr == 111 && arg) {
+        int *rtn = (int *)arg;
+        *rtn = 0;
+        hooklog("  → smart DRM_IGD_ALTER_OVL2: accepted");
+        return 0;
+    }
     /* Default: zero the buffer for read-style ioctls, return 0 */
     if (arg && (((req >> 30) & 0x3) & 2) && sz > 0 && sz < 4096) {
         memset(arg, 0, sz);
