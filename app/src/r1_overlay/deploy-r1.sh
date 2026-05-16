@@ -5,6 +5,8 @@
 set -e
 
 DEV="${1:-/dev/disk12s2}"
+shift 2>/dev/null || true
+R1_ARGS="$*"   # Pass any remaining args (e.g. --cmd 1 --skip-alter) to the test binary
 RAWDEV=$(echo "$DEV" | sed 's|/dev/disk|/dev/rdisk|')
 DEBUGFS=/opt/homebrew/opt/e2fsprogs/sbin/debugfs
 
@@ -13,12 +15,14 @@ BIN=/tmp/q60-overnight/r1-build/q60nav_sprite_c.static
 [ -x "$DEBUGFS" ] || { echo "FATAL: $DEBUGFS missing"; exit 1; }
 [ -f "$BIN" ]    || { echo "FATAL: build R1 client first ($BIN)"; exit 1; }
 
-# Wrapper script — chmod's binary at run-time so debugfs sif quirks don't matter
+echo "Deploying R1 client with args: ${R1_ARGS:-<defaults>}"
+
+# Wrapper script — chmod's binary at run-time + passes args from deploy time
 WRAP=$(mktemp)
-cat > "$WRAP" <<'EOF'
+cat > "$WRAP" <<EOF
 #!/bin/sh
 chmod 755 /opt/q60r1/sprite_test
-exec /opt/q60r1/sprite_test
+exec /opt/q60r1/sprite_test ${R1_ARGS}
 EOF
 
 # Systemd unit — one-shot, 5 sec settle delay, then run

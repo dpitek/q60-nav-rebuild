@@ -137,8 +137,33 @@ int main(int argc, char **argv) {
     if (logf) setvbuf(logf, NULL, _IOLBF, 0);
 
     time_t t = time(NULL);
+    /* Defaults (overridable via argv) */
+    int  arg_cmd      = 2;            /* CMD_ALTER_OVL2_OSD */
+    unsigned long arg_pixfmt = 0x00090320; /* IGD_PF_ARGB32 */
+    int  arg_skip_alter = 0;
+    int  arg_skip_fill  = 0;
+    int  arg_duration = 10;
+    unsigned int  arg_fill_color = 0xFFFF0000; /* opaque red */
+    /* Parse: --cmd N, --pixfmt N (hex), --skip-alter, --skip-fill, --duration N, --color HEX */
+    for (int i = 1; i < argc; i++) {
+        if (!strcmp(argv[i], "--cmd") && i+1 < argc)
+            arg_cmd = (int)strtol(argv[++i], NULL, 0);
+        else if (!strcmp(argv[i], "--pixfmt") && i+1 < argc)
+            arg_pixfmt = strtoul(argv[++i], NULL, 0);
+        else if (!strcmp(argv[i], "--skip-alter"))
+            arg_skip_alter = 1;
+        else if (!strcmp(argv[i], "--skip-fill"))
+            arg_skip_fill = 1;
+        else if (!strcmp(argv[i], "--duration") && i+1 < argc)
+            arg_duration = (int)strtol(argv[++i], NULL, 0);
+        else if (!strcmp(argv[i], "--color") && i+1 < argc)
+            arg_fill_color = (unsigned int)strtoul(argv[++i], NULL, 0);
+    }
+
     LOG("=== Q60 R1 Sprite C test — %s", ctime(&t));
     LOG("argv0=%s pid=%d uid=%d", argv[0], (int)getpid(), (int)getuid());
+    LOG("opts: cmd=%d pixfmt=0x%lx skip_alter=%d skip_fill=%d duration=%ds color=0x%08x",
+        arg_cmd, arg_pixfmt, arg_skip_alter, arg_skip_fill, arg_duration, arg_fill_color);
 
     /* Open /dev/dri/card0 */
     int drm_fd = open("/dev/dri/card0", O_RDWR);
@@ -172,16 +197,20 @@ int main(int argc, char **argv) {
             mapped = NULL;
         } else {
             LOG("  mmap OK at %p", mapped);
-            unsigned int *pixels = (unsigned int *)mapped;
-            unsigned int count = buf.size / 4;
-            for (unsigned int i = 0; i < count; i++) pixels[i] = 0xFFFF0000;  /* opaque red */
-            LOG("  filled %u pixels with 0xFFFF0000 (red ARGB8888)", count);
+            if (arg_skip_fill) {
+                LOG("  --skip-fill set, leaving buffer at GTT state");
+            } else {
+                unsigned int *pixels = (unsigned int *)mapped;
+                unsigned int count = buf.size / 4;
+                for (unsigned int i = 0; i < count; i++) pixels[i] = arg_fill_color;
+                LOG("  filled %u pixels with 0x%08x", count, arg_fill_color);
+            }
         }
     }
 
-    /* Phase D: attach buffer to Sprite C OSD plane via DRM_IOCTL_IGD_ALTER_OVL2 */
-    if (b_ok && mapped) {
-        LOG("[Phase D] DRM_IOCTL_IGD_ALTER_OVL2 (cmd=CMD_ALTER_OVL2_OSD=2)");
+    /* Phase D: attach buffer to Sprite C plane via DRM_IOCTL_IGD_ALTER_OVL2 */
+    if (b_ok && mapped && !arg_skip_alter) {
+        LOG("[Phase D] DRM_IOCTL_IGD_ALTER_OVL2 (cmd=%d, pixfmt=0x%lx)", arg_cmd, arg_pixfmt);
         /* Exact emgd_drm_alter_ovl2_t layout on i386 (computed from EMGD source):
          *   off 0   int   rtn                     (4)
          *   off 4   ptr   display_handle          (4)
@@ -224,10 +253,8 @@ int main(int argc, char **argv) {
         *(unsigned int  *)&request[12] = 800 * 4;       /* pitch */
         *(unsigned int  *)&request[16] = 800;           /* width */
         *(unsigned int  *)&request[20] = 480;           /* height */
-        /* pixel_format = IGD_PF_ARGB32 (from EMGD igd_mode.h):
-         *   PF_DEPTH_32 (0x20) | PF_TYPE_ARGB (PF_TYPE_ALPHA|PF_TYPE_RGB = 0x300) | 0x90000
-         *   = 0x00090320 */
-        *(unsigned long *)&request[40] = 0x00090320;    /* IGD_PF_ARGB32 */
+        /* pixel_format from --pixfmt (default IGD_PF_ARGB32 = 0x00090320) */
+        *(unsigned long *)&request[40] = arg_pixfmt;
 
         /* fill src_rect (entire buffer) */
         *(unsigned int *)&request[120] = 0;             /* x1 */
@@ -241,32 +268,27 @@ int main(int argc, char **argv) {
         *(unsigned int *)&request[144] = 800;           /* x2 */
         *(unsigned int *)&request[148] = 480;           /* y2 */
 
-        /* cmd at offset 196 */
-        *(int *)&request[196] = 2;                       /* CMD_ALTER_OVL2_OSD */
+        /* cmd at offset 196 from --cmd (default 2 = CMD_ALTER_OVL2_OSD) */
+        *(int *)&request[196] = arg_cmd;
 
         unsigned long ioctl_num = (3u << 30) | (((unsigned long)sizeof(request)) << 16)
                                 | ('d' << 8) | DRM_IGD_ALTER_OVL2_NR;
-        LOG("  ioctl(0x%lx, size=%zu, cmd=2/OSD, ARGB8888 800x480 → full screen)",
-            ioctl_num, sizeof(request));
+        LOG("  ioctl(0x%lx, size=%zu, cmd=%d, 800x480 → full screen)",
+            ioctl_num, sizeof(request), arg_cmd);
         int r = ioctl(drm_fd, ioctl_num, request);
         LOG("  ALTER_OVL2 r=%d rtn=%d errno=%d (%s)", r, *rtn, errno, strerror(errno));
     }
 
     /* Phase E: enable v2gbridge — visible result on real HW */
-    if (b_ok && mapped) {
-        LOG("[Phase E] V2G_ENABLE_BRIDGE + 10 sec observe window");
-        int arg = 1;
-        int r = ioctl(v2g_fd, V2G_ENABLE_BRIDGE, &arg);
-        LOG("  enable: r=%d errno=%d", r, errno);
-        sleep(10);
+    LOG("[Phase E] V2G_ENABLE_BRIDGE + %d sec observe window", arg_duration);
+    int arg_enable = 1;
+    int r = ioctl(v2g_fd, V2G_ENABLE_BRIDGE, &arg_enable);
+    LOG("  enable: r=%d errno=%d", r, errno);
+    sleep(arg_duration);
 
-        int zero = 0;
-        r = ioctl(v2g_fd, V2G_DISABLE_BRIDGE, &zero);
-        LOG("  disable: r=%d errno=%d", r, errno);
-    } else {
-        /* Fall back to just phase A toggle if alloc failed */
-        phase_a_bridge_toggle(v2g_fd);
-    }
+    int zero = 0;
+    r = ioctl(v2g_fd, V2G_DISABLE_BRIDGE, &zero);
+    LOG("  disable: r=%d errno=%d", r, errno);
 
     /* Phase F: cleanup */
     if (mapped) munmap(mapped, buf.size);
