@@ -1,5 +1,5 @@
 # Q60 Nav Rebuild — Build Status
-Last updated: 2026-05-13 (post backlog-execution sprint)
+Last updated: 2026-05-17 (R1 overlay hardware research sprint)
 
 ---
 
@@ -107,6 +107,44 @@ routines + DTC read/clear/parse + rain auto-up wiper handler in VehicleService.
 - [x] `scripts/package-rootfs.sh` — build 3GB ext4 rootfs image; geocoder-aware (skips gracefully if not built)
 - [x] `scripts/build-geocoder-db.sh` — build SQLite FTS5+rtree geocoder DB from NC JSONL dump (~5-10 min on Mac)
 - [x] `scripts/build-geocoder-server.sh` — compile geocoder-server for i386 inside q60-toolchain Docker
+
+---
+
+## 🔬 R1 Overlay — Active Hardware Sprint (2026-05-15 → 2026-05-17)
+
+**Goal:** Paint arbitrary UI content onto EMGD Sprite C overlay plane (`/dev/v2gbridge`)
+without disrupting the factory nav system.
+
+### Confirmed working
+| Component | Status |
+|-----------|--------|
+| Boot hook (android-mount.sh patch via debugfs) | ✅ rc=0 every boot |
+| V4L2 REQBUFS + STREAMON on `/dev/video0` | ✅ 3 GTT buffers at 0x0/0xe9000/0x1d2000 |
+| IGD_ALTER_OVL2 plane=5 (Sprite C), plane=3 | ✅ r=0, no DRM master needed |
+| DRM_SET_MASTER as root (no process kill) | ✅ r=0 |
+| V2G_DISABLE_BRIDGE | ✅ always r=0 |
+| Nav system stability | ✅ zero crashes since emgdhmid-kill removed |
+| V2G struct layout confirmed | ✅ `{uint32_t plane, uint32_t screen}` 8-byte |
+| Binary build + deploy cycle | ✅ <5 min end-to-end |
+
+### Current blocker
+`V2G_ENABLE_BRIDGE` (`0xc0047600`) → `enable_direct_display_tnc() returned -22!`
+Root cause: **IOH DMA buffer count = 0**. V2G bridge gates on active camera DMA frames.
+Without a live rearview camera signal, count stays 0 regardless of V4L2 STREAMON.
+
+`V2G_DISPLAY_FRAME` (`0xc0047602`) was discovered — takes buffer index 0/1/2. May prime
+the count. **Testing next boot.**
+
+### Alt path: Direct ALTER_OVL2
+Write YUYV pixels to mmap'd V4L2 buf[0] → call ALTER_OVL2 with GTT offset 0x000000.
+Bypasses V2G_ENABLE if IOH GTT = EMGD GTT address space. **Testing next boot.**
+
+### Slow boot
+`/bin/usleep 75000000` (ppid=1 = Android init). Source is an `init.rc` file — NOT
+init.d (scanned, not found there). Next boot scans `/init.rc` + `/system/init.rc`.
+Fix: replace `75000000` with `5000000` once source identified.
+
+**Full findings:** `ONBOARDING.md`, `docs/v2gbridge-hardware-findings-2026-05-17.md`
 
 ---
 

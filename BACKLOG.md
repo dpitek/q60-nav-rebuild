@@ -1,5 +1,5 @@
 # Q60 Nav — Backlog
-Last reconciled: 2026-05-13 (post PR #1 merge + backlog execution sprint)
+Last reconciled: 2026-05-17 (R1 overlay hardware sprint)
 
 Items not in current scope, ordered by priority. Shipped items have been removed —
 see git log for the full history of merged enhancements.
@@ -30,6 +30,37 @@ see git log for the full history of merged enhancements.
 - SettingsService persistence (JSON, debounced, atomic writes)
 - TripLoggerService (per-cycle GPX)
 - ParkingService ("navigate to car")
+
+---
+
+## 🔬 R1 Overlay — Active (ordered by priority)
+
+### Immediate next boots
+- [ ] **Confirm V2G_DISPLAY_FRAME result** — does DISPLAY_FRAME(0/1/2) prime IOH DMA count?
+  If yes → V2G_ENABLE unblocked. See `Q60_R1_V4L2.LOG` P*-F section.
+- [ ] **Confirm YUYV pixel write + ALTER_OVL2** — P6.5 writes red pixels to `g_buf[0]` then
+  calls ALTER_OVL2 plane=5. If r=0 and screen shows red → direct Sprite C path works.
+- [ ] **Find 75s init.rc delay** — scan `/init.rc`, `/system/init.rc`, `/etc/init/` for
+  `usleep 75000000`. Once found: patch via `debugfs` to `5000000`.
+
+### Once display path confirmed
+- [ ] **Write real UI content** — Replace YUYV test pattern with actual pixel buffer
+  (R1 nav overlay, speed display, etc.)
+- [ ] **Hook R1 client into Qt6 app** — Production R1 client that reads from app state
+  and paints to overlay at runtime
+- [ ] **GMM_ALLOC parameter sweep** — Try type=1 (linear), type=2 (tiled), various flags.
+  Currently rtn=-2 with type=0 flags=0.
+
+### Slow boot (parallel track)
+- [ ] Read `/init.rc` via `debugfs` (once identified as source)
+- [ ] Patch `usleep 75000000` → `usleep 5000000` in init.rc via `debugfs`
+- [ ] Verify boot time improvement (~70s expected)
+
+### Emulator improvements
+- [ ] **EMGD stub responses** for shim — provide realistic response buffers for drmCommandWriteRead
+  calls (cmd 9, 37, 44). See `emu/README.md` for call list.
+- [ ] **V2G_DISPLAY_FRAME stub** in shim — intercept `0xc0047602` and log buf index
+- [ ] **camera_ps emulation** — stub the factory V2G flow so we can test without hardware
 
 ---
 

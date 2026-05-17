@@ -1,5 +1,5 @@
 # Q60 Nav — Code Index
-Generated: 2026-05-13 (post backlog-execution sprint)
+Generated: 2026-05-17 (R1 overlay hardware sprint)
 
 Quick map of what's where. For build status see [STATUS.md](STATUS.md). For features see [README.md](README.md). For factory parity see [docs/feature-parity-audit.md](docs/feature-parity-audit.md).
 
@@ -138,15 +138,72 @@ TurnArrow · SpeedWidget · FanControl · TempZone · TabBar · StatusBar · Wel
 
 ---
 
+## R1 Overlay (`app/src/r1_overlay/`)
+
+Active hardware research track — paints arbitrary content onto EMGD Sprite C overlay
+via `/dev/v2gbridge` without disrupting factory nav.
+
+| File | Role |
+|------|------|
+| [q60nav_v4l2_test.c](app/src/r1_overlay/q60nav_v4l2_test.c) | Main test binary — phases P0 (survey) through P6 (DRM+V2G with pixel write). Deployed to DCU at each boot. |
+| [deploy-thorough.sh](app/src/r1_overlay/deploy-thorough.sh) | Full redeploy: build binary → debugfs write to Slot A → hook injection. Uses Slot B as clean base. Requires `sudo`. |
+| [build-r1.sh](app/src/r1_overlay/build-r1.sh) | Docker i386 alpine build script for sprite_c and probe binaries |
+| [deploy-probe.sh](app/src/r1_overlay/deploy-probe.sh) | Lighter probe-only deploy |
+| [deploy-r1.sh](app/src/r1_overlay/deploy-r1.sh) | R1 production deploy (future — once overlay is working) |
+| [q60nav_sprite_c.c](app/src/r1_overlay/q60nav_sprite_c.c) | Future production R1 overlay client skeleton |
+| [q60nav_r1_probe.c](app/src/r1_overlay/q60nav_r1_probe.c) | Lightweight hardware capability probe |
+
+**Build output:** `/tmp/q60-overnight/r1-build/q60nav_v4l2_test.static`  
+**Logs after boot:** `/Volumes/boot/Q60_R1_V4L2.LOG`, `Q60_KMSG.LOG`, `Q60_HOOK_RAN.TXT`
+
+---
+
+## Emulator (`emu/`)
+
+Docker-based factory daemon emulator for iteration without hardware. See [emu/README.md](emu/README.md).
+Runs i386 factory binaries under QEMU + LD_PRELOAD shim that intercepts `/dev/v2gbridge`,
+`/dev/dri/card0`, `/dev/video0` ioctls and logs them.
+
+---
+
 ## Configs
 - [configs/q60_kernel.config](configs/q60_kernel.config) — full kernel .config
 - [configs/q60_atom_defconfig](configs/q60_atom_defconfig) — base defconfig
 
 ## Documentation
-- [README.md](README.md) — top-level
-- [STATUS.md](STATUS.md) — build state
-- [BACKLOG.md](BACKLOG.md) — post-boot items
+
+### Always-current (read these first)
+- [CLAUDE.md](CLAUDE.md) — session instructions for Claude; deploy cycle, blockers, key facts
+- [ONBOARDING.md](ONBOARDING.md) — live R1 overlay research log (all 12 hardware findings)
+- [README.md](README.md) — project overview, UI, architecture
+- [STATUS.md](STATUS.md) — build state + R1 overlay sprint status
+- [BACKLOG.md](BACKLOG.md) — open items post-boot
+
+### Hardware research
+- [docs/v2gbridge-hardware-findings-2026-05-17.md](docs/v2gbridge-hardware-findings-2026-05-17.md) — full V2G/overlay test findings
+- [docs/plan-r1-v2gbridge-research.md](docs/plan-r1-v2gbridge-research.md) — V2G bridge architecture
+- [docs/plan-r1-sprite-c-design.md](docs/plan-r1-sprite-c-design.md) — Sprite C overlay design
+- [docs/r1-privilege-findings.md](docs/r1-privilege-findings.md) — DRM ioctl permission model
+- [docs/hardware-ground-truth-2026-05-16.md](docs/hardware-ground-truth-2026-05-16.md) — runtime-captured hardware facts
+- [docs/factory-version-baseline.md](docs/factory-version-baseline.md) — factory version table (from diag menu)
+- [docs/oem-boot-security.md](docs/oem-boot-security.md) — boot security model
+- [docs/oem-hidden-functions.md](docs/oem-hidden-functions.md) — factory hidden menu catalog
+
+### Architecture
+- [docs/lower-screen-architecture.md](docs/lower-screen-architecture.md) — lower screen / Integral Switch
+- [docs/powervr-sgx-driver-analysis.md](docs/powervr-sgx-driver-analysis.md) — PowerVR SGX driver verdict (don't build)
 - [docs/boot-safety.md](docs/boot-safety.md) — elilo fallback analysis
-- [docs/hardware-prep.md](docs/hardware-prep.md) — DCU pull + flash procedure
+- [docs/kernel-config-required-fixes.md](docs/kernel-config-required-fixes.md) — required kernel config
 - [docs/feature-parity-audit.md](docs/feature-parity-audit.md) — factory feature gap analysis
+
+### UI
 - [docs/mockup/index.html](docs/mockup/index.html) — interactive HTML prototype
+
+### Other
+- [docs/hardware-day-capture-checklist.md](docs/hardware-day-capture-checklist.md) — J2534 capture session tasks
+- [docs/sd-replacement-deep-dive.md](docs/sd-replacement-deep-dive.md) — SD card replacement research
+- [docs/dcu-sd-replacement-research.md](docs/dcu-sd-replacement-research.md) — DCU SD replacement
+
+### Archive (stale, superseded, or one-time)
+`docs/archive/` — plan-b docs, boot-failure RCA, diagnostic rcS design, initial hardware prep notes.
+Load on demand only.

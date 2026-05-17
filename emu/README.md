@@ -124,3 +124,37 @@ The shim is also a **harness for our own R1 client code**. Build q60nav with
 `-DEMU_BUILD` and a tiny mock-aware path that prefers the shim's faked devices,
 and we can verify our ioctl sequence is exactly right BEFORE deploying to the
 DCU.
+
+## Known ioctls to stub (from live hardware captures 2026-05-17)
+
+These are now confirmed from real hardware — the shim needs response stubs for each:
+
+| ioctl | cmd | Kernel behavior | Needed stub |
+|-------|-----|-----------------|-------------|
+| V2G_ENABLE_BRIDGE | `0xc0047600` | `enable_direct_display_tnc()` — fails if IOH DMA count=0 | Return r=0 after DISPLAY_FRAME called |
+| V2G_DISABLE_BRIDGE | `0xc0047601` | Always r=0 | Already r=0 |
+| V2G_DISPLAY_FRAME | `0xc0047602` | Takes buf index 0/1/2; registers buffer | Return r=0 and set internal buf count = arg |
+| IGD_ALTER_OVL2 | `0xc0c8646f` | 200-byte struct; `{plane, screen, rects, surface}` | Return rtn=0 for planes 3 and 5 |
+| IGD_GMM_ALLOC_REGION | `0xc014644e` | Returns rtn=-2 on hardware | Simulate success for testing |
+| DRM_SET_MASTER | `0x0000641e` | r=0 as root | Return r=0 |
+
+## V2G struct layout (confirmed from kernel messages)
+
+```c
+// V2G_ENABLE struct (8 bytes — driver reads beyond cmd-encoded 4)
+struct v2g_enable_args {
+    uint32_t plane;   // 3 = primary overlay, 5 = Sprite C
+    uint32_t screen;  // EMGD port: 2=LVDS, 4=SDVO; or 0/1 index
+};
+
+// V2G_DISPLAY_FRAME arg (4 bytes)
+uint32_t buf_index;  // 0, 1, or 2 — IOH DMA buffer index
+```
+
+## camera_ps vs emgdhmid (correction from 2026-05-17)
+
+Earlier documentation assumed `emgdhmid` manages the V2G bridge. **This is wrong.**
+`emgdhmid` only performs EMGD DRM initialization and holds DRM master.
+`camera_ps` is the factory process that opens `/dev/v2gbridge` and calls V2G_ENABLE
+for the rearview camera. The shim should intercept `camera_ps` binaries specifically
+when testing V2G flows.

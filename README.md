@@ -260,7 +260,7 @@ The prototype includes a floating sim panel for testing without hardware:
 |---|---|
 | Architecture | i686 (32-bit x86, Bonnell microarchitecture) |
 | ISA extensions | MMX, SSE, SSE2, SSE3, SSSE3 — **no SSE4, no AVX** |
-| RAM | ~1 GB |
+| RAM | 2 GB DDR2 (confirmed via runtime probe 2026-05-16) |
 | eMMC | `/dev/mmcblk0` — 9 partitions |
 | Boot firmware | UEFI (elilo.efi, 2013 vintage) |
 | CAN controllers | 2× Bosch M_CAN (socketcan: can0/can1/can2) |
