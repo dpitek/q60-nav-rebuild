@@ -1,5 +1,5 @@
 # Q60 Nav Rebuild — Build Status
-Last updated: 2026-05-13 (post backlog-execution sprint)
+Last updated: 2026-05-17 (R1 overlay hardware research sprint)
 
 ---
 
@@ -110,14 +110,64 @@ routines + DTC read/clear/parse + rain auto-up wiper handler in VehicleService.
 
 ---
 
+## 🔬 R1 Overlay — Active Hardware Sprint (2026-05-15 → 2026-05-17)
+
+**Goal:** Paint arbitrary UI content onto EMGD Sprite C overlay plane (`/dev/v2gbridge`)
+without disrupting the factory nav system.
+
+### Confirmed working
+| Component | Status |
+|-----------|--------|
+| Boot hook (android-mount.sh patch via debugfs) | ✅ rc=0 every boot |
+| V4L2 REQBUFS + STREAMON on `/dev/video0` | ✅ 3 GTT buffers at 0x0/0xe9000/0x1d2000 |
+| IGD_ALTER_OVL2 plane=5 (Sprite C), plane=3 | ✅ r=0, no DRM master needed |
+| DRM_SET_MASTER as root (no process kill) | ✅ r=0 |
+| V2G_DISABLE_BRIDGE | ✅ always r=0 |
+| Nav system stability | ✅ zero crashes since emgdhmid-kill removed |
+| V2G struct layout confirmed | ✅ `{uint32_t plane, uint32_t screen}` 8-byte |
+| Binary build + deploy cycle | ✅ <5 min end-to-end |
+
+### Current blocker
+`V2G_ENABLE_BRIDGE` (`0xc0047600`) → `enable_direct_display_tnc() returned -22!`
+Root cause: **IOH DMA buffer count = 0**. V2G bridge gates on active camera DMA frames.
+Without a live rearview camera signal, count stays 0 regardless of V4L2 STREAMON.
+
+`V2G_DISPLAY_FRAME` (`0xc0047602`) was discovered — takes buffer index 0/1/2. May prime
+the count. **Testing next boot.**
+
+### Alt path: Direct ALTER_OVL2
+Write YUYV pixels to mmap'd V4L2 buf[0] → call ALTER_OVL2 with GTT offset 0x000000.
+Bypasses V2G_ENABLE if IOH GTT = EMGD GTT address space. **Testing next boot.**
+
+### Slow boot
+`/bin/usleep 75000000` (ppid=1 = Android init). Source is an `init.rc` file — NOT
+init.d (scanned, not found there). Next boot scans `/init.rc` + `/system/init.rc`.
+Fix: replace `75000000` with `5000000` once source identified.
+
+**Full findings:** `ONBOARDING.md`, `docs/v2gbridge-hardware-findings-2026-05-17.md`
+
+---
+
 ## 🔄 In Progress
 
 | Item | Status | Notes |
 |---|---|---|
 | Vector tiles (`.mbtiles`) | ✅ Built | `output/vector-tiles/nc.mbtiles` 464MB |
-| Rootfs image | ✅ Built | `output/q60nav-rootfs.img` 3GB ext4, 1.3GB used |
+| Rootfs image | ⚠️ **FOUND DEFECTIVE 2026-05-15** | `output/q60nav-rootfs.img` exists at 3GB, but missing `/sbin/init`, `/bin/sh`, `/lib/ld-linux.so.2`, glibc. Only application overlay (q60nav binary, Qt6 libs) — no base userland. See [docs/boot-failure-rca.md](docs/boot-failure-rca.md). Stage 1 minimal rootfs (busybox + glibc) used for bring-up. |
+| Kernel bzImage | ⚠️ **FOUND DEFECTIVE 2026-05-15** | 4.19 MB exceeds elilo ia32's 4 MB hardcoded limit → silent truncation → black screen on real DCU. Missing `DRM_GMA500/600`, `X86_INTEL_MID`, `FB_SIMPLE`. Rebuilt 2026-05-16 with XZ compression → 3.03 MB. See [docs/kernel-config-required-fixes.md](docs/kernel-config-required-fixes.md). |
 | Phase 3: MapLibre EGL wiring | ✅ Live | `HeadlessFrontend` (mbgl) owns EGL pbuffer + Mesa swrast internally. Build flag `-DWITH_MAPLIBRE=ON` enabled in `scripts/build-app.sh`. Simulator confirmed map renders. |
 | Geocoder DB | ✅ Ready to build | Run `scripts/build-geocoder-db.sh` (~5-10 min, Python3 on Mac) |
+
+## 🔥 First-boot attempt (2026-05-15) — black screen, root-caused 2026-05-16
+
+Hardware boot of the SD-deployed image produced a complete black screen with no recovery. Five research agents identified two simultaneous root causes:
+
+1. **elilo silently truncates kernels >4 MB** (ia32 hardcoded limit). Our bzImage was 4.19 MB → corrupt setup header → silent CPU hang.
+2. **Kernel built without `DRM_GMA500/600`** — no display driver for Atom E6xx Oaktrail. Even if elilo loaded a clean kernel, LVDS would stay black.
+
+Fix shipped: kernel rebuilt with XZ compression (3.03 MB), `DRM_GMA500=y`, `DRM_GMA600=y`, `X86_INTEL_MID=y`, `SFI=y`, `INTEL_SCU_IPC=y`, `FB_SIMPLE=y`, `BACKLIGHT_CLASS_DEVICE=y`, `CMDLINE_BOOL=y` (embedded cmdline so bootloader cmdline is moot), bloat stripped. Diagnostic rcS at [rootfs/etc/init.d/rcS.diag](../rootfs/etc/init.d/rcS.diag) writes `BOOT_STAGE_NN.TXT` to FAT32 at each milestone for Mac-readable triage.
+
+Full RCA: [docs/boot-failure-rca.md](docs/boot-failure-rca.md). Required config: [docs/kernel-config-required-fixes.md](docs/kernel-config-required-fixes.md). Rationale for diagnostic rcS: [docs/diagnostic-rcS-design.md](docs/diagnostic-rcS-design.md).
 
 ---
 
@@ -135,7 +185,7 @@ routines + DTC read/clear/parse + rain auto-up wiper handler in VehicleService.
 7. **[hardware]** GPS UART probe — ✅ **CONFIRMED real UART NMEA receiver** via factory diag (`Sensor Information` screen, 2026-05-14). HDOP=6, 3D fix, 8+ sats locked. S10-gpsd probes ttyPCH0..3 then ttyS0 — correct path.
 8. **[hardware]** Weston LVDS — dynamic detection will run at boot. **2nd display has its own controller firmware** (HW 000000 / SW 020024 per factory Version Info pg 6/8); likely enumerates on separate DRM card. `detect-display.sh` iterates all card*-* — verify both screens appear.
 9. **[hardware]** OEM hidden-menu exploration — ✅ **DONE 2026-05-14**, captures in `diag-menu/`. Findings: [`docs/factory-version-baseline.md`](docs/factory-version-baseline.md). Updated [`docs/oem-hidden-functions.md`](docs/oem-hidden-functions.md) with confirmed screen layouts.
-10. **[hardware]** `cat /proc/meminfo` on the live unit. **Settles the 1GB-vs-2GB DDR2 question in 30 seconds** (deep research 2026-05-14: 80% confidence on 1GB, MEDIUM-HIGH; no public teardown confirms a specific Q60 SKU). Current memory tuning (zram 256MB, ulimit -v 512MB, log rotation) is sized for 1GB. If `MemTotal` ≥ 1.8GB: drop NO_CACHEGEN, expand Valhalla cache to 256MB, disable zram. If `MemTotal` < 600MB: pull Valhalla entirely, gut MapLibre.
+10. **[hardware]** ~~`cat /proc/meminfo` on the live unit~~ ✅ **RESOLVED 2026-05-16** — runtime probe inside factory env captured **MemTotal = 2,037,248 kB ≈ 2 GB DDR2**. Project tuning should now drop zram (was sized for 1GB), expand Valhalla cache to 256MB, allow generous Mesa swrast buffers, remove NO_CACHEGEN. See [`docs/hardware-ground-truth-2026-05-16.md`](docs/hardware-ground-truth-2026-05-16.md) for the full capture.
 
 ### Factory baseline (Doug's specific DCU, captured 2026-05-14)
 

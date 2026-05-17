@@ -3,8 +3,8 @@
 // 5-tab bottom nav: Home(0) Audio(1) Phone(2) Climate(3) Vehicle(4)
 // Tab 7 = reverse camera (auto-switch only, not in nav bar)
 // Auto-switches on call / reverse — all StatusBridge signals preserved exactly.
-import QtQuick
-import QtQuick.Controls
+import QtQuick 2.15
+import QtQuick.Controls 2.15
 import "../components"
 
 Item {

@@ -2,8 +2,8 @@
 // Full-screen sub-view shown after a destination is picked. Summarises
 // total time/distance, route options (Fastest/Shortest/Eco), avoid toggles,
 // and offers Start / Cancel. Joystick navigable; back-button pops.
-import QtQuick
-import QtQuick.Controls
+import QtQuick 2.15
+import QtQuick.Controls 2.15
 
 Item {
     id: root

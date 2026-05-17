@@ -1,5 +1,5 @@
 // TabBar.qml — Bottom tab bar for lower screen
-import QtQuick
+import QtQuick 2.15
 
 Item {
     id: root

@@ -3,8 +3,8 @@
 // All StatusBridge / NavigationService bindings preserved exactly.
 // Expanded: destination entry (recents, favorites, search, route options sheet)
 //           Active route: stop nav + route options inline expander
-import QtQuick
-import QtQuick.Controls
+import QtQuick 2.15
+import QtQuick.Controls 2.15
 import "../components"
 
 Item {

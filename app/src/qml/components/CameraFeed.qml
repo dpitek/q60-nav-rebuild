@@ -2,8 +2,8 @@
 // Loaded via Loader in RearCameraView so that if QtMultimedia 6.6
 // is unavailable on this Mesa softpipe build the Loader.status goes
 // to Loader.Error cleanly, activating the placeholder instead.
-import QtQuick
-import QtMultimedia 6.6
+import QtQuick 2.15
+import QtMultimedia 5.15
 
 Item {
     id: root
@@ -15,7 +15,7 @@ Item {
         autoPlay:  true
         loops:     MediaPlayer.Infinite
 
-        onErrorOccurred: {
+        onError: {
             console.log("[CameraFeed] MediaPlayer error:", errorString)
         }
     }

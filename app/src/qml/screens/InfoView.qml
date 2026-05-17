@@ -1,7 +1,7 @@
 // InfoView — Lower screen Info tab
 // Cards: Weather · Fuel Prices · Parking Location · Trip History
 // Weather bound to WeatherService (OWM). Fuel bound to FuelService (EIA).
-import QtQuick
+import QtQuick 2.15
 
 Item {
     id: root

@@ -1,0 +1,15 @@
+# Q60 DSU emulator — Wind River Linux 2.6.37 i386 factory rootfs
+# Built from tarballs to bypass macOS xattr probing during build context transfer.
+
+FROM --platform=linux/386 scratch
+
+# Slot A: complete factory rootfs (Wind River Linux + DENSO middleware libs + EMGD userland)
+ADD slot-a.tar /
+
+# /home/naviwork: DENSO factory userland (PS_* daemons + libsvgr + libhmi-cntl-* etc)
+ADD naviwork.tar /home/naviwork/
+
+LABEL q60.emulator.version="0.1"
+LABEL q60.emulator.source="DSU backup.img readonly extract 2026-05-16"
+
+CMD ["/bin/bash"]

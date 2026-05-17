@@ -21,7 +21,7 @@
 //   contacts.recents         // ListModel for recent call rows
 //   contacts.lookupCallerName("555-0142")  // -> "Alex Chen" or the raw number
 //
-import QtQuick
+import QtQuick 2.15
 
 Item {
     id: root

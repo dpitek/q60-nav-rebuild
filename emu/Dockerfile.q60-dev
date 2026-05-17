@@ -1,0 +1,21 @@
+# q60-dsu-dev: factory rootfs + debian dev tools, kept ISOLATED so factory libs aren't shadowed.
+FROM --platform=linux/386 i386/debian:bullseye AS tools
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        strace ltrace coreutils gawk grep sed less procps findutils \
+        binutils file gdb bash
+
+FROM q60-dsu:latest
+COPY --from=tools /usr/bin /opt/dev-tools/bin/
+COPY --from=tools /bin /opt/dev-tools/bin/
+COPY --from=tools /lib/i386-linux-gnu /opt/dev-tools/lib/i386-linux-gnu/
+COPY --from=tools /usr/lib/i386-linux-gnu /opt/dev-tools/lib/i386-linux-gnu/
+
+# Wrapper script — invoke debian tools via "/dt <command>" so their LD_LIBRARY_PATH
+# only takes effect for that one process and doesn't leak to factory binaries.
+COPY dt-wrap.sh /dt
+RUN /opt/dev-tools/bin/chmod 755 /dt 2>/dev/null || true
+
+# Default PATH: factory only. Use /dt for debian tools.
+ENV PATH=/usr/sbin:/usr/bin:/sbin:/bin
+CMD ["/bin/bash"]

@@ -9,8 +9,8 @@
 //   4. Per-profile edit screen (all settings)
 //   5. Delete with confirmation
 
-import QtQuick
-import QtQuick.Controls
+import QtQuick 2.15
+import QtQuick.Controls 2.15
 
 Item {
     id: root
