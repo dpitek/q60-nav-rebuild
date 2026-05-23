@@ -1,5 +1,5 @@
 /*
- * q60nav_v4l2_test.c — v4: comprehensive single-boot test battery.
+ * q60nav_v4l2_test.c — v6: comprehensive single-boot test battery.
  *
  * All unknowns resolved in one boot. Phases run sequentially, most
  * non-destructive first, DRM-master takeover last. Every phase captures
@@ -179,6 +179,7 @@ static int g_vid=-1, g_drm=-1;
 static unsigned int g_nbufs=0;
 static void *g_buf[4]; static unsigned int g_blen[4], g_boff[4];
 static unsigned int g_fmt_w=800, g_fmt_h=480, g_fmt_pitch=1600, g_fmt_sz=768000;
+static unsigned int g_fmt_pf=V4L2_PIX_FMT_YUYV;
 
 /* ══════════════════════════════════════════════════════════════════════════
  * P0 — Survey
@@ -642,8 +643,9 @@ static int p2_v4l2(void) {
     xi(g_vid,VIDIOC_S_FMT,&fmt,"S_FMT 800x480 YUYV");
     g_fmt_w=fmt.fmt.pix.width; g_fmt_h=fmt.fmt.pix.height;
     g_fmt_pitch=fmt.fmt.pix.bytesperline; g_fmt_sz=fmt.fmt.pix.sizeimage;
+    g_fmt_pf=fmt.fmt.pix.pixelformat;
     LOG("  kernel accepted: %ux%u pitch=%u sz=%u pf=0x%08x",
-        g_fmt_w,g_fmt_h,g_fmt_pitch,g_fmt_sz,fmt.fmt.pix.pixelformat);
+        g_fmt_w,g_fmt_h,g_fmt_pitch,g_fmt_sz,g_fmt_pf);
 
     /* REQBUFS */
     struct v4l2_requestbuffers req={.count=3,.type=V4L2_BUF_TYPE_VIDEO_CAPTURE,.memory=V4L2_MEMORY_MMAP};
@@ -1153,22 +1155,28 @@ static void p6_drm_nokill(void) {
      * space as EMGD overlay surfaces. If yes, we can paint Sprite C without
      * V2G_ENABLE — bypassing the camera DMA requirement entirely. */
     if (g_nbufs>0 && g_buf[0] && g_blen[0]>0) {
-        LOG("  --- P6.5: YUYV red -> buf[0] + ALTER_OVL2 plane=5 ---");
-        /* Fill buf[0] with YUYV red: Y=76 U=85 Y=76 V=255 (R=255 G=0 B=0) */
+        LOG("  --- P6.5: red fill -> buf[0] + ALTER_OVL2 plane=5 (pf=0x%08x) ---", g_fmt_pf);
         unsigned char *pix=(unsigned char *)g_buf[0];
         unsigned int nb=g_blen[0];
-        for (unsigned int i=0; i<nb; i+=4) {
-            pix[i+0]=76; pix[i+1]=85; pix[i+2]=76; pix[i+3]=255;
+        if (g_fmt_pf == V4L2_PIX_FMT_RGB16) {
+            /* RGB565 little-endian: red = 0xF800 = bytes 0x00, 0xF8 */
+            for (unsigned int i=0; i+1<nb; i+=2) { pix[i]=0x00; pix[i+1]=0xF8; }
+            LOG("  buf[0] filled RGB565 red (%u bytes gtt=0x%x)",nb,g_boff[0]);
+        } else {
+            /* YUYV red: Y=76 U=85 Y=76 V=255 */
+            for (unsigned int i=0; i<nb; i+=4) {
+                pix[i+0]=76; pix[i+1]=85; pix[i+2]=76; pix[i+3]=255;
+            }
+            LOG("  buf[0] filled YUYV red (%u bytes gtt=0x%x)",nb,g_boff[0]);
         }
         __sync_synchronize(); /* ensure GTT sees writes before ioctl */
-        LOG("  buf[0] filled with YUYV red (%u bytes gtt=0x%x)",nb,g_boff[0]);
         /* re-open DRM for this test (dropped master above) */
         int drm2=open("/dev/dri/card0",O_RDWR);
         if (drm2>=0) {
             ioctl(drm2,DRM_SET_MASTER,0);
             unsigned int ab2[50];
             fill_ovl2(ab2,g_boff[0],g_fmt_w,g_fmt_h,g_fmt_pitch,
-                V4L2_PIX_FMT_YUYV,1,
+                g_fmt_pf,1,
                 0,0,g_fmt_w-1,g_fmt_h-1,
                 0,0,g_fmt_w-1,g_fmt_h-1,
                 0,5); /* plane=5 Sprite C */
@@ -1179,13 +1187,73 @@ static void p6_drm_nokill(void) {
             if (r2==0) { LOG("  SUCCESS -- watching 5s (screen should show red)"); sleep(5); }
             /* disable overlay */
             fill_ovl2(ab2,g_boff[0],g_fmt_w,g_fmt_h,g_fmt_pitch,
-                V4L2_PIX_FMT_YUYV,0,
+                g_fmt_pf,0,
                 0,0,g_fmt_w-1,g_fmt_h-1,
                 0,0,g_fmt_w-1,g_fmt_h-1,
                 0,5);
             ioctl(drm2,IGD_ALTER_OVL2,ab2);
             ioctl(drm2,DRM_DROP_MASTER,0);
             close(drm2);
+        }
+    }
+
+    /* --- P6.6: GMM_ALLOC type sweep + ALTER if a valid surface is obtained ---
+     * Previous boots: type=0,flags=0 → rtn=-2 (EMGD rejected).
+     * Sweep type 0-8 and flags 0/1 to find what EMGD accepts. */
+    {
+        int drm3=open("/dev/dri/card0",O_RDWR);
+        if (drm3>=0) {
+            ioctl(drm3,DRM_SET_MASTER,0);
+            LOG("  --- P6.6: GMM_ALLOC type sweep ---");
+            static const unsigned int gmm_types[]={0,1,2,3,4,8,16,32,64,128,0};
+            int found_gmm=0;
+            unsigned long gmm_surf=0;
+            for (int ti=0; gmm_types[ti]!=0 || ti==0; ti++) {
+                for (int fi=0; fi<2; fi++) {
+                    struct igd_gmm_alloc ga={0};
+                    ga.size=g_fmt_sz ? g_fmt_sz : 800*480*2;
+                    ga.type=gmm_types[ti];
+                    ga.flags=fi;
+                    int gr=ioctl(drm3,IGD_GMM_ALLOC_IOCTL,&ga);
+                    LOG("    GMM type=%u flags=%d: r=%d rtn=%d off=0x%lx",
+                        gmm_types[ti],fi,gr,ga.rtn,ga.offset);
+                    if (!found_gmm && gr==0 && ga.rtn==0 && ga.offset) {
+                        found_gmm=1; gmm_surf=ga.offset;
+                    }
+                }
+                if (found_gmm) break;
+            }
+            if (found_gmm) {
+                LOG("  GMM success: off=0x%lx — filling RGB565 red + ALTER plane=5",gmm_surf);
+                /* mmap the GMM surface via DRM fd at offset=gmm_surf */
+                void *gp=mmap(NULL,g_fmt_sz?g_fmt_sz:800*480*2,
+                              PROT_READ|PROT_WRITE,MAP_SHARED,drm3,gmm_surf);
+                if (gp!=MAP_FAILED) {
+                    unsigned char *gpp=(unsigned char *)gp;
+                    unsigned int gsz=g_fmt_sz?g_fmt_sz:800*480*2;
+                    /* RGB565 red = 0xF800 = bytes 0x00,0xF8 LE */
+                    for (unsigned int i=0;i+1<gsz;i+=2){gpp[i]=0x00;gpp[i+1]=0xF8;}
+                    __sync_synchronize();
+                    munmap(gp,gsz);
+                    LOG("  GMM surface filled red");
+                }
+                unsigned int abg[50];
+                fill_ovl2(abg,gmm_surf,g_fmt_w,g_fmt_h,g_fmt_pitch,
+                    g_fmt_pf,1,
+                    0,0,g_fmt_w-1,g_fmt_h-1,
+                    0,0,g_fmt_w-1,g_fmt_h-1,
+                    0,5);
+                int rg=ioctl(drm3,IGD_ALTER_OVL2,abg);
+                LOG("  ALTER GMM plane=5: r=%d rtn=%d errno=%d",rg,(int)abg[0],errno);
+                kmsg_dump("P6.6-GMM");
+                if (rg==0) { LOG("  P6.6 SUCCESS watching 5s"); sleep(5); }
+                /* disable */
+                fill_ovl2(abg,gmm_surf,g_fmt_w,g_fmt_h,g_fmt_pitch,g_fmt_pf,0,
+                    0,0,g_fmt_w-1,g_fmt_h-1,0,0,g_fmt_w-1,g_fmt_h-1,0,5);
+                ioctl(drm3,IGD_ALTER_OVL2,abg);
+            }
+            ioctl(drm3,DRM_DROP_MASTER,0);
+            close(drm3);
         }
     }
 
@@ -1367,7 +1435,7 @@ int main(int argc, char **argv) {
     if (kmsgf) setvbuf(kmsgf,NULL,_IOLBF,0);
 
     time_t t=time(NULL);
-    LOG("=== Q60 R1 v4 comprehensive test — %s",ctime(&t));
+    LOG("=== Q60 R1 v6 comprehensive test — %s",ctime(&t));
     kmsg_dump("BOOT-IMMEDIATE");
     LOG("pid=%d uid=%d euid=%d",(int)getpid(),(int)getuid(),(int)geteuid());
 
@@ -1388,7 +1456,7 @@ int main(int argc, char **argv) {
         close(g_vid);
     }
 
-    LOG("\n=== v4 done ===");
+    LOG("\n=== v6 done ===");
     if (logf)  { fclose(logf);  logf  = NULL; }
     if (kmsgf) { fclose(kmsgf); kmsgf = NULL; }
 
