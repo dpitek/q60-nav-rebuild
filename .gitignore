@@ -1,3 +1,6 @@
+# Claude Code tooling
+.claude/
+
 # Build outputs — large binaries and generated files not tracked
 output/
 # Geocoder SQLite DB — large binary built by scripts/build-geocoder-db.sh
