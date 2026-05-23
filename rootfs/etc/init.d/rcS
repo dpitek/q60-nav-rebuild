@@ -1,180 +1,526 @@
 #!/bin/sh
-# rcS — Phase 1 Diagnostic Init for Q60 Nav Rebuild on Linux 4.19
-# Goal: probe gma500/GMA600, write gate results to /boot/ (FAT32).
-# IMPORTANT: must not exit non-zero. Every fallible op uses || true.
+# rcS — Phase 1 Maximum-Diagnostic Init for Q60 Nav Rebuild (Linux 4.19, v16)
+#
+# Goal: collect EVERY scrap of forensic data per boot AND survive failures in
+# the /boot (FAT32) mount path. Markers go to BOTH ext4 rootfs (always
+# available — kernel mounted it before init) AND /boot (best-effort).
+#
+# Hard rule: NEVER exit non-zero. Every fallible op wraps with || true.
+
+# ── STAGE 0: FIRST OPERATION — PROVE THE rcS REACHED USERSPACE ───────────
+# This writes to "/" which is the rootfs (Slot B, ext4), already mounted by
+# the kernel before /sbin/init ran. If this marker survives, we know the
+# kernel reached userspace. Doug reads via Docker after pulling the card.
+echo "rcS reached at $(date 2>/dev/null) kernel=$(uname -r 2>/dev/null)" \
+    > /RCS_REACHED.MARKER 2>/dev/null
+sync 2>/dev/null
+# Also keep a per-stage marker log on the rootfs (persistent)
+mkdir -p /diag-rootfs 2>/dev/null
+echo "S0 $(date 2>/dev/null) rcS started" > /diag-rootfs/00_rcs_reached.txt 2>/dev/null
+sync 2>/dev/null
 
 STAGE=/tmp/q60_stages.log
-ts() { date '+%H:%M:%S' 2>/dev/null || echo '?'; }
-log() { echo "[$1] $(ts) $2" >> "$STAGE"; echo "[$1] $2" 2>/dev/null || true; }
+DIAG=/boot/diag
+DIAG_ROOT=/diag-rootfs
+ts() { date '+%H:%M:%S.%N' 2>/dev/null || echo '?'; }
 
+# Every log() writes to console + stage log AND drops markers in TWO places:
+#   1. /diag-rootfs/STAGE_NN.txt on rootfs (always works once kernel ran init)
+#   2. /boot/BOOT_STAGE_NN.TXT on FAT32 (only after Stage 2 mount succeeds)
+# Either survives a hang at any later stage.
+stage_marker() {
+    # Persistent rootfs marker (always works)
+    echo "[$1] $(ts) $2" > "${DIAG_ROOT}/STAGE_$1.txt" 2>/dev/null || true
+    # FAT32 marker (only when /boot is mounted)
+    if grep -q ' /boot ' /proc/mounts 2>/dev/null; then
+        echo "[$1] $(ts) $2" > "/boot/BOOT_STAGE_$1.TXT" 2>/dev/null || true
+    fi
+    sync 2>/dev/null || true
+}
+log() {
+    echo "[$1] $(ts) $2" >> "$STAGE" 2>/dev/null || true
+    echo "[$1] $(ts) $2" >> "${DIAG_ROOT}/_stages.log" 2>/dev/null || true
+    echo "[$1] $2" 2>/dev/null || true
+    stage_marker "$1" "$2"
+}
+
+# Helper: dump a path's content to a diag file. Quiet on failure.
+dump() {
+    local src="$1" dst="$2"
+    [ -e "$src" ] || { echo "(absent)" > "${DIAG}/${dst}" 2>/dev/null; return 0; }
+    cat "$src" > "${DIAG}/${dst}" 2>/dev/null || true
+}
+# Helper: run a command, write output to a diag file.
+run() {
+    local dst="$1"; shift
+    "$@" > "${DIAG}/${dst}" 2>&1 || true
+}
+
+############################################################################
 # ── Stage 1: Essential virtual filesystems ────────────────────────────────
+############################################################################
 mount -t proc proc /proc 2>/dev/null || true
 mount -t sysfs sysfs /sys 2>/dev/null || true
-# DEVTMPFS_MOUNT=y means kernel pre-populates /dev before init — skip if so
-mountpoint -q /dev 2>/dev/null || mount -t devtmpfs devtmpfs /dev 2>/dev/null || true
+grep -q ' /dev ' /proc/mounts 2>/dev/null || mount -t devtmpfs devtmpfs /dev 2>/dev/null || true
 mount -t tmpfs -o nosuid,nodev,size=32M,mode=755 tmpfs /run 2>/dev/null || true
 mount -t tmpfs -o nosuid,nodev,size=64M tmpfs /tmp 2>/dev/null || true
 mkdir -p /dev/pts && mount -t devpts devpts /dev/pts 2>/dev/null || true
-log S1 "filesystems mounted"
+log S1 "virtual filesystems mounted"
 
-# ── Stage 2: Boot partition mount (FAT32 → /boot) ────────────────────────
-# SD card may appear as mmcblk0, mmcblk1, or mmcblk2 depending on eMMC probe order.
-# Try p1 on each MMC device; mount whichever FAT32 partition answers first.
+############################################################################
+# ── Stage 1.5: pstore — capture any prior-boot ramoops dump ──────────────
+############################################################################
+mount -t pstore pstore /sys/fs/pstore 2>/dev/null || true
+if grep -q '/sys/fs/pstore' /proc/mounts 2>/dev/null; then
+    mkdir -p /tmp/pstore-saved
+    cp /sys/fs/pstore/* /tmp/pstore-saved/ 2>/dev/null || true
+    PSTORE_COUNT=$(ls /tmp/pstore-saved 2>/dev/null | wc -l)
+    log S1.5 "pstore captured (${PSTORE_COUNT} entries)"
+else
+    log S1.5 "pstore mount unavailable"
+fi
+
+############################################################################
+# ── Stage 2: Mount /boot (FAT32) — log markers must land here ────────────
+############################################################################
 BOOT_DEV=""
 i=0
 while [ $i -lt 15 ]; do
-    for dev in /dev/mmcblk0p1 /dev/mmcblk1p1 /dev/mmcblk2p1; do
+    for dev in /dev/mmcblk0p1 /dev/mmcblk1p1 /dev/mmcblk2p1 /dev/vda1 /dev/sda1 /dev/sdb1; do
         if [ -b "$dev" ]; then
-            mount -t vfat -o rw,relatime "$dev" /boot 2>/dev/null && \
-                mountpoint -q /boot 2>/dev/null && { BOOT_DEV="$dev"; break 2; }
+            mount -t vfat "$dev" /boot 2>/dev/null
+            if grep -q ' /boot ' /proc/mounts 2>/dev/null; then
+                BOOT_DEV="$dev"; break 2
+            fi
         fi
     done
     sleep 1
     i=$((i+1))
 done
-[ -n "$BOOT_DEV" ] && log S2 "boot mounted from $BOOT_DEV after ${i}s" || log S2 "CRITICAL: /boot mount FAILED — tried mmcblk0-2p1 for ${i}s"
+if [ -n "$BOOT_DEV" ]; then
+    log S2 "boot mounted from $BOOT_DEV after ${i}s"
+else
+    log S2 "CRITICAL: /boot mount FAILED after ${i}s"
+    # No /boot → no diagnostic output possible. Continue anyway so failsafe stays alive.
+fi
 
-# ── Stage 3: IMMEDIATELY restore elilo.conf to default=logan1 ────────────
-# First priority — ensures car recovers even if rest of rcS panics
-if mountpoint -q /boot 2>/dev/null; then
+############################################################################
+# ── Stage 3: FAILSAFE — restore default=logan1 IMMEDIATELY ───────────────
+############################################################################
+if grep -q ' /boot ' /proc/mounts 2>/dev/null; then
     sed -i 's/^default=.*/default=logan1/' /boot/elilo.conf 2>/dev/null || true
     sync 2>/dev/null || true
-    log S3 "elilo.conf restored: default=logan1"
+    log S3 "elilo.conf restored: default=logan1 (failsafe armed)"
 else
-    log S3 "CRITICAL: /boot not mounted — elilo.conf NOT restored, car will loop!"
+    log S3 "CRITICAL: elilo.conf NOT restored — next boot will retry q60nav"
 fi
 
-# ── Stage 4: Boot counter and watchdog ───────────────────────────────────
+############################################################################
+# ── Stage 4: Boot counter + watchdog magic-close ─────────────────────────
+############################################################################
 rm -f /boot/q60_boot_attempts 2>/dev/null || true
-# Magic-close any BIOS-pre-armed hardware watchdog
 if [ -e /dev/watchdog ]; then
     printf 'V' > /dev/watchdog 2>/dev/null || true
-    log S4 "watchdog magic-close sent"
+    log S4 "watchdog magic-close sent to /dev/watchdog"
 else
-    log S4 "no /dev/watchdog (expected for diagnostic)"
+    log S4 "no /dev/watchdog present (expected for diagnostic)"
 fi
 
-# ── Stage 5: Hardware inventory (before DRM probe) ───────────────────────
+############################################################################
+# ── Stage 5: Set up /boot/diag/ tree for the dumps ───────────────────────
+############################################################################
+mkdir -p ${DIAG}/proc ${DIAG}/sys ${DIAG}/pci ${DIAG}/mmc ${DIAG}/drm \
+         ${DIAG}/block ${DIAG}/cpu ${DIAG}/watchdog ${DIAG}/dmesg ${DIAG}/pstore \
+         2>/dev/null || true
+log S5 "diag tree created at ${DIAG}/"
+
+############################################################################
+# ── Stage 6: /proc dumps — kernel-visible system state ───────────────────
+############################################################################
+dump /proc/cmdline       proc/cmdline.txt
+dump /proc/cpuinfo       proc/cpuinfo.txt
+dump /proc/meminfo       proc/meminfo.txt
+dump /proc/iomem         proc/iomem.txt
+dump /proc/ioports       proc/ioports.txt
+dump /proc/interrupts    proc/interrupts.txt
+dump /proc/modules       proc/modules.txt
+dump /proc/filesystems   proc/filesystems.txt
+dump /proc/partitions    proc/partitions.txt
+dump /proc/devices       proc/devices.txt
+dump /proc/fb            proc/fb.txt
+dump /proc/mounts        proc/mounts.txt
+dump /proc/uptime        proc/uptime.txt
+dump /proc/version       proc/version.txt
+dump /proc/swaps         proc/swaps.txt
+dump /proc/dma           proc/dma.txt
+dump /proc/loadavg       proc/loadavg.txt
+dump /proc/buddyinfo     proc/buddyinfo.txt
+dump /proc/zoneinfo      proc/zoneinfo.txt
+dump /proc/vmstat        proc/vmstat.txt
+dump /proc/misc          proc/misc.txt
+dump /proc/stat          proc/stat.txt
+dump /proc/locks         proc/locks.txt
+dump /proc/diskstats     proc/diskstats.txt
+dump /proc/cgroups       proc/cgroups.txt
+dump /proc/kallsyms      proc/kallsyms-head.txt  # full is huge; tail at S6.5
+[ -e /proc/config.gz ] && zcat /proc/config.gz > ${DIAG}/proc/config.txt 2>/dev/null || \
+    cp /proc/config.gz ${DIAG}/proc/config.gz 2>/dev/null || true
+log S6 "/proc dumps captured ($(ls ${DIAG}/proc 2>/dev/null | wc -l) files)"
+
+############################################################################
+# ── Stage 7: PCI deep dump — every device, every register ────────────────
+############################################################################
+PCI_COUNT=0
+for d in /sys/bus/pci/devices/*/; do
+    [ -d "$d" ] || continue
+    BDF=$(basename "$d")
+    PDIR=${DIAG}/pci/${BDF}
+    mkdir -p "$PDIR" 2>/dev/null
+    dump "${d}vendor"            "pci/${BDF}/vendor.txt"
+    dump "${d}device"            "pci/${BDF}/device.txt"
+    dump "${d}class"             "pci/${BDF}/class.txt"
+    dump "${d}subsystem_vendor"  "pci/${BDF}/subsystem_vendor.txt"
+    dump "${d}subsystem_device"  "pci/${BDF}/subsystem_device.txt"
+    dump "${d}resource"          "pci/${BDF}/resource.txt"
+    dump "${d}irq"               "pci/${BDF}/irq.txt"
+    dump "${d}enable"            "pci/${BDF}/enable.txt"
+    dump "${d}modalias"          "pci/${BDF}/modalias.txt"
+    dump "${d}uevent"            "pci/${BDF}/uevent.txt"
+    # Raw config space — hex dump for forensic analysis (256 bytes typical)
+    if [ -r "${d}config" ]; then
+        od -An -tx1 -v "${d}config" 2>/dev/null > "${PDIR}/config.hex" || true
+    fi
+    # Driver binding
+    if [ -L "${d}driver" ]; then
+        readlink "${d}driver" > "${PDIR}/driver.txt" 2>/dev/null || true
+    else
+        echo "(unbound)" > "${PDIR}/driver.txt"
+    fi
+    PCI_COUNT=$((PCI_COUNT+1))
+done
+log S7 "PCI deep dump: ${PCI_COUNT} devices captured"
+
+# Compact summary that matches the R1 baseline format
 {
-    echo "=== Q60 Phase 1 Hardware Inventory ==="
-    echo "Date: $(date 2>/dev/null)"
-    echo "Cmdline: $(cat /proc/cmdline 2>/dev/null)"
-    echo ""
-    echo "--- CPU ---"
-    grep -E "model name|cpu MHz|siblings|cpu cores" /proc/cpuinfo 2>/dev/null | head -8
-    echo ""
-    echo "--- PCI devices ---"
+    echo "# BDF  vendor:device  class       driver"
     for d in /sys/bus/pci/devices/*/; do
-        id=$(cat "${d}vendor" 2>/dev/null | tr -d '0x'):$(cat "${d}device" 2>/dev/null | tr -d '0x')
-        cls=$(cat "${d}class" 2>/dev/null)
-        drv=$(basename "$(readlink ${d}driver 2>/dev/null)" 2>/dev/null || echo "(none)")
-        echo "  $(basename $d)  id=$id  class=$cls  driver=$drv"
+        [ -d "$d" ] || continue
+        BDF=$(basename "$d")
+        V=$(cat "${d}vendor" 2>/dev/null)
+        D=$(cat "${d}device" 2>/dev/null)
+        C=$(cat "${d}class" 2>/dev/null)
+        DRV="(none)"
+        [ -L "${d}driver" ] && DRV=$(basename "$(readlink ${d}driver)" 2>/dev/null)
+        printf "%s  %s:%s  %s  %s\n" "$BDF" "${V#0x}" "${D#0x}" "$C" "$DRV"
     done
-    echo ""
-    echo "--- Block devices ---"
-    cat /proc/partitions 2>/dev/null
-    echo ""
-    echo "--- Memory ---"
-    cat /proc/meminfo 2>/dev/null | head -10
-} > /tmp/q60_inventory.log 2>&1
-log S5 "inventory captured"
+} > ${DIAG}/pci/_SUMMARY.txt 2>/dev/null || true
 
-# ── Stage 6: Pre-probe dmesg ──────────────────────────────────────────────
-dmesg 2>/dev/null > /tmp/q60_dmesg_pre.log || true
-log S6 "pre-probe dmesg: $(wc -l < /tmp/q60_dmesg_pre.log 2>/dev/null || echo '?') lines"
+############################################################################
+# ── Stage 8: Block + MMC subsystem ───────────────────────────────────────
+############################################################################
+ls -la /dev/mmcblk* /dev/sd* /dev/vd* /dev/loop* 2>/dev/null > ${DIAG}/block/_dev_listing.txt
+for b in /sys/block/*/; do
+    [ -d "$b" ] || continue
+    NAME=$(basename "$b")
+    BDIR=${DIAG}/block/${NAME}
+    mkdir -p "$BDIR" 2>/dev/null
+    dump "${b}size"        "block/${NAME}/size.txt"
+    dump "${b}ro"          "block/${NAME}/ro.txt"
+    dump "${b}removable"   "block/${NAME}/removable.txt"
+    dump "${b}uevent"      "block/${NAME}/uevent.txt"
+    dump "${b}stat"        "block/${NAME}/stat.txt"
+    # Per-partition info
+    for p in "$b"${NAME}p*/ "$b"${NAME}*/; do
+        [ -d "$p" ] || continue
+        PNAME=$(basename "$p")
+        [ "$PNAME" = "$NAME" ] && continue
+        dump "${p}size"   "block/${NAME}/${PNAME}_size.txt"
+        dump "${p}start"  "block/${NAME}/${PNAME}_start.txt"
+        dump "${p}uevent" "block/${NAME}/${PNAME}_uevent.txt"
+    done
+done
 
-# ── Stage 7: Wait for gma500 / /dev/fb0 ──────────────────────────────────
-# devtmpfs (CONFIG_DEVTMPFS_MOUNT=y) pre-populates /dev; mdev -s re-scans.
-# udevd is NOT in the busybox image — use mdev only.
+for h in /sys/class/mmc_host/*/; do
+    [ -d "$h" ] || continue
+    HNAME=$(basename "$h")
+    MDIR=${DIAG}/mmc/${HNAME}
+    mkdir -p "$MDIR" 2>/dev/null
+    # Walk all attributes (most are short text files)
+    for f in "$h"*; do
+        [ -f "$f" ] || continue
+        FN=$(basename "$f")
+        dump "$f" "mmc/${HNAME}/${FN}.txt"
+    done
+done
+
+ls /sys/bus/pci/drivers/sdhci-pci/ 2>/dev/null > ${DIAG}/mmc/_sdhci_pci_bound.txt || true
+ls /sys/bus/pci/drivers/sdhci/ 2>/dev/null > ${DIAG}/mmc/_sdhci_bound.txt || true
+log S8 "block + MMC subsystem dumped"
+
+############################################################################
+# ── Stage 9: Pre-DRM dmesg snapshot ──────────────────────────────────────
+############################################################################
+dmesg > ${DIAG}/dmesg/01-pre-drm.txt 2>/dev/null || true
+log S9 "pre-DRM dmesg captured ($(wc -l < ${DIAG}/dmesg/01-pre-drm.txt 2>/dev/null || echo 0) lines)"
+
+############################################################################
+# ── Stage 10: Force module probe + framebuffer wait ──────────────────────
+############################################################################
+# Some platforms need a kick to load all platform drivers.
 echo /bin/mdev > /proc/sys/kernel/hotplug 2>/dev/null || true
 mdev -s 2>/dev/null || true
 
+# Wait up to 10s for /dev/fb0 to materialize
 i=0
 while [ $i -lt 10 ]; do
     [ -e /dev/fb0 ] && break
     sleep 1
     i=$((i+1))
 done
-log S7 "fb0 wait: $([ -e /dev/fb0 ] && echo "EXISTS (after ${i}s)" || echo "ABSENT after 10s")"
+log S10 "fb0 wait: $([ -e /dev/fb0 ] && echo "EXISTS after ${i}s" || echo "ABSENT after 10s")"
 
-# ── Stage 8: DRM/gma500 state probe ──────────────────────────────────────
-{
-    echo "=== Q60 DRM/GMA500 State ==="
-    echo "Date: $(date 2>/dev/null)"
-    echo ""
-    echo "--- Framebuffer devices ---"
-    ls -la /dev/fb* 2>/dev/null || echo "(none)"
-    cat /proc/fb 2>/dev/null || echo "(no /proc/fb)"
-    echo ""
-    echo "--- gma500 driver binding ---"
-    if [ -d /sys/bus/pci/drivers/gma500 ]; then
-        echo "gma500 driver exists"
-        ls /sys/bus/pci/drivers/gma500/ 2>/dev/null
-        for dev in /sys/bus/pci/drivers/gma500/*/; do
-            [ -d "$dev" ] || continue
-            echo "  bound: $(basename $dev)"
-            cat "${dev}uevent" 2>/dev/null
-        done
-    else
-        echo "(gma500 driver not registered — driver did not probe or returned error)"
+############################################################################
+# ── Stage 11: DRM / gma500 deep state ────────────────────────────────────
+############################################################################
+ls -la /sys/class/drm/ 2>/dev/null > ${DIAG}/drm/_class_listing.txt
+ls -la /sys/class/graphics/ 2>/dev/null > ${DIAG}/drm/_graphics_listing.txt
+ls -la /dev/dri/ 2>/dev/null > ${DIAG}/drm/_dev_dri_listing.txt
+ls -la /dev/fb* 2>/dev/null > ${DIAG}/drm/_dev_fb_listing.txt
+cat /proc/fb 2>/dev/null > ${DIAG}/drm/_proc_fb.txt
+
+# gma500 specific
+if [ -d /sys/bus/pci/drivers/gma500 ]; then
+    ls /sys/bus/pci/drivers/gma500/ > ${DIAG}/drm/gma500_bound.txt 2>/dev/null
+    for dev in /sys/bus/pci/drivers/gma500/*/; do
+        [ -d "$dev" ] || continue
+        BDF=$(basename "$dev")
+        dump "${dev}uevent" "drm/gma500_${BDF}_uevent.txt"
+        dump "${dev}power/runtime_status" "drm/gma500_${BDF}_power.txt"
+    done
+else
+    echo "(gma500 driver not registered)" > ${DIAG}/drm/gma500_bound.txt
+fi
+
+# Walk all DRM connectors + status
+for c in /sys/class/drm/card*/; do
+    [ -d "$c" ] || continue
+    CNAME=$(basename "$c")
+    CDIR=${DIAG}/drm/${CNAME}
+    mkdir -p "$CDIR"
+    for f in "$c"*; do
+        [ -f "$f" ] || continue
+        FN=$(basename "$f")
+        # Skip huge binary files (edid blobs etc.)
+        if [ "$FN" = "modes" ] || [ "$FN" = "enabled" ] || [ "$FN" = "status" ] \
+           || [ "$FN" = "dpms" ] || [ "$FN" = "uevent" ] || [ "$FN" = "force" ]; then
+            dump "$f" "drm/${CNAME}/${FN}.txt"
+        fi
+    done
+    # EDID separately as hex (usually 128 or 256 bytes)
+    if [ -e "${c}edid" ]; then
+        od -An -tx1 -v "${c}edid" 2>/dev/null > "${CDIR}/edid.hex" || true
     fi
-    echo ""
-    echo "--- DRM class ---"
-    ls -la /sys/class/drm/ 2>/dev/null || echo "(no DRM class)"
-    echo ""
-    echo "--- gma500/drm dmesg ---"
-    dmesg 2>/dev/null | grep -iE "gma500|psb|oaktrail|4108|GMA600|LVDS|drm|fb0|framebuffer" | head -80
-} > /tmp/q60_drm_state.log 2>&1
-log S8 "DRM state captured"
+done
 
-# ── Stage 9: Gate determination ───────────────────────────────────────────
-FB_OK=0
-GMA_BOUND=0
+# DRM-related dmesg lines
+dmesg 2>/dev/null | grep -iE "gma500|psb|oaktrail|4108|GMA600|LVDS|drm|fb0|framebuffer|emgd|i915|efifb|simple-framebuffer" > ${DIAG}/drm/_dmesg_filtered.txt 2>/dev/null
+log S11 "DRM / gma500 deep state captured"
+
+############################################################################
+# ── Stage 12: Watchdog state ─────────────────────────────────────────────
+############################################################################
+for w in /sys/class/watchdog/*/; do
+    [ -d "$w" ] || continue
+    WNAME=$(basename "$w")
+    WDIR=${DIAG}/watchdog/${WNAME}
+    mkdir -p "$WDIR"
+    for f in "$w"*; do
+        [ -f "$f" ] || continue
+        FN=$(basename "$f")
+        dump "$f" "watchdog/${WNAME}/${FN}.txt"
+    done
+done
+ls -la /dev/watchdog* 2>/dev/null > ${DIAG}/watchdog/_dev_listing.txt
+log S12 "watchdog state captured"
+
+############################################################################
+# ── Stage 13: CPU topology + idle state ──────────────────────────────────
+############################################################################
+dump /sys/devices/system/cpu/possible           cpu/possible.txt
+dump /sys/devices/system/cpu/online             cpu/online.txt
+dump /sys/devices/system/cpu/present            cpu/present.txt
+for cpu_dir in /sys/devices/system/cpu/cpu[0-9]*/; do
+    [ -d "$cpu_dir" ] || continue
+    CN=$(basename "$cpu_dir")
+    mkdir -p "${DIAG}/cpu/${CN}"
+    dump "${cpu_dir}topology/core_id"       "cpu/${CN}/core_id.txt"
+    dump "${cpu_dir}topology/physical_package_id" "cpu/${CN}/package_id.txt"
+    for s in "${cpu_dir}cpuidle/state"[0-9]*/; do
+        [ -d "$s" ] || continue
+        SN=$(basename "$s")
+        dump "${s}name"        "cpu/${CN}/${SN}_name.txt"
+        dump "${s}desc"        "cpu/${CN}/${SN}_desc.txt"
+        dump "${s}latency"     "cpu/${CN}/${SN}_latency.txt"
+        dump "${s}usage"       "cpu/${CN}/${SN}_usage.txt"
+    done
+done
+# MTRR and CPU features from dmesg
+dmesg 2>/dev/null | grep -iE "mtrr|x86 capability|x86/cpu|atom|bonnell|microcode|loops per jiffy|tsc|hpet" > ${DIAG}/cpu/_dmesg_cpu.txt 2>/dev/null
+log S13 "CPU state captured"
+
+############################################################################
+# ── Stage 14: pstore (prior-boot panic) — write captured-earlier files ───
+############################################################################
+if [ -d /tmp/pstore-saved ] && [ -n "$(ls -A /tmp/pstore-saved 2>/dev/null)" ]; then
+    cp /tmp/pstore-saved/* ${DIAG}/pstore/ 2>/dev/null || true
+    PCOUNT=$(ls ${DIAG}/pstore 2>/dev/null | wc -l)
+    log S14 "PRIOR-BOOT PANIC: ${PCOUNT} pstore entries (READ THESE FIRST)"
+else
+    echo "(no prior-boot pstore entries)" > ${DIAG}/pstore/_NONE.txt
+    log S14 "no prior-boot pstore (clean boot)"
+fi
+
+############################################################################
+# ── Stage 15: Post-DRM dmesg + R1 baseline compare ───────────────────────
+############################################################################
+dmesg > ${DIAG}/dmesg/02-post-drm.txt 2>/dev/null || true
+
+# Compare against expected R1 PCI device set
+{
+    echo "=== R1 baseline PCI presence check ==="
+    echo "Expected devices (from factory 2.6.37 boot logs):"
+    echo ""
+    # Format: "BDF vendor:device description"
+    cat <<EOF
+00:00.0  8086:4114  Host Bridge (N2806)
+00:02.0  8086:4108  GMA 600 Graphics (Tunnel Creek IGD)
+00:17.0  8086:8184  PCIe Host Bridge → bus 01-02
+01:00.0  10db:8019  PLX/LAPIS PCIe Bridge
+02:04.0  10db:801e  LAPIS SDHCI #0 (SD card)
+02:04.1  10db:801f  LAPIS SDHCI #1
+02:04.2  10db:8020  LAPIS SDHCI #2 (eMMC)
+02:0a.1  10db:8027  LAPIS PCH UART (ttyPCH0)
+EOF
+    echo ""
+    echo "=== Actual devices seen by v15 kernel ==="
+    cat ${DIAG}/pci/_SUMMARY.txt 2>/dev/null
+    echo ""
+    echo "=== Presence check ==="
+    for combo in "00:00.0 8086 4114 host-bridge" \
+                 "00:02.0 8086 4108 gma600-graphics" \
+                 "00:17.0 8086 8184 pcie-bridge" \
+                 "01:00.0 10db 8019 plx-bridge" \
+                 "02:04.0 10db 801e lapis-sdhci-0" \
+                 "02:04.1 10db 801f lapis-sdhci-1" \
+                 "02:04.2 10db 8020 lapis-sdhci-2" \
+                 "02:0a.1 10db 8027 lapis-uart"; do
+        set -- $combo
+        BDF=$1; VID=$2; DID=$3; DESC=$4
+        DEV_DIR=/sys/bus/pci/devices/0000:$BDF
+        if [ -d "$DEV_DIR" ]; then
+            V=$(cat "$DEV_DIR/vendor" 2>/dev/null | sed 's/^0x//')
+            D=$(cat "$DEV_DIR/device" 2>/dev/null | sed 's/^0x//')
+            if [ "$V" = "$VID" ] && [ "$D" = "$DID" ]; then
+                DRV="(unbound)"
+                [ -L "$DEV_DIR/driver" ] && DRV=$(basename "$(readlink "$DEV_DIR/driver")" 2>/dev/null)
+                echo "  ✓ $BDF ($VID:$DID, $DESC) — driver=$DRV"
+            else
+                echo "  ? $BDF: present but unexpected ids $V:$D (expected $VID:$DID)"
+            fi
+        else
+            echo "  ✗ $BDF ($VID:$DID, $DESC) — MISSING"
+        fi
+    done
+} > ${DIAG}/_R1_BASELINE_CHECK.txt 2>/dev/null
+log S15 "R1 baseline check written"
+
+############################################################################
+# ── Stage 16: Gate determination + SUMMARY ───────────────────────────────
+############################################################################
+FB_OK=0; GMA_BOUND=0; ROOT_OK=0; LAPIS_OK=0
 [ -e /dev/fb0 ] && FB_OK=1
-[ -d /sys/bus/pci/drivers/gma500 ] && \
-    ls /sys/bus/pci/drivers/gma500/ 2>/dev/null | grep -q ":" && GMA_BOUND=1
+[ -d /sys/bus/pci/drivers/gma500 ] && ls /sys/bus/pci/drivers/gma500/ 2>/dev/null | grep -q ":" && GMA_BOUND=1
+[ -e /dev/mmcblk0p3 ] && ROOT_OK=1
+[ -d /sys/bus/pci/devices/0000:02:04.0 ] && LAPIS_OK=1
 
 if [ "$FB_OK" -eq 1 ] && [ "$GMA_BOUND" -eq 1 ]; then
     GATE="PASS"
-    DETAIL="gma500 bound to GMA600 (PCI 8086:4108) and /dev/fb0 exists"
+    DETAIL="gma500 bound + /dev/fb0 present — display path proven on real hardware"
 elif [ "$GMA_BOUND" -eq 1 ]; then
-    GATE="PARTIAL"
-    DETAIL="gma500 bound but /dev/fb0 absent — modeset may have failed"
+    GATE="PARTIAL-NO-FB"
+    DETAIL="gma500 claimed PCI 8086:4108 but mode-set didn't create /dev/fb0"
 elif [ "$FB_OK" -eq 1 ]; then
-    GATE="PARTIAL"
-    DETAIL="/dev/fb0 exists but no gma500 binding — may be efifb or vesa"
+    GATE="PARTIAL-OTHER-FB"
+    DETAIL="/dev/fb0 exists from non-gma500 driver (efifb/simplefb fallback?)"
 else
     GATE="FAIL"
-    DETAIL="gma500 not bound and /dev/fb0 absent"
-fi
-log S9 "GATE=$GATE $DETAIL"
-
-# ── Stage 10: Post-probe dmesg ────────────────────────────────────────────
-dmesg 2>/dev/null > /tmp/q60_dmesg_post.log || true
-log S10 "post-probe dmesg: $(wc -l < /tmp/q60_dmesg_post.log 2>/dev/null || echo '?') lines"
-
-# ── Stage 11: Write all results to /boot/ ────────────────────────────────
-if mountpoint -q /boot 2>/dev/null; then
-    printf "Q60 PHASE 1 DISPLAY GATE: %s\n%s\nDate: %s\n" \
-        "$GATE" "$DETAIL" "$(date 2>/dev/null)" > /boot/Q60_DISPLAY_GATE.TXT
-    sync 2>/dev/null || true
-
-    cp /tmp/q60_drm_state.log  /boot/Q60_DRM_STATE.LOG      2>/dev/null || true
-    cp /tmp/q60_dmesg_post.log /boot/Q60_DMESG_POST_GFX.LOG 2>/dev/null || true
-    cp /tmp/q60_inventory.log  /boot/Q60_INVENTORY.LOG       2>/dev/null || true
-    sync 2>/dev/null || true
-
-    log S11 "LOGS WRITTEN: gate=$GATE"
-    cat "$STAGE" >> /boot/Q60_DIAG_STAGES.LOG 2>/dev/null || true
-    echo "[S11] $(ts) ALL DONE — gate=$GATE" >> /boot/Q60_DIAG_STAGES.LOG
-    sync 2>/dev/null || true
-else
-    log S11 "CRITICAL: /boot not mounted — no logs written to SD card!"
+    DETAIL="gma500 NOT bound and /dev/fb0 ABSENT — Phase 1 hypothesis falsified"
 fi
 
-echo "[rcS] Phase 1 complete. Gate=$GATE Syncing and halting."
+# Write the gate file plus a top-level SUMMARY
+{
+    printf "Q60 PHASE 1 DISPLAY GATE: %s\n" "$GATE"
+    printf "%s\n" "$DETAIL"
+    printf "Date: %s\n" "$(date 2>/dev/null)"
+} > /boot/Q60_DISPLAY_GATE.TXT 2>/dev/null
+
+{
+    echo "Q60 v15 Diagnostic Boot Summary"
+    echo "==============================="
+    echo "Date:           $(date 2>/dev/null)"
+    echo "Kernel:         $(uname -a 2>/dev/null)"
+    echo ""
+    echo "Gate result:    $GATE"
+    echo "Detail:         $DETAIL"
+    echo ""
+    echo "Key signals:"
+    echo "  /dev/fb0 present:          $([ "$FB_OK" -eq 1 ] && echo YES || echo NO)"
+    echo "  gma500 bound to a device:  $([ "$GMA_BOUND" -eq 1 ] && echo YES || echo NO)"
+    echo "  /dev/mmcblk0p3 present:    $([ "$ROOT_OK" -eq 1 ] && echo YES || echo NO)"
+    echo "  LAPIS SDHCI enumerated:    $([ "$LAPIS_OK" -eq 1 ] && echo YES || echo NO)"
+    echo ""
+    echo "Forensic dumps in /boot/diag/:"
+    echo "  proc/      — /proc/* snapshots (cmdline, cpuinfo, iomem, ioports, interrupts, etc.)"
+    echo "  pci/       — every PCI device's full config space + driver binding"
+    echo "  drm/       — DRM/framebuffer state, EDID, gma500 binding detail"
+    echo "  block/     — block device enumeration + per-partition info"
+    echo "  mmc/       — MMC host controllers state"
+    echo "  cpu/       — CPU topology, cpuidle states, MTRR (from dmesg)"
+    echo "  watchdog/  — watchdog device state"
+    echo "  dmesg/     — pre-DRM and post-DRM kernel ringbuffers"
+    echo "  pstore/    — any prior-boot panics (READ FIRST if non-empty)"
+    echo ""
+    echo "Stage timing (Q60_DIAG_STAGES.LOG):"
+    [ -f "$STAGE" ] && cat "$STAGE" 2>/dev/null
+} > /boot/Q60_SUMMARY.txt 2>/dev/null
+
+# Final dmesg
+dmesg > ${DIAG}/dmesg/03-final.txt 2>/dev/null || true
+
+# Stage log + copy rootfs persistent diag into /boot/diag/rootfs-copy/ for
+# easy macOS-side reading. Rootfs originals stay too (redundant on purpose).
+[ -f "$STAGE" ] && cp "$STAGE" /boot/Q60_DIAG_STAGES.LOG 2>/dev/null
+if [ -d "${DIAG_ROOT}" ] && grep -q ' /boot ' /proc/mounts 2>/dev/null; then
+    mkdir -p ${DIAG}/rootfs-copy 2>/dev/null
+    cp -r ${DIAG_ROOT}/* ${DIAG}/rootfs-copy/ 2>/dev/null || true
+    cp /RCS_REACHED.MARKER ${DIAG}/rootfs-copy/ 2>/dev/null || true
+fi
+log S16 "GATE=$GATE — all diagnostics written to /boot/diag/ + rootfs ${DIAG_ROOT}"
+
 sync 2>/dev/null || true
-# Halt so car doesn't loop; default=logan1 already restored above
-halt -f 2>/dev/null || poweroff -f 2>/dev/null || true
 
+# Sysrq emergency snapshot — show task list, registers, etc.
+if [ -e /proc/sysrq-trigger ]; then
+    echo 1 > /proc/sys/kernel/sysrq 2>/dev/null || true
+    for c in t m p; do echo $c > /proc/sysrq-trigger 2>/dev/null; sleep 0.2; done
+    dmesg > ${DIAG}/dmesg/04-sysrq.txt 2>/dev/null || true
+fi
+
+sync 2>/dev/null || true
+log S17 "Phase 1 complete. Powering off."
+
+############################################################################
+# ── Shutdown — must reach this so car re-boots cleanly to factory ────────
+############################################################################
+poweroff -f 2>/dev/null || halt -f 2>/dev/null || true
 exit 0

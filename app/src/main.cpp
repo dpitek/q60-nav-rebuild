@@ -37,12 +37,14 @@ Q_LOGGING_CATEGORY(lcMain, "q60nav.main")
 int main(int argc, char *argv[])
 {
     // Platform defaults — only set if not already provided by the environment.
-    // The simulator overrides QT_QPA_PLATFORM=vnc; start.sh sets wayland.
-    // qputenv is unconditional, so we guard with qgetenv first.
+    // Plan B''' default on the DCU: eglfs + the eglfs_emgdhmi integration plugin
+    // (see app/src/eglfs_emgdhmi/). run-q60qt.sh forces the right env vars
+    // explicitly; the simulator overrides QT_QPA_PLATFORM=vnc/xcb. This block
+    // is just the fallback when env is empty.
     if (qgetenv("QT_QPA_PLATFORM").isEmpty())
-        qputenv("QT_QPA_PLATFORM", "wayland");           // Wayland for dual LVDS on DCU
-    if (qgetenv("QT_QUICK_BACKEND").isEmpty())
-        qputenv("QT_QUICK_BACKEND", "software");         // Mesa swrast — no PowerVR driver
+        qputenv("QT_QPA_PLATFORM", "eglfs");
+    if (qgetenv("QT_QPA_EGLFS_INTEGRATION").isEmpty())
+        qputenv("QT_QPA_EGLFS_INTEGRATION", "eglfs_emgdhmi");
     if (qgetenv("QSG_RENDER_LOOP").isEmpty())
         qputenv("QSG_RENDER_LOOP", "basic");             // Single-threaded render on Atom
     if (qgetenv("QT_QUICK_CONTROLS_STYLE").isEmpty())

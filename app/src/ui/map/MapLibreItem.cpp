@@ -269,11 +269,12 @@ void MapLibreItem::scheduleRender()
 #endif
 }
 
-// ─── geometryChanged ──────────────────────────────────────────────────────────
-void MapLibreItem::geometryChanged(const QRectF &newGeometry,
-                                   const QRectF &oldGeometry)
+// ─── geometryChange ───────────────────────────────────────────────────────────
+// Qt6 protected override is named geometryChange (Qt5 was geometryChanged).
+void MapLibreItem::geometryChange(const QRectF &newGeometry,
+                                  const QRectF &oldGeometry)
 {
-    QQuickItem::geometryChanged(newGeometry, oldGeometry);
+    QQuickItem::geometryChange(newGeometry, oldGeometry);
     if (newGeometry.size() == oldGeometry.size()) return;
 
     const int w = qMax(static_cast<int>(newGeometry.width()),  32);

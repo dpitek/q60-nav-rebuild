@@ -47,6 +47,13 @@ deps/valhalla-build-i386/
 
 # Linux kernel source tree (large — download separately; see kernel/README)
 kernel/
+kernel-2.6.37/
+kernel-3.4/
+kernel-3.4-src/
+
+# Hardware reference materials (OEM PDFs, datasheets, large) — never commit
+reference files/
+"reference files"/
 
 # Compiled rootfs binaries — built by scripts, not tracked
 rootfs/opt/valhalla/bin/

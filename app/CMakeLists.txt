@@ -17,20 +17,18 @@ if(DEFINED ENV{CROSS_COMPILE_I686})
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -m32")
 endif()
 
-# Qt 5.15 — use i386 build when cross-compiling. Plan B target.
-if(DEFINED ENV{QT5_I386_PREFIX})
-    set(CMAKE_PREFIX_PATH "$ENV{QT5_I386_PREFIX}")
-elseif(DEFINED ENV{QT6_I386_PREFIX})
-    # Backwards-compat: legacy var name from Plan A. Will be retired.
-    set(CMAKE_PREFIX_PATH "$ENV{QT6_I386_PREFIX}")
+# Plan B''' uses Qt 6 (already built at output/qt6-i386). Qt 5.15 was the old
+# Plan B and won't work — its build excluded EGL/GL (deps/build-qt515-i386.sh
+# has -no-opengl -no-egl). The May-16 Qt5 port commit (1ae703a) is reverted
+# below.
+if(DEFINED ENV{QT6_I386_PREFIX})
+    set(CMAKE_PREFIX_PATH "$ENV{QT6_I386_PREFIX}" ${CMAKE_PREFIX_PATH})
 endif()
 
-find_package(Qt5 5.15 REQUIRED COMPONENTS
+find_package(Qt6 6.6 REQUIRED COMPONENTS
     Core Gui Quick QuickControls2 Network Qml Positioning
 )
-# DBus enabled in Plan B Qt 5 build (-dbus-linked in build-qt515-i386.sh).
-# AudioService BlueZ AVRCP uses Qt5::DBus when present; falls back to direct socket.
-find_package(Qt5 5.15 OPTIONAL_COMPONENTS DBus)
+find_package(Qt6 6.6 OPTIONAL_COMPONENTS DBus)
 
 find_package(PkgConfig REQUIRED)
 
@@ -75,9 +73,9 @@ else()
     set(MAPLIBRE_FOUND FALSE)
 endif()
 
-# Generate qml.qrc that captures every QML file under src/qml/.
-# Equivalent of qt6_add_qml_module(QML_FILES …) for Qt 5.15. Prefix /Q60Nav is
-# what main.cpp expects (qrc:/Q60Nav/src/qml/Main.qml).
+# QML resources — Qt 6 path. Use qt_add_qml_module if available; otherwise fall
+# back to a hand-built qml.qrc (this is also what the Qt 5.15 port did, and it
+# still works in Qt 6 — Qt 6 is a strict superset for QRC handling).
 file(WRITE ${CMAKE_BINARY_DIR}/qml.qrc "<RCC><qresource prefix=\"/Q60Nav\">\n")
 file(GLOB_RECURSE _qml_files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} src/qml/*.qml)
 foreach(_q ${_qml_files})
@@ -119,17 +117,17 @@ target_include_directories(q60nav PRIVATE
 )
 
 target_link_libraries(q60nav PRIVATE
-    Qt5::Core
-    Qt5::Gui
-    Qt5::Quick
-    Qt5::QuickControls2
-    Qt5::Network
-    Qt5::Qml
-    Qt5::Positioning
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Quick
+    Qt6::QuickControls2
+    Qt6::Network
+    Qt6::Qml
+    Qt6::Positioning
 )
 
-if(Qt5DBus_FOUND)
-    target_link_libraries(q60nav PRIVATE Qt5::DBus)
+if(Qt6DBus_FOUND)
+    target_link_libraries(q60nav PRIVATE Qt6::DBus)
     target_compile_definitions(q60nav PRIVATE HAVE_QT_DBUS)
 endif()
 
@@ -158,10 +156,18 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     )
 endif()
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Plan B''' eglfs device-integration plugin — the surgical wrap that lets
+# Qt's eglfs paint into an EMGD HMI pixmap visible on LVDS upper.
+# ─────────────────────────────────────────────────────────────────────────────
+add_subdirectory(src/eglfs_emgdhmi)
+
 install(TARGETS q60nav
-    RUNTIME DESTINATION /opt/q60nav
+    RUNTIME DESTINATION /opt/q60qt
 )
-install(FILES ../rootfs/opt/nav/start.sh
-    DESTINATION /opt/q60nav
-    PERMISSIONS OWNER_EXECUTE OWNER_READ GROUP_READ WORLD_READ
+install(FILES ../app/src/planb_qt/run-q60qt.sh
+    DESTINATION /opt/q60qt
+    PERMISSIONS OWNER_EXECUTE OWNER_READ OWNER_WRITE
+                GROUP_EXECUTE GROUP_READ
+                WORLD_EXECUTE WORLD_READ
 )

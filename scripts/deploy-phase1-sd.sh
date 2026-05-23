@@ -8,13 +8,20 @@
 
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 AUTO_YES=0
-TARGET="disk6"
+TARGET=""
 for arg in "$@"; do
     case "$arg" in
         -y|--yes) AUTO_YES=1 ;;
         disk*) TARGET="$arg" ;;
     esac
 done
+
+if [ -z "$TARGET" ]; then
+    echo "  ✗ ERROR: target disk not specified" >&2
+    echo "  Usage: sudo bash $0 [-y] diskN" >&2
+    echo "  Run 'diskutil list' first to identify the SD card." >&2
+    exit 1
+fi
 
 TARGET_DEV="/dev/${TARGET}"
 RAW_DEV="/dev/r${TARGET}"
@@ -116,13 +123,24 @@ ok "Boot partition mounted at ${BOOT_MNT}"
 # Write kernel
 info "Copying kernel: vmlinuz-4.19-q60 (${KERNEL_SIZE} bytes)"
 cp "${KERNEL_SRC}" "${BOOT_MNT}/vmlinuz-4.19-q60"
-ok "Kernel written"
+ok "Kernel written to vmlinuz-4.19-q60"
 
 # Verify kernel landed
 WRITTEN_SIZE=$(stat -f%z "${BOOT_MNT}/vmlinuz-4.19-q60" 2>/dev/null || echo 0)
 info "Kernel on disk: ${WRITTEN_SIZE} bytes"
 [ "${WRITTEN_SIZE}" -eq "${KERNEL_SIZE}" ] || fail "Kernel size mismatch (expected ${KERNEL_SIZE}, got ${WRITTEN_SIZE})"
 ok "Kernel size verified"
+
+# CRITICAL: also write kernel to EFI/BOOT/BOOTIA32.EFI — this is what UEFI
+# actually loads via the removable-media default fallback path. elilo is never
+# invoked because UEFI loads BOOTIA32.EFI directly via the EFI stub.
+# Without this step, deploying a new kernel is a no-op for the actual boot.
+mkdir -p "${BOOT_MNT}/EFI/BOOT"
+info "Copying kernel to UEFI default fallback: EFI/BOOT/BOOTIA32.EFI"
+cp "${KERNEL_SRC}" "${BOOT_MNT}/EFI/BOOT/BOOTIA32.EFI"
+WRITTEN_BIA=$(stat -f%z "${BOOT_MNT}/EFI/BOOT/BOOTIA32.EFI" 2>/dev/null || echo 0)
+[ "${WRITTEN_BIA}" -eq "${KERNEL_SIZE}" ] || fail "BOOTIA32.EFI size mismatch (expected ${KERNEL_SIZE}, got ${WRITTEN_BIA})"
+ok "BOOTIA32.EFI written — UEFI will now load v14 kernel directly"
 
 # ── Step 5: elilo.conf ────────────────────────────────────────────────────────
 step 5 "Updating elilo.conf"
@@ -146,7 +164,7 @@ else
 import sys, re
 
 path = sys.argv[1]
-new_append = '\tappend="root=LABEL=q60diag rw rootwait console=ttyPCH0,115200n8 console=tty0 loglevel=8 ignore_loglevel nokaslr idle=halt ehci_hcd.log2_irq_thresh=2 memmap=2M$52M memmap=10M$54M panic=10 dram=on video=efifb:off acpi_backlight=native video=LVDS-1:800x480@60 video=LVDS-2:800x420@60"'
+new_append = '\tappend="root=/dev/mmcblk0p3 rw rootwait console=ttyPCH0,115200n8 console=tty0 loglevel=8 ignore_loglevel nokaslr idle=halt ehci_hcd.log2_irq_thresh=2 memmap=2M$52M memmap=10M$54M panic=10 dram=on video=efifb:off acpi_backlight=native video=LVDS-1:800x480@60 video=LVDS-2:800x420@60"'
 
 with open(path, 'r') as f:
     lines = f.readlines()

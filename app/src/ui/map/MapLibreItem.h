@@ -95,8 +95,9 @@ protected:
     QSGNode *updatePaintNode(QSGNode *oldNode,
                              UpdatePaintNodeData *data) override;
     void componentComplete() override;
-    void geometryChanged(const QRectF &newGeometry,
-                         const QRectF &oldGeometry) override;
+    // Qt6: QQuickItem renamed to geometryChange (no 'd'). Qt5 used geometryChanged.
+    void geometryChange(const QRectF &newGeometry,
+                        const QRectF &oldGeometry) override;
 
 private:
     void initMap();

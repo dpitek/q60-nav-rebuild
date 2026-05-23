@@ -4,7 +4,8 @@
 #include <QFileInfo>
 #include <QDebug>
 #include <QCoreApplication>
-#include <QTextCodec>
+// Qt6: QTextStream defaults to UTF-8 — QTextCodec was removed (lives in
+// Core5Compat). No #include needed; setCodec() call dropped below.
 
 ButtonLogger::ButtonLogger()
 {
@@ -38,7 +39,7 @@ void ButtonLogger::open(const QString &logPath)
         return;
     }
     m_stream.setDevice(&m_file);
-    m_stream.setCodec("UTF-8");
+    // Qt6 QTextStream default is UTF-8 — no setCodec needed.
 
     writeEntry(QStringLiteral("SESSION_START version=1 pid=") +
                QString::number(QCoreApplication::applicationPid()));

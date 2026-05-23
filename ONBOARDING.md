@@ -286,3 +286,148 @@ etc.).
 **Why it matters:** First real hardware test of the Linux 4.19 + gma500 path. When it works,
 `Q60_DISPLAY_GATE.TXT` will show `PASS` (gma500 bound, /dev/fb0 present) or `FAIL/PARTIAL`
 with DRM state details. Either result unblocks Phase 2 planning.
+
+---
+
+## Finding 14 — v14 Consolidated Rebuild (2026-05-23)
+
+**What:** Second Phase 1 car boot also produced two black screens with zero markers on /boot.
+Diagnosis revealed THREE independent bugs that all needed to be fixed simultaneously:
+
+| # | Bug | Root cause | Fix |
+|---|---|---|---|
+| 1 | Wrong kernel actually loading | UEFI removable-media fallback loads `/EFI/BOOT/BOOTIA32.EFI`, deploy script only wrote `vmlinuz-4.19-q60` + `elilo.conf` — neither used. Old May 18 v13 kernel had been booting all along. | Deploy script now also writes kernel to `BOOTIA32.EFI` |
+| 2 | Three of five v13 boot fixes missing from May 22 pivot kernel | Architecture-pivot kernel config regen lost: LAPIS SDHCI vendor entries, `X86_PAE`+`HIGHMEM64G`, `PHYSICAL_ALIGN=0x1000000` | All re-applied in v14 config; LAPIS patch back in `sdhci-pci-core.c`; build script reconstructed at `scripts/build-kernel.sh` |
+| 3 | `root=LABEL=q60diag` doesn't work in 4.19 without initrd | Mainline 4.19 `name_to_dev_t` only handles PARTUUID/PARTLABEL/device-path — no LABEL= lookup | Embedded cmdline now `root=/dev/mmcblk0p3`; elilo.conf updated to match |
+
+**Additional bugs found during QEMU validation (would have caused silent rcS failure even on
+fixed hardware):**
+
+| Bug | Effect | Fix |
+|---|---|---|
+| rcS used `mountpoint -q` — not compiled into this busybox | Every mount-success check silently failed → rcS thought all mounts failed → no /boot logs written even when mount worked | Replaced with `grep -q ' /boot ' /proc/mounts` (portable) |
+| rcS Stage 0 mounted pstore before sysfs was up | Side-effect interaction | Moved to Stage 1.5 after sysfs mount |
+| rcS only wrote BOOT_STAGE markers at Stage 11 — atomic | If rcS hung partway, ZERO evidence on SD card | New `stage_marker()` writes `/boot/BOOT_STAGE_NN.TXT` at every stage, syncing after each |
+
+**Emulator validation (Phases 3–4 PASS):**
+- QEMU happy-path boot: all 11 BOOT_STAGE markers landed; `Q60_DISPLAY_GATE.TXT` = FAIL (correct
+  — no GMA600 in QEMU); failsafe `elilo.conf default=logan1` restore confirmed
+- QEMU `--no-root` test: kernel panic + reboot loop, 0 markers — reproduces today's car
+  failure mode exactly, proving the new diagnostic mechanism catches this
+
+**v14 artifacts:**
+- `output/bzImage-4.19-q60` — 3.30 MB, sha256 `b00f1545...`
+- `output/q60-diag-rootfs-phase1.img` — 512 MB ext4 q60diag, rcS sha256 `e253298d...`
+- `scripts/build-kernel.sh` — NEW, reproducible builds
+- `scripts/qemu-prep-disk.sh`, `qemu-boot-test.sh`, `qemu-deploy-dryrun.sh` — NEW emulator harness
+- `scripts/patch-rootfs-rcS.sh` — NEW, in-place rcS injection
+- `scripts/deploy-phase1-sd.sh` — fixed: writes BOOTIA32.EFI; no more hardcoded disk6 default
+
+**Critical lesson re-confirmed:** all bugs were present today; fixing them one at a time would
+have produced identical black-screen symptoms across multiple boots. Parallel debugging in
+QEMU (60-second iteration cycles vs car's 2-3 minute cycles) is what made this tractable.
+
+**Next:** `sudo bash scripts/deploy-phase1-sd.sh -y disk4` → car boot → read Phase 1 logs.
+v14 should produce either `PASS`, `PARTIAL`, or `FAIL` with rich diagnostic detail — never
+again "no markers at all."
+
+---
+
+## Finding 15 — v15 RCA: MOVBE compiler bug (2026-05-23)
+
+**What:** v14 was about to deploy with `CONFIG_MATOM=y` in the kernel config.
+gcc-11 with `-march=atom` freely emits the **MOVBE** instruction
+(Move-with-Byte-swap, Atom 2008+). **Atom E6xx "Bonnell" — model 0x26 — does NOT
+have MOVBE.** Every emitted MOVBE is an illegal opcode that triple-faults the CPU
+at kernel decompress. v14's vmlinux contained **1174 MOVBE instruction sites** —
+this kernel could not boot on the Q60.
+
+**Why we missed it for the v14 deploy:** the May 22 architecture pivot regenerated
+the kernel config from scratch and re-enabled `CONFIG_MATOM=y`. The earlier memory
+finding [`project_atom_e6xx_cpu_compat.md`](../.claude/projects/-Users-dpitek-Developer-q60-rebuild/memory/project_atom_e6xx_cpu_compat.md)
+explicitly warned about this — it was lost in the regen and not caught by the
+build sanity checks.
+
+**Why QEMU validation didn't catch it:** QEMU's `-cpu n270` (Bonnell-ish) is
+configured to support MOVBE (modern QEMU emulates all common Atom features).
+The MOVBE-laden v14 kernel booted fine in QEMU while it would have triple-faulted
+on the real Q60. **This is the hard limit of emulator-based validation for this
+target — different ISA support between QEMU's "n270" and real E6xx silicon.**
+
+**v15 fixes (all four together):**
+
+| Fix | Where |
+|---|---|
+| `# CONFIG_MATOM is not set` + `CONFIG_M686=y` | `configs/q60_kernel.config:228,247` |
+| `KCFLAGS="-mno-movbe -march=i686 -mtune=i686"` | `scripts/build-kernel.sh` Docker invocation |
+| Post-build objdump check (must be 0 MOVBE) | `scripts/build-kernel.sh` STEP 4 sanity gate |
+| Added `MATOM` to REQUIRED_N list, `M686` to REQUIRED_Y list | `scripts/build-kernel.sh` |
+
+**Result:** v15 vmlinux has **0 MOVBE** instructions (560 CMOVBE — Conditional MOVe
+if Below or Equal, Pentium Pro 1995-era, perfectly legal on Bonnell). sha256
+`fd94dea1b1f86d30a74dbae46f36ae1ea6894b41d352153a872feb52f8444690`.
+
+**Other v15 adjustments surfaced by comprehensive audit:**
+- Added `lpj=1296800` to embedded cmdline (factory pre-calibrated loops-per-jiffy)
+- Added `printk.devkmsg=on` (let userspace see all kernel messages)
+
+## Maximum-diagnostic rcS (v15)
+
+The Phase 1 init script now produces ~200 files per boot, all on the FAT32 /boot
+partition (macOS-readable). Doug's directive: leave no diagnostic ignored.
+
+**Per-stage markers (`/boot/BOOT_STAGE_*.TXT`):** S1 → S17, written + fsync'd after
+each stage so a hang at stage N leaves all N-1 markers behind as forensic evidence.
+
+**Forensic dumps (`/boot/diag/`):**
+
+| Subdir | Contents |
+|---|---|
+| `proc/` | 26 `/proc/*` snapshots — cmdline, cpuinfo, iomem, ioports, interrupts, modules, filesystems, partitions, devices, fb, mounts, version, swaps, dma, loadavg, buddyinfo, zoneinfo, vmstat, misc, stat, locks, diskstats, cgroups, kallsyms-head, config (if `CONFIG_IKCONFIG_PROC=y`) |
+| `pci/` | Every PCI device's full config space (256-byte hex), driver binding, BARs, IRQ, vendor/device/class/subsystem IDs, modalias, uevent. Plus `_SUMMARY.txt` in compact lspci-style format. |
+| `drm/` | DRM/framebuffer state, EDID hex dump per connector, gma500 binding detail, dmesg lines filtered for `gma500\|psb\|oaktrail\|4108\|GMA600\|LVDS\|drm\|fb0\|framebuffer\|emgd\|i915\|efifb` |
+| `block/` | Block device enumeration + per-partition size/start/uevent |
+| `mmc/` | MMC host controllers — every sysfs attribute. Plus `_sdhci_pci_bound.txt` showing which devices bound to the sdhci-pci driver (validates LAPIS patch worked) |
+| `cpu/` | CPU topology, cpuidle states, MTRR/microcode/loops-per-jiffy from dmesg |
+| `watchdog/` | All watchdog device state |
+| `dmesg/` | Pre-DRM, post-DRM, final, and sysrq-triggered dumps |
+| `pstore/` | Prior-boot panic captures (ramoops, dmesg-ramoops). READ FIRST if non-empty |
+
+**R1 baseline check** (`/boot/diag/_R1_BASELINE_CHECK.txt`): rcS compares actual PCI
+device enumeration against the expected set from R1's factory 2.6.37 boot logs:
+
+| BDF | Expected | Meaning |
+|---|---|---|
+| 00:00.0 | 8086:4114 | Tunnel Creek host bridge |
+| 00:02.0 | 8086:4108 | GMA 600 graphics |
+| 00:17.0 | 8086:8184 | PCIe bridge → bus 01-02 |
+| 01:00.0 | 10db:8019 | PLX/LAPIS PCIe bridge |
+| 02:04.0 | 10db:801e | LAPIS SDHCI #0 (SD card) — REQUIRES OUR sdhci-pci-core.c PATCH |
+| 02:04.1 | 10db:801f | LAPIS SDHCI #1 |
+| 02:04.2 | 10db:8020 | LAPIS SDHCI #2 (eMMC) |
+| 02:0a.1 | 10db:8027 | LAPIS PCH UART (ttyPCH0) |
+
+A `✓` next to each = present + driver bound; `✗` = missing entirely; `?` = present
+but unexpected IDs. This tells us in one file whether the v15 kernel sees all
+expected hardware.
+
+## Lesson confirmed
+
+**QEMU is not a hardware validation tool for this target.** It can catch:
+- Shell bugs in rcS
+- Missing/wrong kernel cmdline arguments
+- Marker/failsafe mechanism correctness
+- Build-script bugs
+
+It cannot catch:
+- ISA mismatches (MOVBE was the killer; QEMU's n270 hides it)
+- LAPIS SDHCI binding
+- GMA600 LVDS modeset
+- EKI v2.30 EFI quirks
+- Tunnel Creek MTRR/MWAIT quirks
+
+Going forward: use comprehensive research + memory files + R1 baseline + diagnostic
+boot for hardware decisions. Use QEMU only as a script-bug filter before a car boot.
+
+**v15 artifacts:** `bzImage-4.19-q60` sha `fd94dea1...` · 3.28 MB · 0 MOVBE.
+`rootfs/etc/init.d/rcS` sha `b6ec3ca5...` · 504 lines · 17 stages.
