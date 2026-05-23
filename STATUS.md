@@ -1,5 +1,34 @@
 # Q60 Nav Rebuild — Build Status
-Last updated: 2026-05-17 (R1 overlay hardware research sprint)
+Last updated: 2026-05-23 (Phase 1 — first car boot + deploy fix)
+
+---
+
+## 🔄 Phase 1 — Display Gate (current focus)
+
+### Architecture pivot (2026-05-22)
+Moved from R1 overlay (Sprite C / V2G) to **full factory nav replacement** (Phase 1–4):
+- **Phase 1:** gma500 display gate + diagnostic boot ← current
+- **Phase 2:** Qt6 + Weston rendering on real hardware
+- **Phase 3:** Navigation services (Valhalla, geocoder, tiles)
+- **Phase 4:** CAN integration + production polish
+
+### Phase 1 status
+| Item | State |
+|---|---|
+| Linux 4.19 kernel with gma500/GMA600, ttyPCH0, MID platform | ✅ 3.1 MB |
+| Diagnostic rootfs (`q60diag`, 512 MB ext4, 19/19 emulator tests) | ✅ |
+| `scripts/deploy-phase1-sd.sh` | ✅ (bug fixed 2026-05-23) |
+| First car boot (2026-05-23) | ❌ two black screens — rootfs not deployed |
+| Redeploy with fixed script | 🔄 pending |
+| Display gate (gma500 + LVDS): **UNTESTED** | ⏳ next boot |
+
+### Boot failure RCA (2026-05-23)
+Two causes, both resolved:
+1. **Rootfs not deployed** — disk4s3 had old factory content; no `q60diag` label → kernel panic before init
+2. **Deploy script bug** — UPDATE path replaced `append=` line without `root=LABEL=q60diag`; kernel would boot with no root device
+
+**Fix:** `root=LABEL=q60diag` added to `new_append` in `deploy-phase1-sd.sh`.
+**Next command:** `sudo bash scripts/deploy-phase1-sd.sh -y disk4`
 
 ---
 

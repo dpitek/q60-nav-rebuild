@@ -1,5 +1,5 @@
 # Q60 Nav — Code Index
-Generated: 2026-05-17 (R1 overlay hardware sprint)
+Generated: 2026-05-23 (Phase 1 — first car boot)
 
 Quick map of what's where. For build status see [STATUS.md](STATUS.md). For features see [README.md](README.md). For factory parity see [docs/feature-parity-audit.md](docs/feature-parity-audit.md).
 
@@ -84,6 +84,8 @@ TurnArrow · SpeedWidget · FanControl · TempZone · TabBar · StatusBar · Wel
 - [install-mesa-rootfs.sh](scripts/install-mesa-rootfs.sh)
 
 ### Deploy
+- [deploy-phase1-sd.sh](scripts/deploy-phase1-sd.sh) — **Phase 1 SD card deploy** (one command: writes rootfs + kernel + elilo.conf). Usage: `sudo bash scripts/deploy-phase1-sd.sh -y disk4`
+- [verify-slotb.sh](scripts/verify-slotb.sh) — verify Slot B ext4 label and rootfs integrity before booting
 - [package-rootfs.sh](scripts/package-rootfs.sh) — build 3GB ext4 image
 - [deploy-to-image.sh](scripts/deploy-to-image.sh) — write kernel + rootfs to eMMC
 - [deploy-tiles.sh](scripts/deploy-tiles.sh) — push tiles to mounted partition
@@ -105,7 +107,8 @@ TurnArrow · SpeedWidget · FanControl · TempZone · TabBar · StatusBar · Wel
 
 ### Init system
 - [inittab](rootfs/etc/inittab) — runlevel 5, watchdog respawn
-- [init.d/rcS](rootfs/etc/init.d/rcS), [S10-gpsd](rootfs/etc/init.d/S10-gpsd), [S20-valhalla](rootfs/etc/init.d/S20-valhalla), [S25-geocoder](rootfs/etc/init.d/S25-geocoder), [S30-weston](rootfs/etc/init.d/S30-weston), [S50-q60nav](rootfs/etc/init.d/S50-q60nav)
+- [init.d/rcS](rootfs/etc/init.d/rcS) — **Phase 1 diagnostic init**: mounts /boot (FAT32), probes gma500, writes gate result to `/boot/Q60_DISPLAY_GATE.TXT`, restores `default=logan1`, halts
+- [S10-gpsd](rootfs/etc/init.d/S10-gpsd), [S20-valhalla](rootfs/etc/init.d/S20-valhalla), [S25-geocoder](rootfs/etc/init.d/S25-geocoder), [S30-weston](rootfs/etc/init.d/S30-weston), [S50-q60nav](rootfs/etc/init.d/S50-q60nav) — Phase 2+ production services
 - [fstab](rootfs/etc/fstab) — `/boot rw` (counter writes), p9 → `/data`
 
 ### App support (`/opt/nav/`)
@@ -173,11 +176,11 @@ Runs i386 factory binaries under QEMU + LD_PRELOAD shim that intercepts `/dev/v2
 ## Documentation
 
 ### Always-current (read these first)
-- [CLAUDE.md](CLAUDE.md) — session instructions for Claude; deploy cycle, blockers, key facts
-- [ONBOARDING.md](ONBOARDING.md) — live R1 overlay research log (all 12 hardware findings)
+- [CLAUDE.md](CLAUDE.md) — session instructions; deploy cycle, current status, hardware facts
+- [ONBOARDING.md](ONBOARDING.md) — live research log: 12 R1 findings + Phase 1 pivot + Finding 13 (first boot RCA)
+- [STATUS.md](STATUS.md) — build state + Phase 1 status
 - [README.md](README.md) — project overview, UI, architecture
-- [STATUS.md](STATUS.md) — build state + R1 overlay sprint status
-- [BACKLOG.md](BACKLOG.md) — open items post-boot
+- [BACKLOG.md](BACKLOG.md) — open items
 
 ### Hardware research
 - [docs/v2gbridge-hardware-findings-2026-05-17.md](docs/v2gbridge-hardware-findings-2026-05-17.md) — full V2G/overlay test findings

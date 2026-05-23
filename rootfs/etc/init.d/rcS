@@ -1,113 +1,180 @@
 #!/bin/sh
-# rcS — System initialization (runs once at boot before runlevel scripts)
-# For Q60 Nav Rebuild on Linux 4.19
-#
-# IMPORTANT: this script must not exit non-zero. The watchdog is armed by
-# q60nav and start.sh later; if rcS fails the boot enters an indeterminate
-# state and the boot counter never decrements. Use `|| true` on every
-# fallible command.
+# rcS — Phase 1 Diagnostic Init for Q60 Nav Rebuild on Linux 4.19
+# Goal: probe gma500/GMA600, write gate results to /boot/ (FAT32).
+# IMPORTANT: must not exit non-zero. Every fallible op uses || true.
 
-# Mount essential virtual filesystems
+STAGE=/tmp/q60_stages.log
+ts() { date '+%H:%M:%S' 2>/dev/null || echo '?'; }
+log() { echo "[$1] $(ts) $2" >> "$STAGE"; echo "[$1] $2" 2>/dev/null || true; }
+
+# ── Stage 1: Essential virtual filesystems ────────────────────────────────
 mount -t proc proc /proc 2>/dev/null || true
 mount -t sysfs sysfs /sys 2>/dev/null || true
-mount -t devtmpfs devtmpfs /dev 2>/dev/null || true
+# DEVTMPFS_MOUNT=y means kernel pre-populates /dev before init — skip if so
+mountpoint -q /dev 2>/dev/null || mount -t devtmpfs devtmpfs /dev 2>/dev/null || true
 mount -t tmpfs -o nosuid,nodev,size=32M,mode=755 tmpfs /run 2>/dev/null || true
 mount -t tmpfs -o nosuid,nodev,size=64M tmpfs /tmp 2>/dev/null || true
+mkdir -p /dev/pts && mount -t devpts devpts /dev/pts 2>/dev/null || true
+log S1 "filesystems mounted"
 
-# /dev/pts for pseudo-terminals
-mkdir -p /dev/pts
-mount -t devpts devpts /dev/pts 2>/dev/null || true
+# ── Stage 2: Boot partition mount (FAT32 → /boot) ────────────────────────
+# SD card may appear as mmcblk0, mmcblk1, or mmcblk2 depending on eMMC probe order.
+# Try p1 on each MMC device; mount whichever FAT32 partition answers first.
+BOOT_DEV=""
+i=0
+while [ $i -lt 15 ]; do
+    for dev in /dev/mmcblk0p1 /dev/mmcblk1p1 /dev/mmcblk2p1; do
+        if [ -b "$dev" ]; then
+            mount -t vfat -o rw,relatime "$dev" /boot 2>/dev/null && \
+                mountpoint -q /boot 2>/dev/null && { BOOT_DEV="$dev"; break 2; }
+        fi
+    done
+    sleep 1
+    i=$((i+1))
+done
+[ -n "$BOOT_DEV" ] && log S2 "boot mounted from $BOOT_DEV after ${i}s" || log S2 "CRITICAL: /boot mount FAILED — tried mmcblk0-2p1 for ${i}s"
 
-# Mount FAT32 boot partition + any fstab entries (data is `nofail` — see fstab).
-mount -a 2>/dev/null || true
-
-# Some fstab entries target paths that don't exist on the ro root yet —
-# create the mount-point parent if missing, then re-mount. Cheap and idempotent.
-mkdir -p /var/log /var/run /var/lib /etc/xdg/weston 2>/dev/null || true
-mount /var/log         2>/dev/null || mount -t tmpfs -o nosuid,nodev,size=16M,mode=755 tmpfs /var/log 2>/dev/null || true
-mount /var/run         2>/dev/null || mount -t tmpfs -o nosuid,nodev,size=4M,mode=755 tmpfs /var/run 2>/dev/null || true
-mount /etc/xdg/weston  2>/dev/null || mount -t tmpfs -o nosuid,nodev,size=1M,mode=755 tmpfs /etc/xdg/weston 2>/dev/null || true
-
-# ─── First-boot directory bootstrap ───────────────────────────────────────
-# If /data isn't mounted (partition missing on a fresh image, not yet
-# formatted, or hardware variant without that partition), fall back to
-# /var/lib/q60nav-data so every service that writes under /data still works.
-if ! mountpoint -q /data 2>/dev/null; then
-    mkdir -p /var/lib/q60nav-data 2>/dev/null
-    if [ ! -d /data ] || [ -z "$(ls -A /data 2>/dev/null)" ]; then
-        rm -rf /data 2>/dev/null
-        ln -sfn /var/lib/q60nav-data /data 2>/dev/null || mkdir -p /data
-    fi
-    echo "[rcS] /data partition not mounted — using fallback at /var/lib/q60nav-data"
-fi
-
-# Required runtime directories — every service expects these.
-mkdir -p /var/lib/q60nav 2>/dev/null
-mkdir -p /data/q60nav /data/q60nav/trips /data/q60nav/captures \
-         /data/q60nav/parking /data/q60nav/logs 2>/dev/null
-
-# Set hostname
-echo q60nav > /proc/sys/kernel/hostname 2>/dev/null || true
-
-# Seed RNG (optional, fail-safe)
-[ -f /var/lib/random-seed ] && cat /var/lib/random-seed > /dev/urandom 2>/dev/null
-
-# ─── Kernel modules ───────────────────────────────────────────────────────
-# Hardware-research note (2026-05-14): the Q60 DCU is an Atom E6xx (Tunnel
-# Creek) + EG20T PCH. Correct drivers:
-#   ie6xx_wdt  — E6xx-specific watchdog (NOT iTCO_wdt)
-#   pch_can    — EG20T integrated CAN controller (NOT mcp251x)
-#   pch_uart   — EG20T integrated UARTs (used by GPS receiver)
-# We modprobe both old + new names so the kernel picks whichever the in-tree
-# config built. iTCO_wdt is harmless if not present; ie6xx_wdt is the right
-# one. Same for can drivers — try in-tree first, fall back to mcp251x if a
-# variant DCU has external SPI CAN.
-modprobe ie6xx_wdt   2>/dev/null || modprobe iTCO_wdt 2>/dev/null || true
-modprobe can         2>/dev/null || true
-modprobe can_raw     2>/dev/null || true
-modprobe pch_can     2>/dev/null || modprobe mcp251x 2>/dev/null || true
-modprobe pch_uart    2>/dev/null || true
-# zram for swap (see swap section below)
-modprobe zram        2>/dev/null || true
-
-# udev — device node population
-/sbin/udevd --daemon 2>/dev/null || true
-udevadm trigger --type=subsystems 2>/dev/null || true
-udevadm trigger --type=devices    2>/dev/null || true
-udevadm settle --timeout=8        2>/dev/null || true
-
-# ─── zram swap (256MB compressed) ─────────────────────────────────────────
-# Atom E6xx has 1GB RAM and no swap partition. Without swap the OOM-killer
-# fires aggressively on memory spikes (e.g. tile pan during route calc) and
-# the first victim is q60nav (highest RSS) → boot-counter increments. zram
-# compresses pages 3-4× in RAM → ~750MB effective virtual headroom with no
-# eMMC writes and ~5ms latency.
-if [ -e /sys/block/zram0/disksize ]; then
-    echo 268435456 > /sys/block/zram0/disksize 2>/dev/null && \
-        mkswap /dev/zram0 >/dev/null 2>&1 && \
-        swapon -p 100 /dev/zram0 2>/dev/null && \
-        echo "[rcS] zram swap active (256MB compressed)" || \
-        echo "[rcS] zram setup failed — proceeding without swap"
+# ── Stage 3: IMMEDIATELY restore elilo.conf to default=logan1 ────────────
+# First priority — ensures car recovers even if rest of rcS panics
+if mountpoint -q /boot 2>/dev/null; then
+    sed -i 's/^default=.*/default=logan1/' /boot/elilo.conf 2>/dev/null || true
+    sync 2>/dev/null || true
+    log S3 "elilo.conf restored: default=logan1"
 else
-    echo "[rcS] zram not available — no swap"
+    log S3 "CRITICAL: /boot not mounted — elilo.conf NOT restored, car will loop!"
 fi
 
-# ─── busybox syslogd (rotating logs to prevent eMMC fill) ────────────────
-# `-O /var/log/messages` — primary log file
-# `-s 256`  — rotate at 256 KB
-# `-b 4`    — keep 4 rotated copies
-# `-S`      — smaller line format
-# Failure is non-fatal; services already log directly to /var/log/*.log.
-if command -v syslogd >/dev/null 2>&1; then
-    syslogd -O /var/log/messages -s 256 -b 4 -S 2>/dev/null || \
-        echo "[rcS] syslogd failed to start"
+# ── Stage 4: Boot counter and watchdog ───────────────────────────────────
+rm -f /boot/q60_boot_attempts 2>/dev/null || true
+# Magic-close any BIOS-pre-armed hardware watchdog
+if [ -e /dev/watchdog ]; then
+    printf 'V' > /dev/watchdog 2>/dev/null || true
+    log S4 "watchdog magic-close sent"
+else
+    log S4 "no /dev/watchdog (expected for diagnostic)"
 fi
 
-# Lower the OOM-kill score for q60nav-related processes (run later, once
-# q60nav is alive). For now just set kernel vm tuning that helps small-RAM.
-echo 1     > /proc/sys/vm/overcommit_memory 2>/dev/null || true
-echo 80    > /proc/sys/vm/overcommit_ratio  2>/dev/null || true
-echo 16384 > /proc/sys/vm/min_free_kbytes   2>/dev/null || true
+# ── Stage 5: Hardware inventory (before DRM probe) ───────────────────────
+{
+    echo "=== Q60 Phase 1 Hardware Inventory ==="
+    echo "Date: $(date 2>/dev/null)"
+    echo "Cmdline: $(cat /proc/cmdline 2>/dev/null)"
+    echo ""
+    echo "--- CPU ---"
+    grep -E "model name|cpu MHz|siblings|cpu cores" /proc/cpuinfo 2>/dev/null | head -8
+    echo ""
+    echo "--- PCI devices ---"
+    for d in /sys/bus/pci/devices/*/; do
+        id=$(cat "${d}vendor" 2>/dev/null | tr -d '0x'):$(cat "${d}device" 2>/dev/null | tr -d '0x')
+        cls=$(cat "${d}class" 2>/dev/null)
+        drv=$(basename "$(readlink ${d}driver 2>/dev/null)" 2>/dev/null || echo "(none)")
+        echo "  $(basename $d)  id=$id  class=$cls  driver=$drv"
+    done
+    echo ""
+    echo "--- Block devices ---"
+    cat /proc/partitions 2>/dev/null
+    echo ""
+    echo "--- Memory ---"
+    cat /proc/meminfo 2>/dev/null | head -10
+} > /tmp/q60_inventory.log 2>&1
+log S5 "inventory captured"
 
-echo "[rcS] System init complete"
+# ── Stage 6: Pre-probe dmesg ──────────────────────────────────────────────
+dmesg 2>/dev/null > /tmp/q60_dmesg_pre.log || true
+log S6 "pre-probe dmesg: $(wc -l < /tmp/q60_dmesg_pre.log 2>/dev/null || echo '?') lines"
+
+# ── Stage 7: Wait for gma500 / /dev/fb0 ──────────────────────────────────
+# devtmpfs (CONFIG_DEVTMPFS_MOUNT=y) pre-populates /dev; mdev -s re-scans.
+# udevd is NOT in the busybox image — use mdev only.
+echo /bin/mdev > /proc/sys/kernel/hotplug 2>/dev/null || true
+mdev -s 2>/dev/null || true
+
+i=0
+while [ $i -lt 10 ]; do
+    [ -e /dev/fb0 ] && break
+    sleep 1
+    i=$((i+1))
+done
+log S7 "fb0 wait: $([ -e /dev/fb0 ] && echo "EXISTS (after ${i}s)" || echo "ABSENT after 10s")"
+
+# ── Stage 8: DRM/gma500 state probe ──────────────────────────────────────
+{
+    echo "=== Q60 DRM/GMA500 State ==="
+    echo "Date: $(date 2>/dev/null)"
+    echo ""
+    echo "--- Framebuffer devices ---"
+    ls -la /dev/fb* 2>/dev/null || echo "(none)"
+    cat /proc/fb 2>/dev/null || echo "(no /proc/fb)"
+    echo ""
+    echo "--- gma500 driver binding ---"
+    if [ -d /sys/bus/pci/drivers/gma500 ]; then
+        echo "gma500 driver exists"
+        ls /sys/bus/pci/drivers/gma500/ 2>/dev/null
+        for dev in /sys/bus/pci/drivers/gma500/*/; do
+            [ -d "$dev" ] || continue
+            echo "  bound: $(basename $dev)"
+            cat "${dev}uevent" 2>/dev/null
+        done
+    else
+        echo "(gma500 driver not registered — driver did not probe or returned error)"
+    fi
+    echo ""
+    echo "--- DRM class ---"
+    ls -la /sys/class/drm/ 2>/dev/null || echo "(no DRM class)"
+    echo ""
+    echo "--- gma500/drm dmesg ---"
+    dmesg 2>/dev/null | grep -iE "gma500|psb|oaktrail|4108|GMA600|LVDS|drm|fb0|framebuffer" | head -80
+} > /tmp/q60_drm_state.log 2>&1
+log S8 "DRM state captured"
+
+# ── Stage 9: Gate determination ───────────────────────────────────────────
+FB_OK=0
+GMA_BOUND=0
+[ -e /dev/fb0 ] && FB_OK=1
+[ -d /sys/bus/pci/drivers/gma500 ] && \
+    ls /sys/bus/pci/drivers/gma500/ 2>/dev/null | grep -q ":" && GMA_BOUND=1
+
+if [ "$FB_OK" -eq 1 ] && [ "$GMA_BOUND" -eq 1 ]; then
+    GATE="PASS"
+    DETAIL="gma500 bound to GMA600 (PCI 8086:4108) and /dev/fb0 exists"
+elif [ "$GMA_BOUND" -eq 1 ]; then
+    GATE="PARTIAL"
+    DETAIL="gma500 bound but /dev/fb0 absent — modeset may have failed"
+elif [ "$FB_OK" -eq 1 ]; then
+    GATE="PARTIAL"
+    DETAIL="/dev/fb0 exists but no gma500 binding — may be efifb or vesa"
+else
+    GATE="FAIL"
+    DETAIL="gma500 not bound and /dev/fb0 absent"
+fi
+log S9 "GATE=$GATE $DETAIL"
+
+# ── Stage 10: Post-probe dmesg ────────────────────────────────────────────
+dmesg 2>/dev/null > /tmp/q60_dmesg_post.log || true
+log S10 "post-probe dmesg: $(wc -l < /tmp/q60_dmesg_post.log 2>/dev/null || echo '?') lines"
+
+# ── Stage 11: Write all results to /boot/ ────────────────────────────────
+if mountpoint -q /boot 2>/dev/null; then
+    printf "Q60 PHASE 1 DISPLAY GATE: %s\n%s\nDate: %s\n" \
+        "$GATE" "$DETAIL" "$(date 2>/dev/null)" > /boot/Q60_DISPLAY_GATE.TXT
+    sync 2>/dev/null || true
+
+    cp /tmp/q60_drm_state.log  /boot/Q60_DRM_STATE.LOG      2>/dev/null || true
+    cp /tmp/q60_dmesg_post.log /boot/Q60_DMESG_POST_GFX.LOG 2>/dev/null || true
+    cp /tmp/q60_inventory.log  /boot/Q60_INVENTORY.LOG       2>/dev/null || true
+    sync 2>/dev/null || true
+
+    log S11 "LOGS WRITTEN: gate=$GATE"
+    cat "$STAGE" >> /boot/Q60_DIAG_STAGES.LOG 2>/dev/null || true
+    echo "[S11] $(ts) ALL DONE — gate=$GATE" >> /boot/Q60_DIAG_STAGES.LOG
+    sync 2>/dev/null || true
+else
+    log S11 "CRITICAL: /boot not mounted — no logs written to SD card!"
+fi
+
+echo "[rcS] Phase 1 complete. Gate=$GATE Syncing and halting."
+sync 2>/dev/null || true
+# Halt so car doesn't loop; default=logan1 already restored above
+halt -f 2>/dev/null || poweroff -f 2>/dev/null || true
+
 exit 0

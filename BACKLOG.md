@@ -1,8 +1,16 @@
 # Q60 Nav — Backlog
-Last reconciled: 2026-05-17 (R1 overlay hardware sprint)
+Last reconciled: 2026-05-23 (Phase 1 — first car boot + deploy fix)
 
 Items not in current scope, ordered by priority. Shipped items have been removed —
 see git log for the full history of merged enhancements.
+
+---
+
+## 🔄 Phase 1 — Immediate (unblock display gate)
+
+- [ ] **Redeploy + retest** — `sudo bash scripts/deploy-phase1-sd.sh -y disk4` → car boot → read `Q60_DISPLAY_GATE.TXT`
+- [ ] **If PASS**: proceed to Phase 2 (Weston + Qt6 bring-up on hardware)
+- [ ] **If FAIL/PARTIAL**: interpret `Q60_DRM_STATE.LOG` + `Q60_DMESG_POST_GFX.LOG` — likely kernel panic, driver missing, or wrong PCI ID response
 
 ---
 
@@ -33,34 +41,17 @@ see git log for the full history of merged enhancements.
 
 ---
 
-## 🔬 R1 Overlay — Active (ordered by priority)
+## ⏸ R1 Overlay — Suspended (superseded 2026-05-22 by Phase 1 full replacement)
 
-### Immediate next boots
-- [ ] **Confirm V2G_DISPLAY_FRAME result** — does DISPLAY_FRAME(0/1/2) prime IOH DMA count?
-  If yes → V2G_ENABLE unblocked. See `Q60_R1_V4L2.LOG` P*-F section.
-- [ ] **Confirm YUYV pixel write + ALTER_OVL2** — P6.5 writes red pixels to `g_buf[0]` then
-  calls ALTER_OVL2 plane=5. If r=0 and screen shows red → direct Sprite C path works.
-- [ ] **Find 75s init.rc delay** — scan `/init.rc`, `/system/init.rc`, `/etc/init/` for
-  `usleep 75000000`. Once found: patch via `debugfs` to `5000000`.
+> R1 research findings remain valid hardware knowledge. Revisit only if Phase 1 gma500
+> approach fails entirely. See ONBOARDING.md Findings 1–12 for full detail.
 
-### Once display path confirmed
-- [ ] **Write real UI content** — Replace YUYV test pattern with actual pixel buffer
-  (R1 nav overlay, speed display, etc.)
-- [ ] **Hook R1 client into Qt6 app** — Production R1 client that reads from app state
-  and paints to overlay at runtime
-- [ ] **GMM_ALLOC parameter sweep** — Try type=1 (linear), type=2 (tiled), various flags.
-  Currently rtn=-2 with type=0 flags=0.
-
-### Slow boot (parallel track)
-- [ ] Read `/init.rc` via `debugfs` (once identified as source)
-- [ ] Patch `usleep 75000000` → `usleep 5000000` in init.rc via `debugfs`
-- [ ] Verify boot time improvement (~70s expected)
-
-### Emulator improvements
-- [ ] **EMGD stub responses** for shim — provide realistic response buffers for drmCommandWriteRead
-  calls (cmd 9, 37, 44). See `emu/README.md` for call list.
-- [ ] **V2G_DISPLAY_FRAME stub** in shim — intercept `0xc0047602` and log buf index
-- [ ] **camera_ps emulation** — stub the factory V2G flow so we can test without hardware
+### Suspended items (do not pick up until Phase 1 gate resolves)
+- [ ] Confirm V2G_DISPLAY_FRAME primes IOH DMA count
+- [ ] Confirm YUYV pixel write + ALTER_OVL2 plane=5
+- [ ] Find + patch 75s init.rc delay via `debugfs`
+- [ ] GMM_ALLOC parameter sweep (type=1/2, various flags)
+- [ ] EMGD stub responses in emu shim
 
 ---
 

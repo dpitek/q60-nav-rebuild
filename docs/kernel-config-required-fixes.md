@@ -2,6 +2,8 @@
 
 This document lists kernel `.config` items that **must** be set for the q60nav kernel to boot on Clarion QY5092 / Atom E6xx hardware. Originally identified after the first hardware boot attempt produced a complete black screen — five research agents converged on the same root causes. Significantly refined 2026-05-16 after a live probe inside the factory environment captured ground-truth hardware data (see [hardware-ground-truth-2026-05-16.md](hardware-ground-truth-2026-05-16.md)).
 
+**Status as of 2026-05-22:** All items in this document have been applied to `configs/q60_kernel.config`. The build script is `/tmp/q60-kernel-build.sh`. Kernel is 3.1 MB (XZ), passes all sanity checks. `configs/q60_kernel.config` is the source of truth — never edit `kernel/.config` directly.
+
 Apply these on top of `configs/q60_kernel.config` and rebuild.
 
 ## 2026-05-16 update — what changed after the in-factory probe
@@ -92,6 +94,25 @@ CONFIG_CMDLINE="root=/dev/mmcblk0p3 rw rootwait console=ttyPCH0,115200n8 console
 ```
 CONFIG_PCH_CAN=y
 ```
+
+### PCH UART console — separate from driver config (2026-05-22 discovery)
+
+`CONFIG_SERIAL_PCH_UART=y` enables the driver (creates `/dev/ttyPCH0`) but console support is a **separate** option. Without this, `console=ttyPCH0,115200n8` is silently ignored.
+
+```
+CONFIG_SERIAL_PCH_UART_CONSOLE=y
+```
+
+### APIC — required for X86_INTEL_MID dep chain (2026-05-22 discovery)
+
+`X86_INTEL_MID` depends on `X86_IO_APIC`. On i386 single-CPU without SMP, `X86_IO_APIC` requires `X86_LOCAL_APIC`, which requires `X86_UP_APIC`. All must be enabled:
+
+```
+CONFIG_X86_UP_APIC=y
+CONFIG_X86_UP_IOAPIC=y
+```
+
+Note: `X86_INTEL_MID` runtime code only fires when bootloader sets `hardware_subarch=X86_SUBARCH_INTEL_MID`. elilo sets `hardware_subarch=0` (X86_SUBARCH_PC), so APB timer and MID platform init never execute at runtime. Safe to compile in.
 
 ### EG20T GPIO — required for any LED diagnostic
 

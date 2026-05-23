@@ -1,4 +1,4 @@
-# Q60 R1 Overlay — Hardware Research Log (2026-05-15 → 2026-05-17)
+# Q60 Nav Rebuild — Hardware Research Log (2026-05-15 → 2026-05-23)
 
 > Live research log — findings from direct hardware testing on a 2017 Infiniti Q60
 > Clarion QY5092 DCU. Goal: paint arbitrary content onto the Sprite C overlay plane
@@ -235,3 +235,54 @@ No cross-compiler, no JTAG, no reflash. Deploy cycle: build → `sudo bash deplo
 ---
 
 *See also: `docs/plan-r1-v2gbridge-research.md` (architecture), `docs/r1-privilege-findings.md` (DRM ioctl permissions), `docs/v2gbridge-hardware-findings-2026-05-17.md` (full detail)*
+
+---
+
+## Architecture Pivot (2026-05-22)
+
+After the R1 overlay research sprint, the approach changed: instead of painting over the
+factory nav via V2G, we're **replacing the factory nav entirely** with Linux 4.19 + Qt6 +
+Weston. The R1 findings above remain valid hardware facts and will inform Phase 2+.
+
+**Phase plan:**
+| Phase | Goal | State |
+|---|---|---|
+| 1 | gma500 display gate — does mainline claim LVDS on Crossville Lapis? | 🔄 |
+| 2 | Qt6 + Weston rendering on real hardware | ⏳ |
+| 3 | Navigation services (Valhalla, geocoder, map tiles) | ⏳ |
+| 4 | CAN integration + production polish | ⏳ |
+
+---
+
+## Finding 13 — Phase 1 First Car Boot: Two Black Screens (2026-05-23)
+
+**What:** First boot of the Phase 1 diagnostic image resulted in both LVDS displays staying
+black. No Phase 1 logs written to `/boot/` (no `Q60_DISPLAY_GATE.TXT`, `Q60_DIAG_STAGES.LOG`,
+etc.).
+
+**Diagnosis:**
+
+| Clue | Interpretation |
+|---|---|
+| `elilo.conf` still shows `default=q60nav` | rcS never ran — it restores `default=logan1` as its first action after mounting /boot |
+| No Phase 1 logs on SD card | init never started on the 4.19 kernel |
+| `vmlinuz-4.19-q60` present (3.1 MB, May 22) | Kernel was on the card; elilo loaded it |
+| disk4s3 = no ext4 label | No partition had `q60diag` label → kernel couldn't mount root → immediate panic |
+
+**Root causes (both fixed):**
+
+1. **Rootfs never deployed** — `deploy-phase1-sd.sh` defaults to `disk6`; card was at `disk4`.
+   disk4s3 still had old factory Linux content with no `q60diag` ext4 label. The kernel
+   attempted `root=LABEL=q60diag`, found nothing, panicked before init.
+
+2. **Deploy script UPDATE path stripped root=** — The Python UPDATE path replaced the entire
+   `append=` line with a version that omitted `root=LABEL=q60diag`. If run as-is after the
+   above was fixed, next boot would also fail (no root device).
+
+**Fix:** Added `root=LABEL=q60diag` to `new_append` in `scripts/deploy-phase1-sd.sh` (line 149).
+
+**Next:** `sudo bash scripts/deploy-phase1-sd.sh -y disk4` → car boot → read Phase 1 logs.
+
+**Why it matters:** First real hardware test of the Linux 4.19 + gma500 path. When it works,
+`Q60_DISPLAY_GATE.TXT` will show `PASS` (gma500 bound, /dev/fb0 present) or `FAIL/PARTIAL`
+with DRM state details. Either result unblocks Phase 2 planning.

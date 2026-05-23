@@ -1,23 +1,32 @@
 #!/bin/sh
-# watchdog-pet.sh — Keep iTCO hardware watchdog alive
-# Run by inittab as respawn — if this dies, watchdog fires → reboot
-# Pets /dev/watchdog every 20s (well under 30s iTCO timeout)
-# q60nav ALSO pets the watchdog; this script is the safety net during startup
+# watchdog-pet.sh — Sole hardware watchdog keeper for Q60 Nav
+# Respawned by inittab. This is the ONLY process that holds /dev/watchdog.
+# q60nav does NOT open /dev/watchdog — it relies on this keeper.
+#
+# Design:
+#   - ie6xx_wdt (Atom E6xx) with 30s timeout
+#   - Pet every 20s — inside 30s window, tolerates one missed cycle
+#   - Clean shutdown (SIGTERM): writes 'V' → magic close disables watchdog
+#   - Crash/kill: fd closes without 'V' → watchdog fires → hardware reboot
+#   - Inittab respawn within 30s re-arms with a fresh timeout window
 
 WDOG=/dev/watchdog
 PET_INTERVAL=20
 
 if [ ! -c "$WDOG" ]; then
-    echo "[watchdog] /dev/watchdog not found — iTCO not available" >&2
-    # Sleep indefinitely so inittab respawn doesn't loop frantically
-    while true; do sleep 60; done
+    # ie6xx_wdt not loaded or absent — idle without tight respawn loop
+    sleep 3600
+    exit 0
 fi
 
-# Open watchdog (arms it) and pet every 20s
+# Open watchdog — arms the 30s hardware countdown from here
 exec 3>"$WDOG"
-echo "[watchdog] Armed. Petting every ${PET_INTERVAL}s"
 
+# On SIGTERM (clean shutdown): magic-close to disable watchdog before fd closes
+trap 'printf V >&3; exec 3>&-; exit 0' TERM INT
+
+# Pet loop: any non-V byte resets the countdown
 while true; do
-    echo "V" >&3    # 'V' = controlled ping (magic close = disable)
+    printf '1' >&3
     sleep "$PET_INTERVAL"
 done
