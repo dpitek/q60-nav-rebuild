@@ -35,7 +35,19 @@ extern int emgdHmiGetFramebufferSize(void *, int *, int *);
 extern int emgdHmiGetScreenParams(void *, int, int *, int *, int *, int *);
 extern int emgdHmiCreatePixmap(void *, int, int, int, void **);
 extern int emgdHmiDestroyPixmap(void *, void *);
-extern int emgdHmiMapPixmap(void *, void *, unsigned, unsigned, unsigned, void **);
+/* CORRECTED 2026-05-24: w/h/stride are OUT pointers; out_mem points to a
+ * PVR2DMEMINFO* (struct's .pBase is the actual pixel VA). */
+extern int emgdHmiMapPixmap(void *, void *, unsigned *, unsigned *, unsigned *, void **);
+
+/* PVR2DMEMINFO layout (Khronos PVR2D ABI). Returned by MapPixmap as **mem. */
+typedef struct {
+    void     *pBase;
+    uint32_t  ui32MemSize;
+    uint32_t  ui32DevAddr;
+    uint32_t  ulFlags;
+    void     *hPrivateData;
+    void     *hPrivateMapData;
+} DriverPVR2DMEMINFO;
 extern int emgdHmiFreeMem(void *);
 extern int emgdHmiConfigureBuffers(void *, EMGDHmiBufferState **);
 extern int emgdHmiRequestFlip(void *, int, int, int *);
@@ -78,14 +90,26 @@ int main(void) {
     printf("  pixmap handle = %p\n", px);
     if (!px) { printf("  no pixmap handle returned\n"); fails++; }
 
-    /* 4. Map for CPU paint */
-    void *vaddr = NULL;
-    CHECK(emgdHmiMapPixmap(ndpy, px, 800, 480, 800 * 4, &vaddr), 0);
-    printf("  mapped vaddr = %p\n", vaddr);
-    if (!vaddr) { printf("  MapPixmap returned NULL\n"); fails++; }
+    /* 4. Map for CPU paint — w/h/stride are OUT, out_mem is PVR2DMEMINFO** */
+    void              *info_ptr = NULL;
+    unsigned           qw = 0, qh = 0, qstride = 0;
+    CHECK(emgdHmiMapPixmap(ndpy, px, &qw, &qh, &qstride, &info_ptr), 0);
+    printf("  Map returned w=%u h=%u stride=%u info=%p\n",
+           qw, qh, qstride, info_ptr);
+    if (!info_ptr) { printf("  MapPixmap returned NULL info\n"); fails++; }
+
+    DriverPVR2DMEMINFO *info = (DriverPVR2DMEMINFO *) info_ptr;
+    void   *vaddr = info ? info->pBase : NULL;
+    size_t  vsize = info ? info->ui32MemSize : 0;
+    printf("  PVR2DMEMINFO.pBase=%p .ui32MemSize=%zu\n", vaddr, vsize);
+    if (!vaddr) { printf("  pBase NULL — pixel buffer not mapped\n"); fails++; }
+    if (vsize < (size_t)qw * (size_t)qh * 4) {
+        printf("  WARN: ui32MemSize=%zu < w*h*4=%zu — may be sub-pixmap mapping\n",
+               vsize, (size_t)qw * (size_t)qh * 4);
+    }
 
     /* 5. Paint vertical bars (the drawbuf-style memcpy paint) */
-    if (vaddr) {
+    if (vaddr && vsize >= (size_t)qw * (size_t)qh * 4) {
         uint32_t *pix = (uint32_t *)vaddr;
         for (int y = 0; y < 480; y++) {
             for (int x = 0; x < 800; x++) {

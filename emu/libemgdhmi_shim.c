@@ -84,8 +84,10 @@ typedef struct {
 struct local_pixmap {
     uint32_t handle;
     int      w, h;
+    unsigned int stride;          /* byte-pitch */
     size_t   bytes;
-    void    *vaddr;
+    void    *vaddr;               /* actual pixel buffer */
+    void    *meminfo;             /* ShimPVR2DMEMINFO* returned by MapPixmap */
     struct local_pixmap *next;
 };
 
@@ -204,8 +206,10 @@ int emgdHmiCreatePixmap(void *display, int usage, int w, int h, void **result) {
     if (!p) return EMGD_ERR_BAD_ALLOC;
     p->handle = handle;
     p->w = w; p->h = h;
-    p->bytes = (size_t)w * (size_t)h * 4;   /* assume ARGB8888 */
+    p->stride = (unsigned)w * 4;            /* assume ARGB8888 byte-pitch */
+    p->bytes = (size_t)p->stride * (size_t)h;
     p->vaddr = NULL;
+    p->meminfo = NULL;
     pthread_mutex_lock(&g_lock);
     p->next = g_pixmap_list; g_pixmap_list = p;
     pthread_mutex_unlock(&g_lock);
@@ -229,7 +233,7 @@ int emgdHmiDestroyPixmap(void *display, void *pixmap) {
         if ((*pp)->handle == handle) {
             struct local_pixmap *dead = *pp;
             *pp = dead->next;
-            free(dead->vaddr); free(dead);
+            free(dead->vaddr); free(dead->meminfo); free(dead);
             break;
         }
         pp = &(*pp)->next;
@@ -238,12 +242,38 @@ int emgdHmiDestroyPixmap(void *display, void *pixmap) {
     return rv;
 }
 
-/* NO IPC — process-local. Mirrors real lib (uses PVR2DMemMap of GTT alloc). */
+/* CORRECTED 2026-05-24 to match real lib disasm at offset 0x4163a6f0:
+ *   int emgdHmiMapPixmap(display, pixmap,
+ *                        unsigned *out_w, unsigned *out_h, unsigned *out_stride,
+ *                        PVR2DMEMINFO **out_mem)
+ *
+ * Sends opcode 8 QUERYPIXMAP to the daemon, gets back the pixmap's actual
+ * w/h/stride, then calls PVR2DMemMap which returns a PVR2DMEMINFO* (NOT a
+ * direct CPU VA). Caller must dereference *out_mem to a PVR2DMEMINFO struct,
+ * then use its .pBase field to get the actual pixel pointer.
+ *
+ * Spike 7 / 8 crashed by treating w/h/stride as by-value (wrong — they are
+ * OUT pointers) and by treating *out_mem as a direct VA (wrong — it's a
+ * pointer to PVR2DMEMINFO whose first field is the VA).
+ */
+
+/* Mimic the real Imagination PVR2DMEMINFO layout (Khronos PVR2D ABI). */
+typedef struct {
+    void     *pBase;            /* +0x00 — virtual address of pixel buffer */
+    uint32_t  ui32MemSize;      /* +0x04 — size in bytes */
+    uint32_t  ui32DevAddr;      /* +0x08 — GTT/device address */
+    uint32_t  ulFlags;          /* +0x0c */
+    void     *hPrivateData;     /* +0x10 */
+    void     *hPrivateMapData;  /* +0x14 */
+} ShimPVR2DMEMINFO;
+
 int emgdHmiMapPixmap(void *display, void *pixmap,
-                     unsigned int w, unsigned int h, unsigned int stride,
-                     void **mem) {
-    (void)display; (void)w; (void)h; (void)stride;
-    if (!mem) return EMGD_ERR_BAD_ALLOC;
+                     unsigned int *out_w, unsigned int *out_h,
+                     unsigned int *out_stride,
+                     void **out_mem)
+{
+    (void)display;
+    if (!out_mem) return EMGD_ERR_BAD_ALLOC;
     uint32_t handle = (uint32_t)(uintptr_t)pixmap;
     pthread_mutex_lock(&g_lock);
     struct local_pixmap *p = g_pixmap_list;
@@ -253,7 +283,24 @@ int emgdHmiMapPixmap(void *display, void *pixmap,
         p->vaddr = calloc(1, p->bytes);
         if (!p->vaddr) { pthread_mutex_unlock(&g_lock); return EMGD_ERR_BAD_ALLOC; }
     }
-    *mem = p->vaddr;
+    /* Allocate/reuse a PVR2DMEMINFO struct for this pixmap.
+     * Real lib keeps these in a cache; we just attach one per pixmap. */
+    if (!p->meminfo) {
+        p->meminfo = calloc(1, sizeof(ShimPVR2DMEMINFO));
+        if (!p->meminfo) { pthread_mutex_unlock(&g_lock); return EMGD_ERR_BAD_ALLOC; }
+    }
+    ShimPVR2DMEMINFO *info = (ShimPVR2DMEMINFO *) p->meminfo;
+    info->pBase       = p->vaddr;
+    info->ui32MemSize = p->bytes;
+    info->ui32DevAddr = 0;          /* GTT offset; emulator doesn't model GTT */
+    info->ulFlags     = 0;
+    info->hPrivateData = NULL;
+    info->hPrivateMapData = NULL;
+    /* Write OUT params */
+    if (out_w)      *out_w      = p->w;
+    if (out_h)      *out_h      = p->h;
+    if (out_stride) *out_stride = p->stride;
+    *out_mem = p->meminfo;          /* PVR2DMEMINFO*, NOT a pixel VA */
     pthread_mutex_unlock(&g_lock);
     return EMGD_SUCCESS;
 }
