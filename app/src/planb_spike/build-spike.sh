@@ -16,6 +16,7 @@ mkdir -p "$OUT"
 
 cp "$SRC_DIR/q60_planb_spike6_memcpy_paint.c"   "$OUT/"
 cp "$SRC_DIR/q60_planb_spike7_memcpy_fixed.c"   "$OUT/"
+cp "$SRC_DIR/q60_planb_spike8_correct_map.c"    "$OUT/"
 # Earlier spikes 1-5 archived to docs/archive/spikes-2026-05-23/ — proved EGL works
 # but GL paint into pixmap surface doesn't reach scanout (use memcpy + ConfigureBuffers).
 
@@ -27,7 +28,7 @@ set -e
 (apt-get update && apt-get install -y --no-install-recommends \
   gcc libc6-dev binutils libegl1-mesa-dev) >/dev/null
 cd /build
-for sf in q60_planb_spike6_memcpy_paint.c q60_planb_spike7_memcpy_fixed.c; do
+for sf in q60_planb_spike6_memcpy_paint.c q60_planb_spike7_memcpy_fixed.c q60_planb_spike8_correct_map.c; do
   out=$(echo "$sf" | sed -E "s/q60_planb_(spike[0-9a-z]+)_.*/\1/")
   echo "--- building $out from $sf ---"
   gcc -O2 -Wall -Wextra -o "$out" "$sf" -ldl
@@ -38,6 +39,6 @@ done
 
 echo ""
 echo "=== Built ==="
-ls -la "$OUT"/spike6 "$OUT"/spike7
+ls -la "$OUT"/spike6 "$OUT"/spike7 "$OUT"/spike8
 echo ""
 echo "Deploy with: sudo bash $SRC_DIR/deploy-spike.sh <disk> (e.g. disk4s2)"
