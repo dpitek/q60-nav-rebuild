@@ -15,7 +15,7 @@ DEV="${1:-/dev/disk12s2}"
 RAWDEV=$(echo "$DEV" | sed 's|/dev/disk|/dev/rdisk|')
 DEBUGFS=/opt/homebrew/opt/e2fsprogs/sbin/debugfs
 
-BIN=/tmp/q60-planb/spike9
+BIN=/tmp/q60-planb/spike10
 [ -x "$DEBUGFS" ] || { echo "FATAL: debugfs missing — brew install e2fsprogs"; exit 1; }
 [ -f "$BIN" ]    || { echo "FATAL: $BIN missing — run build-spike.sh first"; exit 1; }
 
@@ -43,7 +43,7 @@ mountpoint -q /boot 2>/dev/null || mount /dev/mmcblk0p1 /boot 2>/dev/null
 mountpoint -q /boot 2>/dev/null || mount /dev/mmcblk1p1 /boot 2>/dev/null
 printf "[wrap-1] /boot mounted: %s\n" "$(mountpoint /boot 2>&1)" >> "$T"
 
-chmod 755 /opt/q60planb/spike9 2>/dev/null
+chmod 755 /opt/q60planb/spike10 2>/dev/null
 ls -la /opt/q60planb/ >> "$T" 2>/dev/null
 
 # Plan B''' EGL recipe — /usr/lib FIRST so libc.so.6 / libdl.so.2 don't get
@@ -56,7 +56,7 @@ ulimit -c 0
 printf "[wrap-2] LAUNCH %s\n" "$(date)" >> "$T"
 printf "[wrap-2] LAUNCH %s\n" "$(date)" > /boot/Q60_PLANB_HOOK_RAN.TXT 2>/dev/null
 
-/opt/q60planb/spike9 > /tmp/q60-planb-stdout.log 2>&1
+/opt/q60planb/spike10 > /tmp/q60-planb-stdout.log 2>&1
 RC=$?
 
 # Boot timing diagnostics — SYNCHRONOUS so they're not killed by cgroup cleanup
@@ -156,8 +156,8 @@ fi
 UNIT=$(mktemp)
 cat > "$UNIT" <<'UNIT_EOF'
 [Unit]
-Description=Q60 Plan B''' Spike 9 — PVR2DMEMINFO deref (emulator-validated)
-ConditionPathExists=/opt/q60planb/spike9
+Description=Q60 Plan B''' Spike 10 — kill daemons + defensive re-bind
+ConditionPathExists=/opt/q60planb/spike10
 
 [Service]
 Type=oneshot
@@ -184,8 +184,8 @@ rm spike1c
 rm spike2
 rm spike3
 rm spike4
-rm spike9
-write $BIN spike9
+rm spike10
+write $BIN spike10
 rm run.sh
 write $RUN run.sh
 cd /
