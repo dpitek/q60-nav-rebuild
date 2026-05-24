@@ -80,14 +80,18 @@ private:
     int (*m_DestroyPixmap)(void *, void *) = nullptr;
     int (*m_ConfigureBuffers)(void *, EMGDHmiBufferState **) = nullptr;
     int (*m_RequestFlip)(void *, int /*screen*/, int /*owner*/, int *) = nullptr;
+    // 6-arg MapPixmap — signature per D2 forensic-libemgdhmi-api.md §2 #11
+    int (*m_MapPixmap)(void *, void *, unsigned, unsigned, unsigned, void **) = nullptr;
 
     void *m_ndpy = nullptr;       // EMGD native display handle (magic 0xd39ade6b)
     void *m_pixmap = nullptr;     // Our scanout pixmap (single, screen 0)
+    void *m_pixmap_vaddr = nullptr; // CPU virtual address from MapPixmap — readback target
     QSize m_size{800, 480};       // Upper LVDS only for now
     bool m_buffersConfigured = false;
     bool m_flipRequested = false; // RequestFlip is a no-op stub per D3, but cheap to call
 
     bool configureBuffers();
+    void readbackToPixmap();      // glReadPixels post-swap → memcpy into vaddr
 };
 
 class QEglFSEmgdHmiIntegrationPlugin : public QEglFSDeviceIntegrationPlugin

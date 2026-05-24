@@ -27,6 +27,27 @@
 #include <QSurfaceFormat>
 #include <dlfcn.h>
 #include <cstring>
+#include <cstdint>
+
+// GLES2 functions for the post-swap readback. We avoid pulling GLES headers
+// into the plugin's compile by declaring the two we need inline. They are
+// resolved at runtime via the EGL config; presentBuffer runs in the GL thread
+// after the swap so the context is current.
+extern "C" {
+    // GL types we need (matches GLES2 spec)
+    typedef int GLint;
+    typedef unsigned int GLuint;
+    typedef unsigned int GLenum;
+    typedef int GLsizei;
+    typedef void GLvoid;
+    #define GL_RGBA            0x1908
+    #define GL_BGRA_EXT        0x80E1
+    #define GL_UNSIGNED_BYTE   0x1401
+    void glReadPixels(GLint x, GLint y, GLsizei width, GLsizei height,
+                      GLenum format, GLenum type, GLvoid *data);
+    void glFinish(void);
+    GLenum glGetError(void);
+}
 
 QT_BEGIN_NAMESPACE
 
@@ -65,6 +86,9 @@ void QEglFSEmgdHmiIntegration::platformInit()
         dlsym(m_libemgdhmi, "emgdHmiConfigureBuffers"));
     m_RequestFlip       = reinterpret_cast<int(*)(void*, int, int, int*)>(
         dlsym(m_libemgdhmi, "emgdHmiRequestFlip"));
+    // 6-arg MapPixmap: (display, pixmap, w, h, stride, **mem) — see spike7
+    m_MapPixmap         = reinterpret_cast<int(*)(void*, void*, unsigned, unsigned, unsigned, void**)>(
+        dlsym(m_libemgdhmi, "emgdHmiMapPixmap"));
 
     if (!m_GetNativeDisplay || !m_CreatePixmap || !m_ConfigureBuffers) {
         qCWarning(lcEmgdHmi) << "Missing required emgdHmi entry points — plugin disabled";
@@ -188,9 +212,25 @@ EGLNativeWindowType QEglFSEmgdHmiIntegration::createNativeWindow(
     // in GTT but not in the kernel's scanout table → nothing visible.
     if (!configureBuffers()) {
         qCWarning(lcEmgdHmi) << "configureBuffers FAILED — pixmap allocated but not scanned out";
-        // Don't destroy the pixmap — Qt may still recover (or we can use it
-        // as a software-only render target for debugging). Return the
-        // handle anyway.
+    }
+
+    // Spike 5 proved: GL rendering into a pixmap surface does NOT reach the
+    // memory the kernel scans out — eglSwapBuffers on a pixmap is a no-op
+    // for visibility. Workaround: after each swap, glReadPixels into the
+    // CPU-mapped pixmap memory. That memcpy IS what shows on screen.
+    //
+    // Map the pixmap once here; CPU vaddr is reused in presentBuffer.
+    if (m_MapPixmap) {
+        int rc = m_MapPixmap(m_ndpy, m_pixmap,
+                             static_cast<unsigned>(w),
+                             static_cast<unsigned>(h),
+                             static_cast<unsigned>(w * 4),
+                             &m_pixmap_vaddr);
+        qCInfo(lcEmgdHmi) << "emgdHmiMapPixmap rc=" << rc
+                          << "vaddr=" << m_pixmap_vaddr;
+        if (rc != 0) m_pixmap_vaddr = nullptr;
+    } else {
+        qCWarning(lcEmgdHmi) << "emgdHmiMapPixmap not resolved — readback path disabled";
     }
 
     return reinterpret_cast<EGLNativeWindowType>(m_pixmap);
@@ -211,20 +251,41 @@ void QEglFSEmgdHmiIntegration::destroyNativeWindow(EGLNativeWindowType window)
 
 void QEglFSEmgdHmiIntegration::presentBuffer(QPlatformSurface *surface)
 {
-    // Default behaviour: Qt's eglfs already calls eglSwapBuffers before us.
-    // We add the optional RequestFlip on the FIRST swap only — that's the
-    // call the factory daemon issues after a render to advance the
-    // visible buffer index.
+    // Qt's eglfs has already called eglSwapBuffers before this hook fires.
+    // The GL context is still current. We now have to get those rendered
+    // pixels into the memory the EMGD kernel actually scans out — Qt's GL
+    // back buffer is NOT the same as our pixmap memory (spike 5 confirmed).
+    //
+    // Workaround: glReadPixels into our CPU-mapped pixmap memory. CPU cost
+    // is high (~1.5 MB read + write per frame at 800x480 ARGB8888) but it
+    // makes the GL output visible. Long-term, write a custom Qt backend
+    // that renders into a QImage backed by the pixmap memory directly
+    // (skip GL entirely, drawbuf-style). For tonight: prove the path.
     Q_UNUSED(surface);
 
+    readbackToPixmap();
+
+    // RequestFlip is a 10-byte stub on this build (per Agent D3) — call it
+    // anyway in case the daemon ever grows real flip logic.
     if (!m_flipRequested && m_RequestFlip && m_ndpy) {
         int did_flip = 0;
         int rc = m_RequestFlip(m_ndpy, 0 /* screen 0 = upper LVDS */,
                                0 /* owner EMGD_DISPLAY_HMI */,
                                &did_flip);
         qCInfo(lcEmgdHmi) << "emgdHmiRequestFlip rc=" << rc << "did_flip=" << did_flip;
-        m_flipRequested = true; // log once — subsequent swaps don't need it for static binding
+        m_flipRequested = true;
     }
+}
+
+void QEglFSEmgdHmiIntegration::readbackToPixmap()
+{
+    if (!m_pixmap_vaddr) return;
+    glFinish();  // make sure GL is done before we read back
+    glReadPixels(0, 0, m_size.width(), m_size.height(),
+                 GL_RGBA, GL_UNSIGNED_BYTE, m_pixmap_vaddr);
+    // glReadPixels writes bytes in R,G,B,A order. uint32_t on little-endian
+    // = 0xAABBGGRR. If scanout expects 0xAARRGGBB we'll see colors swapped
+    // (R/B). Hardware test will tell — fix in spike 6's color cycle finding.
 }
 
 bool QEglFSEmgdHmiIntegration::hasCapability(QPlatformIntegration::Capability cap) const
